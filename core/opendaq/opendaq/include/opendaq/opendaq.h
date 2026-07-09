@@ -102,6 +102,8 @@
 
 #include <opendaq/device_update_options_factory.h>
 
+#include <opendaq/credential_provider_factory.h>
+
 #include <opendaq/exceptions.h>
 
 

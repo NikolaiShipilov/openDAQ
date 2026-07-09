@@ -113,6 +113,9 @@ DECLARE_OPENDAQ_INTERFACE(IContext, IBaseObject)
      * @param[out] servers The dictionary of available discovery servers.
      */
     virtual ErrCode INTERFACE_FUNC getDiscoveryServers(IDict** servers) = 0;
+
+    // [templateType(providers, IString, ICredentialProvider)]
+    virtual ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) = 0;
 };
 /*!@}*/
 
@@ -132,7 +135,8 @@ OPENDAQ_DECLARE_CLASS_FACTORY(
     IModuleManager*, moduleManager,
     IAuthenticationProvider*, authenticationProvider,
     IDict*, options,
-    IDict*, discoveryServers
+    IDict*, discoveryServers,
+    IDict*, credentialProviders
 )
 
 /*!@}*/

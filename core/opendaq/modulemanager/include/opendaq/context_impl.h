@@ -23,6 +23,7 @@
 #include <coretypes/type_manager_ptr.h>
 #include <coreobjects/authentication_provider_ptr.h>
 #include <opendaq/discovery_server_ptr.h>
+#include <opendaq/credential_provider_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -35,7 +36,8 @@ public:
                          ModuleManagerPtr moduleManager,
                          AuthenticationProviderPtr authenticationProvider,
                          DictPtr<IString, IBaseObject> options,
-                         DictPtr<IString, IDiscoveryServer> discoveryServices);
+                         DictPtr<IString, IDiscoveryServer> discoveryServices,
+                         DictPtr<IString, ICredentialProvider> credentialProviders);
     ~ContextImpl();
 
     ErrCode INTERFACE_FUNC getScheduler(IScheduler** scheduler) override;
@@ -48,6 +50,7 @@ public:
     ErrCode INTERFACE_FUNC getOptions(IDict** options) override;
     ErrCode INTERFACE_FUNC getModuleOptions(IString* moduleId, IDict** options) override;
     ErrCode INTERFACE_FUNC getDiscoveryServers(IDict** servers) override;
+    ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) override;
 
 private:
     void componentCoreEventCallback(ComponentPtr& component, CoreEventArgsPtr& eventArgs);
@@ -62,6 +65,7 @@ private:
     EventEmitter<ComponentPtr, CoreEventArgsPtr> coreEvent;
     DictPtr<IString, IBaseObject> options;
     DictPtr<IString, IDiscoveryServer> discoveryServers;
+    DictPtr<IString, ICredentialProvider> credentialProviders;
 };
 
 END_NAMESPACE_OPENDAQ

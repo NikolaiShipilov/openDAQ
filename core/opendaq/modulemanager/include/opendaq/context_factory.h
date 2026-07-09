@@ -20,6 +20,7 @@
 #include <opendaq/module_manager_ptr.h>
 #include <coretypes/type_manager_ptr.h>
 #include <opendaq/discovery_server_ptr.h>
+#include <opendaq/credential_provider_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -42,9 +43,10 @@ inline ContextPtr Context(const SchedulerPtr& scheduler,
                           const ModuleManagerPtr& moduleManager,
                           const AuthenticationProviderPtr& authenticationProvider = nullptr,
                           const DictPtr<IString, IBaseObject> options = Dict<IString, IBaseObject>(),
-                          const DictPtr<IString, IDiscoveryServer> discoveryServers = Dict<IString, IDiscoveryServer>())
+                          const DictPtr<IString, IDiscoveryServer> discoveryServers = Dict<IString, IDiscoveryServer>(),
+                          const DictPtr<IString, ICredentialProvider> credentialProviders = Dict<IString, ICredentialProvider>())
 {
-    ContextPtr obj(Context_Create(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServers));
+    ContextPtr obj(Context_Create(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServers, credentialProviders));
     return obj;
 }
 
@@ -57,7 +59,7 @@ inline ContextPtr NullContext(const LoggerPtr& logger = Logger(),
                               const TypeManagerPtr& typeManager = TypeManager(),
                               const DictPtr<IString, IBaseObject> options = Dict<IString, IBaseObject>())
 {
-    ContextPtr obj(Context_Create(nullptr, logger, typeManager, nullptr, nullptr, options, Dict<IString, IDiscoveryServer>()));
+    ContextPtr obj(Context_Create(nullptr, logger, typeManager, nullptr, nullptr, options, Dict<IString, IDiscoveryServer>(), Dict<IString, ICredentialProvider>()));
     return obj;
 }
 

@@ -89,6 +89,9 @@ public:
     ErrCode INTERFACE_FUNC setLoadAuthenticatedModulesOnly(Bool authenticatedOnly) override;
     ErrCode INTERFACE_FUNC getLoadAuthenticatedModulesOnly(Bool* authenticatedOnly) override;
 
+    ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) override;
+    ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerName, ICredentialProvider* provider) override;
+
 private:
     static DictPtr<IString, IBaseObject> GetDefaultOptions();
 
@@ -116,6 +119,7 @@ private:
     DictPtr<IString, IBaseObject> options;
     PropertyObjectPtr rootDeviceConfig{nullptr};
     ListPtr<IString> discoveryServers;
+    DictPtr<IString, ICredentialProvider> credentialProviders;
 };
 
 END_NAMESPACE_OPENDAQ

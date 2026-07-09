@@ -130,6 +130,11 @@ if (APP_ENABLE_WEBPAGE_EXAMPLES)
 															 logger_example_util)
 
 	# end of Logger examples
+
+        if (DAQMODULES_SIMULATOR_DEVICE_MODULE)
+            add_executable(credential_providers cpp/credential_providers/credential_providers.cpp)
+            target_link_libraries(credential_providers PRIVATE daq::opendaq)
+        endif()
 	
 	if(DAQMODULES_LICENSING_MODULE AND NOT APPLE)
 		set(LICENSING_EXAMPLE_REQUIREMENTS_MET ON)

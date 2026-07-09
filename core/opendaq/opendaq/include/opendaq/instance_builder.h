@@ -21,6 +21,7 @@
 #include <coreobjects/authentication_provider.h>
 #include <opendaq/discovery_server.h>
 #include <opendaq/module_authenticator.h>
+#include <opendaq/credential_provider.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -377,6 +378,12 @@ DECLARE_OPENDAQ_INTERFACE(IInstanceBuilder, IBaseObject)
     virtual ErrCode INTERFACE_FUNC setLoadAuthenticatedModulesOnly(Bool authOnly) = 0;
 
     virtual ErrCode INTERFACE_FUNC getLoadAuthenticatedModulesOnly(Bool* authOnly) = 0;
+
+    // [templateType(providers, IString, ICredentialProvider)]
+    virtual ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) = 0;
+
+    // [returnSelf]
+    virtual ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerName, ICredentialProvider* provider) = 0;
 };
 /*!@}*/
 

@@ -42,7 +42,8 @@ DevicePtr SimulatorDeviceModule::onCreateDevice(const StringPtr& connectionStrin
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(SIMULATOR_MODULE_ID));
     auto info = SimulatorDeviceImpl::CreateDeviceInfo(options);
 
-    auto devicePtr = createWithImplementation<IDevice, SimulatorDeviceImpl>(config, context, parent, info);
+    auto credentialProvider = context.getCredentialProviders().get("CmdLineCredentialProvider");
+    DevicePtr devicePtr = createWithImplementation<IDevice, SimulatorDeviceImpl>(config, context, parent, info, credentialProvider.requestCredentials(SimulatorDeviceImpl::CreateCredentialRequest(connectionString, config)));
     device = devicePtr;
     return devicePtr.detach();
 }

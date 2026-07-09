@@ -1,10 +1,12 @@
 #include <coreobjects/errors.h>
+#include <opendaq/credential_provider_ptr.h>
 #include <opendaq/instance_builder_impl.h>
 #include <opendaq/instance_builder_ptr.h>
 #include <opendaq/instance_ptr.h>
 #include <opendaq/custom_log.h>
 #include <opendaq/config_provider_factory.h>
 #include <coreobjects/authentication_provider_factory.h>
+
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -54,6 +56,7 @@ InstanceBuilderImpl::InstanceBuilderImpl()
     , providers(List<IConfigProvider>())
     , options(GetDefaultOptions())
     , discoveryServers(List<IString>())
+    , credentialProviders(Dict<IString, ICredentialProvider>())
 {
 }
 
@@ -471,6 +474,22 @@ ErrCode InstanceBuilderImpl::getLoadAuthenticatedModulesOnly(Bool* authenticated
 
     *authenticatedOnly = this->authenticatedModulesOnly;
     return OPENDAQ_SUCCESS;
+}
+
+ErrCode InstanceBuilderImpl::getCredentialProviders(IDict** providers)
+{
+    OPENDAQ_PARAM_NOT_NULL(providers);
+
+    *providers = this->credentialProviders.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode InstanceBuilderImpl::addCredentialProvider(IString* providerName, ICredentialProvider* provider)
+{
+    OPENDAQ_PARAM_NOT_NULL(providerName);
+    OPENDAQ_PARAM_NOT_NULL(provider);
+
+    return credentialProviders->set(providerName, provider);
 }
 
 /////////////////////

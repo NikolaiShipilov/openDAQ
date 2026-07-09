@@ -163,7 +163,7 @@ static ContextPtr ContextFromInstanceBuilder(IInstanceBuilder* instanceBuilder)
             discoveryServers.set(serverName, server);
     }
 
-    return Context(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServers);
+    return Context(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServers, builderPtr.getCredentialProviders());
 }
 
 void InstanceImpl::stopAndRemoveServers() const
