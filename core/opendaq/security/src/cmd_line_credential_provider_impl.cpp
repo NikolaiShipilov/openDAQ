@@ -64,11 +64,11 @@ void CmdLineCredentialProviderImpl::printRequestDetails(const CredentialRequestP
     std::cout << "============================================================\n\n";
 
     if (const auto type = request.getComponentType(); type.assigned())
-        std::cout << "Component : " << type.getName() << '\n';
+        std::cout << "Component type : " << type.getName() << '\n';
 
 
     if (const auto connectionString = request.getConnectionString(); connectionString.assigned() && connectionString.getLength() > 0)
-        std::cout << "Connection: " << connectionString << '\n';
+        std::cout << "Connection string : " << connectionString << '\n';
 
     std::cout << '\n';
 }

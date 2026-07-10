@@ -1,8 +1,3 @@
-/**
- * Part of the openDAQ stand-alone application quick start guide. The full
- * example can be found in app_quick_start_full.cpp
- */
-
 #include <iostream>
 #include <fstream>
 #include <opendaq/opendaq.h>
