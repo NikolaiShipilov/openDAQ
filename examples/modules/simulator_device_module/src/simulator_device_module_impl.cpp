@@ -42,7 +42,13 @@ DevicePtr SimulatorDeviceModule::onCreateDevice(const StringPtr& connectionStrin
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(SIMULATOR_MODULE_ID));
     auto info = SimulatorDeviceImpl::CreateDeviceInfo(options);
 
-    auto devicePtr = createWithImplementation<IDevice, SimulatorDeviceImpl>(config, context, parent, info);
+    auto credentialProvider = context.getCredentialProviders().getOrDefault("CmdLineCredentialProvider", nullptr);
+    if (!credentialProvider.assigned())
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no relevant credential provider is registered");
+    }
+
+    DevicePtr devicePtr = createWithImplementation<IDevice, SimulatorDeviceImpl>(config, context, parent, info, credentialProvider.requestCredentials(SimulatorDeviceImpl::CreateCredentialRequest(connectionString, config)));
     device = devicePtr;
     return devicePtr.detach();
 }

@@ -14,10 +14,11 @@
 #include <utility>
 #include <opendaq/thread_name.h>
 #include <coreobjects/callable_info_factory.h>
+#include <opendaq/credential_request_factory.h>
 
 BEGIN_NAMESPACE_SIMULATOR_DEVICE_MODULE
 
-SimulatorDeviceImpl::SimulatorDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info)
+SimulatorDeviceImpl::SimulatorDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials)
     : Device(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
     , acqLoopTime(20)
     , stopAcq(false)
@@ -31,6 +32,19 @@ SimulatorDeviceImpl::SimulatorDeviceImpl(const PropertyObjectPtr& config, const 
     , domainUnit(getDomainUnit())
     , epoch(getEpoch())
 {
+    if (!credentials.assigned())
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no credentials provided");
+    }
+
+    DictPtr<IString, IBaseObject> usernameAndPassword = credentials.getSecrets();
+    if (!usernameAndPassword.assigned() ||
+        !usernameAndPassword.hasKey("UserName") || usernameAndPassword.get("UserName") != "user" ||
+        !usernameAndPassword.hasKey("Password") || usernameAndPassword.get("Password") != "aaa")
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - wrong credentials");
+    }
+
     this->loggerComponent = this->context.getLogger().getOrAddComponent(SIMULATOR_MODULE_NAME);
     this->deviceInfo = info;
     
@@ -80,6 +94,12 @@ DeviceTypePtr SimulatorDeviceImpl::CreateType()
                       "openDAQ signal generator simulator",
                       "daq.simulator",
                       defaultConfig);
+}
+
+CredentialRequestPtr SimulatorDeviceImpl::CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config)
+{
+    auto builder = CredentialRequestBuilder();
+    return builder.setComponentType(CreateType()).setConnectionString(connectionString).build();
 }
 
 uint64_t SimulatorDeviceImpl::onGetTicksSinceOrigin()

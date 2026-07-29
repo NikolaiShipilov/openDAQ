@@ -26,11 +26,12 @@ BEGIN_NAMESPACE_SIMULATOR_DEVICE_MODULE
 class SimulatorDeviceImpl final : public Device
 {
 public:
-    explicit SimulatorDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info);
+    explicit SimulatorDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials);
     ~SimulatorDeviceImpl() override;
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
+    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config);
 
 protected:
     // DeviceImpl overrides
