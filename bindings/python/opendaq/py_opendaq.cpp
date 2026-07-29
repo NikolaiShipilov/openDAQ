@@ -133,6 +133,10 @@ void wrapDaqComponentOpenDaq(pybind11::module_ m)
     auto classILogFileInfo = declareILogFileInfo(m);
     auto classILogFileInfoBuilder = declareILogFileInfoBuilder(m);
     auto classIDeviceUpdateOptions = declareIDeviceUpdateOptions(m);
+    auto classICredentialProvider = declareICredentialProvider(m);
+    auto classICredentialRequest = declareICredentialRequest(m);
+    auto classICredentialRequestBuilder = declareICredentialRequestBuilder(m);
+    auto classICredentialPayload = declareICredentialPayload(m);
 
     defineIModuleInfo(m, classIModuleInfo);
     defineIComponentType(m, classIComponentType);
@@ -239,6 +243,10 @@ void wrapDaqComponentOpenDaq(pybind11::module_ m)
     defineILogFileInfo(m, classILogFileInfo);
     defineILogFileInfoBuilder(m, classILogFileInfoBuilder);
     defineIDeviceUpdateOptions(m, classIDeviceUpdateOptions);
+    defineICredentialProvider(m, classICredentialProvider);
+    defineICredentialRequest(m, classICredentialRequest);
+    defineICredentialRequestBuilder(m, classICredentialRequestBuilder);
+    defineICredentialPayload(m, classICredentialPayload);
 
     defineComponentSearchFilterFactories(m);
 

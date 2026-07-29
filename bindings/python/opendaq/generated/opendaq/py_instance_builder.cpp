@@ -373,4 +373,22 @@ void defineIInstanceBuilder(pybind11::module_ m, PyDaqIntf<daq::IInstanceBuilder
             objectPtr.setLoadAuthenticatedModulesOnly(authOnly);
         },
         "");
+    cls.def_property_readonly("credential_providers",
+        [](daq::IInstanceBuilder *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::InstanceBuilderPtr::Borrow(object);
+            return objectPtr.getCredentialProviders().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "");
+    cls.def("add_credential_provider",
+        [](daq::IInstanceBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& providerName, daq::ICredentialProvider* provider)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::InstanceBuilderPtr::Borrow(object);
+            objectPtr.addCredentialProvider(getVariantValue<daq::IString*>(providerName), provider);
+        },
+        py::arg("provider_name"), py::arg("provider"),
+        "");
 }

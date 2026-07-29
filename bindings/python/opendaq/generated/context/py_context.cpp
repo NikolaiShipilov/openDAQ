@@ -126,4 +126,13 @@ void defineIContext(pybind11::module_ m, PyDaqIntf<daq::IContext, daq::IBaseObje
         },
         py::return_value_policy::take_ownership,
         "Gets the dictionary of available discovery servers.");
+    cls.def_property_readonly("credential_providers",
+        [](daq::IContext *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::ContextPtr::Borrow(object);
+            return objectPtr.getCredentialProviders().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "");
 }
