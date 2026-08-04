@@ -17,11 +17,13 @@
 #pragma once
 #include <credential_demo_module/common.h>
 #include <opendaq/device_impl.h>
+#include <opendaq/credential_request_ptr.h>
+#include <opendaq/credential_payload_ptr.h>
 
 /*
- * Minimal device implementation with no signals, channels, or authentication.
- * Serves as the base for later steps that layer in credential-provider
- * integration and multiple authentication methods on top of this skeleton.
+ * Minimal device implementation with no signals or channels. Authenticates
+ * via the credential framework using a username/password payload, mirroring
+ * simulator_device_module's approach, as the first showcased auth method.
  */
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -29,10 +31,11 @@ BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 class CredentialDemoDeviceImpl final : public Device
 {
 public:
-    explicit CredentialDemoDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info);
+    explicit CredentialDemoDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials);
 
     static DeviceInfoPtr CreateDeviceInfo();
     static DeviceTypePtr CreateType();
+    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

@@ -39,7 +39,14 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
 
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo();
 
-    DevicePtr devicePtr = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(config, context, parent, info);
+    auto credentialProvider = context.getCredentialProviders().getOrDefault("CmdLineCredentialProvider", nullptr);
+    if (!credentialProvider.assigned())
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no relevant credential provider is registered");
+    }
+
+    DevicePtr devicePtr = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
+        config, context, parent, info, credentialProvider.requestCredentials(CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, config)));
     device = devicePtr;
     return devicePtr.detach();
 }
