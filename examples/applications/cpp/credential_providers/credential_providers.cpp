@@ -10,8 +10,7 @@ void createJsonConfigFile()
     std::string options = R"(
     {
     "Modules": {
-        "SimulatorDeviceModule": {
-            "Name": "Simulator",
+        "CredentialDemoModule": {
             "Manufacturer": "openDAQ",
             "SerialNumber": "1234"
             }
@@ -41,12 +40,10 @@ int main(int /*argc*/, const char* /*argv*/[])
     instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
     auto instance = instanceBuilder.build();
 
-    auto device = instance.addDevice("daq.simulator://openDAQ_1234");
-
-    auto renderer = instance.addFunctionBlock("RefFBModuleRenderer");
-    renderer.getInputPorts()[0].connect(device.getSignalsRecursive()[0]);
+    auto device = instance.addDevice("daq://openDAQ_1234");
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\"" << std::endl;
 
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
     std::cin.get();
     return 0;
-} 
+}

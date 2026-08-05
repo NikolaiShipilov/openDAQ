@@ -131,7 +131,7 @@ if (APP_ENABLE_WEBPAGE_EXAMPLES)
 
 	# end of Logger examples
 
-        if (DAQMODULES_SIMULATOR_DEVICE_MODULE)
+        if (DAQMODULES_CREDENTIAL_DEMO_MODULE)
             add_executable(credential_providers cpp/credential_providers/credential_providers.cpp)
             target_link_libraries(credential_providers PRIVATE daq::opendaq)
         endif()
