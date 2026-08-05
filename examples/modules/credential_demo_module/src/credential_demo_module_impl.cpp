@@ -31,12 +31,6 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
                                                const ComponentPtr& parent,
                                                const PropertyObjectPtr& config)
 {
-    std::scoped_lock lock(sync);
-
-    clearRemovedDevice();
-    if (device.assigned())
-        DAQ_THROW_EXCEPTION(AlreadyExistsException, "Credential demo device is already created!");
-
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo();
 
     auto credentialProvider = context.getCredentialProviders().getOrDefault("CmdLineCredentialProvider", nullptr);
@@ -45,17 +39,8 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
         DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no relevant credential provider is registered");
     }
 
-    DevicePtr devicePtr = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
-        config, context, parent, info, credentialProvider.requestCredentials(CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, config)));
-    device = devicePtr;
-    return devicePtr.detach();
-}
-
-void CredentialDemoModule::clearRemovedDevice()
-{
-    const bool isNull = !device.assigned() || !device.getRef().assigned();
-    if (isNull || device.getRef().isRemoved())
-        device = nullptr;
+    return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
+        config, context, parent, info, credentialProvider.requestCredentials(CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, config))).detach();
 }
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

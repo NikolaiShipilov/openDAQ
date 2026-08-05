@@ -22,8 +22,7 @@
 
 /*
  * Minimal device implementation with no signals or channels. Authenticates
- * via the credential framework using a username/password payload, mirroring
- * simulator_device_module's approach, as the first showcased auth method.
+ * via the credential framework using a username/password, as the first showcased auth method.
  */
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE

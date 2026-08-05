@@ -20,9 +20,7 @@
 
 /*
  * Showcase module for authentication-method integration with the credential
- * framework (ICredentialProvider / ICredentialRequest / ICredentialPayload).
- * This first step only registers a single device with no authentication;
- * credential-provider wiring is added in a later step.
+ * framework.
  */
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -35,12 +33,6 @@ public:
     ListPtr<IDeviceInfo> onGetAvailableDevices() override;
     DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes() override;
     DevicePtr onCreateDevice(const StringPtr& connectionString, const ComponentPtr& parent, const PropertyObjectPtr& config) override;
-
-private:
-    WeakRefPtr<IDevice> device;
-    std::mutex sync;
-
-    void clearRemovedDevice();
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE
