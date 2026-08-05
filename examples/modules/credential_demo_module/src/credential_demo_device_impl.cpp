@@ -3,6 +3,8 @@
 #include <opendaq/device_info_factory.h>
 #include <opendaq/device_type_factory.h>
 #include <opendaq/credential_request_factory.h>
+#include <opendaq/server_capability_config.h>
+#include <opendaq/device_info_internal.h>
 #include <fmt/format.h>
 #include <string_view>
 
@@ -41,6 +43,11 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
     devInfo.setModel("Credential demo device");
     devInfo.setSerialNumber(serialNumber);
     devInfo.setDeviceType(CreateType());
+
+    auto capability = ServerCapability("CredentialDemo", "Credential Demo", ProtocolType::Configuration)
+                           .setPrefix(CreateType().getConnectionStringPrefix())
+                           .setConnectionString(connectionString);
+    devInfo.asPtr<IDeviceInfoInternal>(true).addServerCapability(capability);
 
     return devInfo;
 }
