@@ -35,6 +35,7 @@ public:
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
     static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config);
+    static void ValidateConnectionString(const StringPtr& connectionString, const DeviceInfoPtr& info);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

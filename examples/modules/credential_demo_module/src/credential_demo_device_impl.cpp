@@ -4,8 +4,11 @@
 #include <opendaq/device_type_factory.h>
 #include <opendaq/credential_request_factory.h>
 #include <fmt/format.h>
+#include <string_view>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
+
+static constexpr std::string_view GenericDeviceAddress = "credential_demo_device";
 
 CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials)
     : Device(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
@@ -54,6 +57,20 @@ CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const Str
 {
     auto builder = CredentialRequestBuilder();
     return builder.setComponentType(CreateType()).setConnectionString(connectionString).build();
+}
+
+void CredentialDemoDeviceImpl::ValidateConnectionString(const StringPtr& connectionString, const DeviceInfoPtr& info)
+{
+    const std::string prefix = fmt::format("{}://", CreateType().getConnectionStringPrefix());
+    const std::string connStr = connectionString;
+    if (connStr.find(prefix) != 0)
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Invalid connection string \"{}\", no prefix", connectionString);
+
+    const auto address = connStr.substr(prefix.size());
+    const auto manufacturerAndSerial = fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber());
+
+    if (address != manufacturerAndSerial && address != GenericDeviceAddress)
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Invalid connection string \"{}\", unknown device address", connectionString);
 }
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

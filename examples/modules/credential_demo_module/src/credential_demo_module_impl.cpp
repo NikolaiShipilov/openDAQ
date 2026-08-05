@@ -34,6 +34,7 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
 {
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
+    CredentialDemoDeviceImpl::ValidateConnectionString(connectionString, info);
 
     auto credentialProvider = context.getCredentialProviders().getOrDefault("CmdLineCredentialProvider", nullptr);
     if (!credentialProvider.assigned())
