@@ -3,11 +3,12 @@
 #include <opendaq/device_info_factory.h>
 #include <opendaq/device_type_factory.h>
 #include <opendaq/credential_request_factory.h>
+#include <fmt/format.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
 CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials)
-    : Device(ctx, parent, "credential_demo_device", nullptr, info.getName())
+    : Device(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
     if (!credentials.assigned())
     {
@@ -25,13 +26,17 @@ CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& conf
     this->deviceInfo = info;
 }
 
-DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo()
+DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions)
 {
-    auto devInfo = DeviceInfo("daq.credential_demo://credential_demo_device");
+    const StringPtr manufacturer = moduleOptions.get("Manufacturer");
+    const StringPtr serialNumber = moduleOptions.get("SerialNumber");
+
+    auto connectionString = fmt::format("daq.credential_demo://{}_{}", manufacturer, serialNumber);
+    auto devInfo = DeviceInfo(connectionString);
     devInfo.setName("Credential demo device");
-    devInfo.setManufacturer("openDAQ");
+    devInfo.setManufacturer(manufacturer);
     devInfo.setModel("Credential demo device");
-    devInfo.setSerialNumber("0");
+    devInfo.setSerialNumber(serialNumber);
     devInfo.setDeviceType(CreateType());
 
     return devInfo;

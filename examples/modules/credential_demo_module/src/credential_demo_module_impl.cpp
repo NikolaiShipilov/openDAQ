@@ -18,7 +18,8 @@ CredentialDemoModule::CredentialDemoModule(const ContextPtr& context)
 
 ListPtr<IDeviceInfo> CredentialDemoModule::onGetAvailableDevices()
 {
-    return { CredentialDemoDeviceImpl::CreateDeviceInfo() };
+    const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
+    return { CredentialDemoDeviceImpl::CreateDeviceInfo(options) };
 }
 
 DictPtr<IString, IDeviceType> CredentialDemoModule::onGetAvailableDeviceTypes()
@@ -31,7 +32,8 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
                                                const ComponentPtr& parent,
                                                const PropertyObjectPtr& config)
 {
-    auto info = CredentialDemoDeviceImpl::CreateDeviceInfo();
+    const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
+    auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
 
     auto credentialProvider = context.getCredentialProviders().getOrDefault("CmdLineCredentialProvider", nullptr);
     if (!credentialProvider.assigned())
@@ -41,6 +43,21 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
 
     return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
         config, context, parent, info, credentialProvider.requestCredentials(CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, config))).detach();
+}
+
+DictPtr<IString, IBaseObject> CredentialDemoModule::populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions)
+{
+    auto defaultOptions = Dict<IString, IBaseObject>({{"Manufacturer", "openDAQ"}, {"SerialNumber", "0"}});
+
+    for (const auto& [key, value] : inputOptions)
+    {
+        if (defaultOptions.hasKey(key))
+        {
+            defaultOptions.set(key, value);
+        }
+    }
+
+    return defaultOptions;
 }
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

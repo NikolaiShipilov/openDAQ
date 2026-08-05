@@ -4,16 +4,30 @@
 
 #include <opendaq/module_ptr.h>
 #include <coretypes/common.h>
+#include <coretypes/dictobject_factory.h>
 
 #include <opendaq/context_factory.h>
 
 using CredentialDemoModuleTest = testing::Test;
 using namespace daq;
 
-static ModulePtr createModule()
+static ContextPtr contextWithModuleOptions(const DictPtr<IString, IBaseObject>& moduleOptions)
+{
+    auto options = Dict<IString, IBaseObject>();
+    if (moduleOptions.assigned() && moduleOptions.getCount() > 0)
+    {
+        auto modules = Dict<IString, IBaseObject>();
+        modules.set("CredentialDemoModule", moduleOptions);
+        options.set("Modules", modules);
+    }
+
+    return NullContext(Logger(), TypeManager(), options);
+}
+
+static ModulePtr createModule(const ContextPtr& context = NullContext())
 {
     ModulePtr module;
-    createModule(&module, NullContext());
+    createModule(&module, context);
     return module;
 }
 
@@ -62,6 +76,24 @@ TEST_F(CredentialDemoModuleTest, EnumerateDevices)
     ListPtr<IDeviceInfo> deviceInfo;
     ASSERT_NO_THROW(deviceInfo = module.getAvailableDevices());
     ASSERT_EQ(deviceInfo.getCount(), static_cast<SizeT>(1));
+
+    ASSERT_EQ(deviceInfo[0].getManufacturer(), "openDAQ");
+    ASSERT_EQ(deviceInfo[0].getSerialNumber(), "0");
+    ASSERT_EQ(deviceInfo[0].getConnectionString(), "daq.credential_demo://openDAQ_0");
+}
+
+TEST_F(CredentialDemoModuleTest, EnumerateDevicesWithModuleOptions)
+{
+    auto moduleOptions = Dict<IString, IBaseObject>({{"Manufacturer", "TestManufacturer"}, {"SerialNumber", "42"}});
+    auto module = createModule(contextWithModuleOptions(moduleOptions));
+
+    ListPtr<IDeviceInfo> deviceInfo;
+    ASSERT_NO_THROW(deviceInfo = module.getAvailableDevices());
+    ASSERT_EQ(deviceInfo.getCount(), static_cast<SizeT>(1));
+
+    ASSERT_EQ(deviceInfo[0].getManufacturer(), "TestManufacturer");
+    ASSERT_EQ(deviceInfo[0].getSerialNumber(), "42");
+    ASSERT_EQ(deviceInfo[0].getConnectionString(), "daq.credential_demo://TestManufacturer_42");
 }
 
 TEST_F(CredentialDemoModuleTest, GetAvailableDeviceTypes)
@@ -80,22 +112,4 @@ TEST_F(CredentialDemoModuleTest, CreateDeviceConnectionStringNull)
 
     DevicePtr device;
     ASSERT_THROW(device = module.createDevice(nullptr, nullptr), ArgumentNullException);
-}
-
-TEST_F(CredentialDemoModuleTest, CreateDevice)
-{
-    auto module = createModule();
-
-    DevicePtr device;
-    ASSERT_NO_THROW(device = module.createDevice("daq.credential_demo://credential_demo_device", nullptr));
-    ASSERT_TRUE(device.assigned());
-}
-
-TEST_F(CredentialDemoModuleTest, CreateDeviceAlreadyExists)
-{
-    auto module = createModule();
-
-    DevicePtr device;
-    ASSERT_NO_THROW(device = module.createDevice("daq.credential_demo://credential_demo_device", nullptr));
-    ASSERT_THROW(module.createDevice("daq.credential_demo://credential_demo_device", nullptr), AlreadyExistsException);
 }

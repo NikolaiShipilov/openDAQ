@@ -32,7 +32,7 @@ class CredentialDemoDeviceImpl final : public Device
 public:
     explicit CredentialDemoDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials);
 
-    static DeviceInfoPtr CreateDeviceInfo();
+    static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
     static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config);
 };
