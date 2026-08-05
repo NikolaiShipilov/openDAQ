@@ -75,7 +75,7 @@ TEST_F(CredentialDemoModuleTest, EnumerateDevices)
 
     ListPtr<IDeviceInfo> deviceInfo;
     ASSERT_NO_THROW(deviceInfo = module.getAvailableDevices());
-    ASSERT_EQ(deviceInfo.getCount(), static_cast<SizeT>(1));
+    ASSERT_EQ(deviceInfo.getCount(), 1u);
 
     ASSERT_EQ(deviceInfo[0].getManufacturer(), "openDAQ");
     ASSERT_EQ(deviceInfo[0].getSerialNumber(), "0");
@@ -89,7 +89,7 @@ TEST_F(CredentialDemoModuleTest, EnumerateDevicesWithModuleOptions)
 
     ListPtr<IDeviceInfo> deviceInfo;
     ASSERT_NO_THROW(deviceInfo = module.getAvailableDevices());
-    ASSERT_EQ(deviceInfo.getCount(), static_cast<SizeT>(1));
+    ASSERT_EQ(deviceInfo.getCount(), 1u);
 
     ASSERT_EQ(deviceInfo[0].getManufacturer(), "TestManufacturer");
     ASSERT_EQ(deviceInfo[0].getSerialNumber(), "42");
@@ -102,7 +102,7 @@ TEST_F(CredentialDemoModuleTest, GetAvailableDeviceTypes)
 
     DictPtr<IString, IDeviceType> deviceTypes;
     ASSERT_NO_THROW(deviceTypes = module.getAvailableDeviceTypes());
-    ASSERT_EQ(deviceTypes.getCount(), static_cast<SizeT>(1));
+    ASSERT_EQ(deviceTypes.getCount(), 1u);
     ASSERT_TRUE(deviceTypes.hasKey("CredentialDemoDevice"));
 }
 
