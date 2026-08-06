@@ -16,6 +16,7 @@
 
 #pragma once
 #include <opendaq/component_type.h>
+#include <opendaq/credential_payload_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -24,6 +25,8 @@ BEGIN_NAMESPACE_OPENDAQ
 * [interfaceSmartPtr(IDeviceType, GenericDeviceTypePtr)]
 * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr, "<opendaq/component_type_ptr.h>")]
 * [interfaceLibrary(IComponentType, "opendaq")]
+* [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
+* [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
 */
 
 /*!
@@ -45,6 +48,13 @@ DECLARE_OPENDAQ_INTERFACE(IDeviceType, IComponentType)
      * The prefix is always found at the start of the connection string, before the "://" delimiter.
      */
     virtual ErrCode INTERFACE_FUNC getConnectionStringPrefix(IString** prefix) = 0;
+
+    /*!
+     * @brief Gets the supported credential payloads, keyed by payload id.
+     * @param[out] payloads The payload id -> payload descriptor dictionary.
+     */
+    // [templateType(payloads, IString, ICredentialPayloadDescriptor)]
+    virtual ErrCode INTERFACE_FUNC getSupportedPayloads(IDict** payloads) = 0;
 };
 /*!@}*/
 

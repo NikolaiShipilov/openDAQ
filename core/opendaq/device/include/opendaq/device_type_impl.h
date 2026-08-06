@@ -18,6 +18,8 @@
 #include <opendaq/component_type_impl.h>
 #include <opendaq/component_type_builder_ptr.h>
 #include <opendaq/device_type.h>
+#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -30,11 +32,13 @@ public:
                             const StringPtr& name,
                             const StringPtr& description,
                             const PropertyObjectPtr& defaultConfig,
-                            const StringPtr& prefix);
+                            const StringPtr& prefix,
+                            const DictPtr<IString, ICredentialPayloadDescriptor>& supportedPayloads = Dict<IString, ICredentialPayloadDescriptor>());
 
     explicit DeviceTypeImpl(const ComponentTypeBuilderPtr& builder);
 
     ErrCode INTERFACE_FUNC getConnectionStringPrefix(IString** prefix) override;
+    ErrCode INTERFACE_FUNC getSupportedPayloads(IDict** payloads) override;
 
     // ISerializable
     ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
@@ -42,6 +46,9 @@ public:
 
     static ConstCharPtr SerializeId();
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
+
+private:
+    DictPtr<IString, ICredentialPayloadDescriptor> supportedPayloads;
 };
 
 

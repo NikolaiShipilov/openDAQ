@@ -4,11 +4,13 @@
 #include <opendaq/function_block_type_impl.h>
 #include <opendaq/streaming_type_impl.h>
 #include <coretypes/validation.h>
+#include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 ComponentTypeBuilderImpl::ComponentTypeBuilderImpl(ComponentTypeSort sort)
     : sort(sort)
+    , supportedPayloads(Dict<IString, ICredentialPayloadDescriptor>())
 {
 }
 
@@ -122,6 +124,22 @@ ErrCode ComponentTypeBuilderImpl::getDefaultConfig(IPropertyObject** defaultConf
     OPENDAQ_PARAM_NOT_NULL(defaultConfig);
 
     *defaultConfig = this->defaultConfig.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ComponentTypeBuilderImpl::addSupportedPayload(IString* id, ICredentialPayloadDescriptor* payload)
+{
+    OPENDAQ_PARAM_NOT_NULL(id);
+    OPENDAQ_PARAM_NOT_NULL(payload);
+
+    return supportedPayloads->set(id, payload);
+}
+
+ErrCode ComponentTypeBuilderImpl::getSupportedPayloads(IDict** payloads)
+{
+    OPENDAQ_PARAM_NOT_NULL(payloads);
+
+    *payloads = supportedPayloads.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

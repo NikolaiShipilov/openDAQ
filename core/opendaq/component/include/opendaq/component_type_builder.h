@@ -17,6 +17,7 @@
 #pragma once
 #include <coreobjects/property_object.h>
 #include <opendaq/component_type.h>
+#include <opendaq/credential_payload_descriptor.h>
 #include <coretypes/stringobject.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -39,6 +40,8 @@ enum class ComponentTypeSort
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceLibrary(IComponentType, "opendaq")]
+ * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
  */
 
 /*!
@@ -164,6 +167,21 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
      * For example: Port=1000, OutputRate=5000, ...
      */
     virtual ErrCode INTERFACE_FUNC getDefaultConfig(IPropertyObject** defaultConfig) = 0;
+
+    // [returnSelf]
+    /*!
+     * @brief Adds a supported credential payload, keyed by payload id.
+     * @param id The payload id.
+     * @param payload The descriptor of the supported payload.
+     */
+    virtual ErrCode INTERFACE_FUNC addSupportedPayload(IString* id, ICredentialPayloadDescriptor* payload) = 0;
+
+    /*!
+     * @brief Gets the supported credential payloads, keyed by payload id.
+     * @param[out] payloads The payload id -> payload descriptor dictionary.
+     */
+    // [templateType(payloads, IString, ICredentialPayloadDescriptor)]
+    virtual ErrCode INTERFACE_FUNC getSupportedPayloads(IDict** payloads) = 0;
 };
 /*!@}*/
 

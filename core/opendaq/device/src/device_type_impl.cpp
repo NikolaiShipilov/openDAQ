@@ -13,13 +13,15 @@ DeviceTypeImpl::DeviceTypeImpl(const StringPtr& id,
                                const StringPtr& name,
                                const StringPtr& description,
                                const PropertyObjectPtr& defaultConfig,
-                               const StringPtr& prefix)
+                               const StringPtr& prefix,
+                               const DictPtr<IString, ICredentialPayloadDescriptor>& supportedPayloads)
     : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig)
+    , supportedPayloads(supportedPayloads)
 {
 }
 
 DeviceTypeImpl::DeviceTypeImpl(const ComponentTypeBuilderPtr& builder)
-    : DeviceTypeImpl(builder.getId(), builder.getName(), builder.getDescription(), builder.getDefaultConfig(), builder.getConnectionStringPrefix())
+    : DeviceTypeImpl(builder.getId(), builder.getName(), builder.getDescription(), builder.getDefaultConfig(), builder.getConnectionStringPrefix(), builder.getSupportedPayloads())
 {
 }
 
@@ -28,6 +30,14 @@ ErrCode DeviceTypeImpl::getConnectionStringPrefix(IString** prefix)
     OPENDAQ_PARAM_NOT_NULL(prefix);
 
     *prefix = this->prefix.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode DeviceTypeImpl::getSupportedPayloads(IDict** payloads)
+{
+    OPENDAQ_PARAM_NOT_NULL(payloads);
+
+    *payloads = this->supportedPayloads.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
