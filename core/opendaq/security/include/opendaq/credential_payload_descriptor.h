@@ -29,6 +29,11 @@ enum class CredentialPayloadFormat : EnumType
     KeyValuePairs,  ///< N string pairs - e.g. UserName / Password.
 };
 
+/*#
+ * [interfaceLibrary(IPropertyObject, "coreobjects")]
+ * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
+ */
+
 /*!
  * @brief Describes the details of the payload required for an authentication method used by the module and produced by credential provider.
  */
@@ -53,5 +58,10 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
      */
     virtual ErrCode INTERFACE_FUNC getDescription(IString** description) = 0;
 };
+
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
+    LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor,
+    IList*, keys, IString*, description
+)
 
 END_NAMESPACE_OPENDAQ
