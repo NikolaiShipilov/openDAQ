@@ -5,12 +5,16 @@ function(rtgen_component_${BASE_NAME})
     rtgen(SRC_CredentialPayload credential_payload.h)
     rtgen(SRC_CredentialRequest credential_request.h)
     rtgen(SRC_CredentialRequestBuilder credential_request_builder.h)
+    rtgen(SRC_AuthenticationConfig authentication_config.h)
+    rtgen(SRC_CredentialPayloadDescriptor credential_payload_descriptor.h)
 
     set(SRC_PublicHeaders_Component_Generated
         ${SRC_CredentialProvider_PublicHeaders}
         ${SRC_CredentialPayload_PublicHeaders}
         ${SRC_CredentialRequest_PublicHeaders}
         ${SRC_CredentialRequestBuilder_PublicHeaders}
+        ${SRC_AuthenticationConfig_PublicHeaders}
+        ${SRC_CredentialPayloadDescriptor_PublicHeaders}
         PARENT_SCOPE
     )
 
@@ -19,6 +23,8 @@ function(rtgen_component_${BASE_NAME})
         ${SRC_CredentialPayload_PrivateHeaders}
         ${SRC_CredentialRequest_PrivateHeaders}
         ${SRC_CredentialRequestBuilder_PrivateHeaders}
+        ${SRC_AuthenticationConfig_PrivateHeaders}
+        ${SRC_CredentialPayloadDescriptor_PrivateHeaders}
         PARENT_SCOPE
     )
 
@@ -27,6 +33,8 @@ function(rtgen_component_${BASE_NAME})
         ${SRC_CredentialPayload_Cpp}
         ${SRC_CredentialRequest_Cpp}
         ${SRC_CredentialRequestBuilder_Cpp}
+        ${SRC_AuthenticationConfig_Cpp}
+        ${SRC_CredentialPayloadDescriptor_Cpp}
         PARENT_SCOPE
     )
 endfunction()
@@ -47,6 +55,8 @@ function(create_component_source_groups_${BASE_NAME})
         ${SDK_HEADERS_DIR}/credential_request_builder_impl.h
         ${SDK_HEADERS_DIR}/userpass_credential_payload_impl.h
         ${SDK_HEADERS_DIR}/cmd_line_credential_provider_impl.h
+        ${SDK_HEADERS_DIR}/authentication_config.h
+        ${SDK_HEADERS_DIR}/credential_payload_descriptor.h
         ${SDK_SRC_DIR}/credential_request_impl.cpp
         ${SDK_SRC_DIR}/userpass_credential_payload_impl.cpp
         ${SDK_SRC_DIR}/cmd_line_credential_provider_impl.cpp
@@ -62,6 +72,8 @@ set(SRC_PublicHeaders_Component
     credential_request.h
     credential_request_builder.h
     credential_request_factory.h
+    authentication_config.h
+    credential_payload_descriptor.h
     PARENT_SCOPE
 )
 
