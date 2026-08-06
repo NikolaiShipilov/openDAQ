@@ -18,13 +18,27 @@
 #include <coretypes/baseobject.h>
 #include <opendaq/credential_request.h>
 #include <opendaq/credential_payload.h>
+#include <opendaq/credential_payload_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
+
+/*#
+ * [interfaceLibrary(IInteger, "coretypes")]
+ * [interfaceSmartPtr(IInteger, IntegerPtr, "<coretypes/integer.h>")]
+ */
 
 DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 {
     virtual ErrCode INTERFACE_FUNC getName(IString** name) = 0;
     virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials) = 0;
+
+    // [elementType(formats, IInteger)]
+    /*!
+     * @brief Gets a list of the credential payload formats this provider can provide. Used for
+     * format-matching against a device type's supported payload formats.
+     * @param[out] formats The list of supported payload formats.
+     */
+    virtual ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) = 0;
 };
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, CmdLineCredentialProvider, ICredentialProvider)

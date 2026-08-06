@@ -1,5 +1,6 @@
 #include <opendaq/cmd_line_credential_provider_impl.h>
 #include <opendaq/credential_payload_factory.h>
+#include <coretypes/listobject_factory.h>
 #include <iostream>
 
 #ifdef _WIN32
@@ -22,6 +23,17 @@ ErrCode CmdLineCredentialProviderImpl::getName(IString** name)
     OPENDAQ_PARAM_NOT_NULL(name);
 
     *name = String(CmdLineCredentialProviderName).detach();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CmdLineCredentialProviderImpl::getSupportedPayloadFormats(IList** formats)
+{
+    OPENDAQ_PARAM_NOT_NULL(formats);
+
+    auto supportedFormats = List<IInteger>();
+    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::KeyValuePairs));
+
+    *formats = supportedFormats.detach();
     return OPENDAQ_SUCCESS;
 }
 
