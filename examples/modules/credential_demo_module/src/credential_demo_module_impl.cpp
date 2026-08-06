@@ -3,6 +3,7 @@
 #include <credential_demo_module/version.h>
 
 #include <coretypes/version_info_factory.h>
+#include <opendaq/credential_payload_descriptor_factory.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
@@ -36,14 +37,32 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
     CredentialDemoDeviceImpl::ValidateConnectionString(connectionString, info);
 
-    auto credentialProvider = context.getCredentialProviders().getOrDefault("CmdLineCredentialProvider", nullptr);
+    auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), CredentialDemoDeviceImpl::CreateType());
     if (!credentialProvider.assigned())
     {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no relevant credential provider is registered");
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no credential provider supporting a compatible payload format is registered");
     }
 
     return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
         config, context, parent, info, credentialProvider.requestCredentials(CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, config))).detach();
+}
+
+CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
+                                                                           const DeviceTypePtr& deviceType)
+{
+    for (const auto& [_, payload] : deviceType.getSupportedPayloads())
+    {
+        for (const auto& [_, provider] : providers)
+        {
+            for (const auto& format : provider.getSupportedPayloadFormats())
+            {
+                if (static_cast<CredentialPayloadFormat>(static_cast<Int>(format)) == payload.getFormat())
+                    return provider;
+            }
+        }
+    }
+
+    return nullptr;
 }
 
 DictPtr<IString, IBaseObject> CredentialDemoModule::populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions)

@@ -2,15 +2,19 @@
 
 #include <opendaq/device_info_factory.h>
 #include <opendaq/device_type_factory.h>
+#include <opendaq/component_type_builder_factory.h>
 #include <opendaq/credential_request_factory.h>
+#include <opendaq/credential_payload_descriptor_factory.h>
 #include <opendaq/server_capability_config.h>
 #include <opendaq/device_info_internal.h>
+#include <coretypes/listobject_factory.h>
 #include <fmt/format.h>
 #include <string_view>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
 static constexpr std::string_view GenericDeviceAddress = "credential_demo_device";
+static const std::string UserNamePasswordPayloadId = "UserNamePassword";
 
 CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials)
     : Device(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
@@ -54,10 +58,15 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
-    return DeviceType("CredentialDemoDevice",
-                      "Credential demo device",
-                      "openDAQ authentication/credential framework showcase device",
-                      "daq.credential_demo");
+    auto payload = KeyValuePayloadDescriptor(List<IString>("UserName", "Password"), "Username and password");
+
+    return DeviceTypeBuilder()
+        .setId("CredentialDemoDevice")
+        .setName("Credential demo device")
+        .setDescription("openDAQ authentication/credential framework showcase device")
+        .setConnectionStringPrefix("daq.credential_demo")
+        .addSupportedPayload(UserNamePasswordPayloadId, payload)
+        .build();
 }
 
 CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config)

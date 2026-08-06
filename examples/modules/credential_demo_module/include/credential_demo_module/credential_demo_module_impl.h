@@ -36,6 +36,7 @@ public:
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);
+    static CredentialProviderPtr FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers, const DeviceTypePtr& deviceType);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE
