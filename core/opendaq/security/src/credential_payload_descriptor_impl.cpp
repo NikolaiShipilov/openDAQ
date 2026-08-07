@@ -26,8 +26,23 @@ ErrCode CredentialPayloadDescriptorBaseImpl::getDescription(IString** descriptio
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode CredentialPayloadDescriptorBaseImpl::serialize(ISerializer* serializer)
+{
+    serializer->startTaggedObject(this);
+    serializeCustomValues(serializer);
+    serializer->endObject();
+    return OPENDAQ_SUCCESS;
+}
+
+void CredentialPayloadDescriptorBaseImpl::serializeCustomValues(ISerializer* serializer)
+{
+    serializer->key("Description");
+    serializer->writeString(description.getCharPtr(), description.getLength());
+}
+
 KeyValuePayloadDescriptorImpl::KeyValuePayloadDescriptorImpl(const ListPtr<IString>& keys, const StringPtr& description)
     : CredentialPayloadDescriptorBaseImpl(BuildParameters(keys), description)
+    , keys(keys)
 {
 }
 
@@ -47,6 +62,45 @@ ErrCode KeyValuePayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format
 
     *format = CredentialPayloadFormat::KeyValuePairs;
     return OPENDAQ_SUCCESS;
+}
+
+ErrCode KeyValuePayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
+{
+    *id = SerializeId();
+    return OPENDAQ_SUCCESS;
+}
+
+ConstCharPtr KeyValuePayloadDescriptorImpl::SerializeId()
+{
+    return "KeyValuePayloadDescriptor";
+}
+
+void KeyValuePayloadDescriptorImpl::serializeCustomValues(ISerializer* serializer)
+{
+    CredentialPayloadDescriptorBaseImpl::serializeCustomValues(serializer);
+
+    serializer->key("Keys");
+    serializer->startList();
+    for (const auto& key : keys)
+        serializer->writeString(key.getCharPtr(), key.getLength());
+    serializer->endList();
+}
+
+ErrCode KeyValuePayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
+{
+    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
+    const auto contextPtr = BaseObjectPtr::Borrow(context);
+    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
+
+    return daqTry(
+        [&]
+        {
+            const auto keys = serializedObj.readList<IString>("Keys", contextPtr, factoryCallbackPtr);
+            const auto description = serializedObj.readString("Description");
+
+            *obj = createWithImplementation<ICredentialPayloadDescriptor, KeyValuePayloadDescriptorImpl>(keys, description).detach();
+            return OPENDAQ_SUCCESS;
+        });
 }
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IList*, keys, IString*, description)

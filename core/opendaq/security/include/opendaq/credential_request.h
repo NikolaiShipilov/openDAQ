@@ -37,6 +37,18 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) = 0;
 
     /*!
+     * @brief Gets the manufacturer of the device the request is for.
+     * @param[out] manufacturer The device manufacturer.
+     */
+    virtual ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) = 0;
+
+    /*!
+     * @brief Gets the serial number of the device the request is for.
+     * @param[out] serialNumber The device serial number.
+     */
+    virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
+
+    /*!
      * @brief Gets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on save & replayed on load.
      * @param[out] payloadId The payload id.
      */

@@ -57,6 +57,34 @@ ErrCode CredentialRequestBuilderImpl::getConnectionString(IString** connectionSt
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode CredentialRequestBuilderImpl::setManufacturer(IString* manufacturer)
+{
+    this->manufacturer = manufacturer;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getManufacturer(IString** manufacturer)
+{
+    OPENDAQ_PARAM_NOT_NULL(manufacturer);
+
+    *manufacturer = this->manufacturer.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::setSerialNumber(IString* serialNumber)
+{
+    this->serialNumber = serialNumber;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getSerialNumber(IString** serialNumber)
+{
+    OPENDAQ_PARAM_NOT_NULL(serialNumber);
+
+    *serialNumber = this->serialNumber.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode CredentialRequestBuilderImpl::getMetaData(IPropertyObject** metaData)
 {
     OPENDAQ_PARAM_NOT_NULL(metaData);

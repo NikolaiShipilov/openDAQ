@@ -44,6 +44,16 @@ virtual ErrCode INTERFACE_FUNC setConnectionString(IString* connectionString) = 
 virtual ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) = 0;
 
 // [returnSelf]
+virtual ErrCode INTERFACE_FUNC setManufacturer(IString* manufacturer) = 0;
+
+virtual ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) = 0;
+
+// [returnSelf]
+virtual ErrCode INTERFACE_FUNC setSerialNumber(IString* serialNumber) = 0;
+
+virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
+
+// [returnSelf]
 virtual ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) = 0;
 
 virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;

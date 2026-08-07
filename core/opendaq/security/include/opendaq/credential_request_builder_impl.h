@@ -35,6 +35,11 @@ public:
     ErrCode INTERFACE_FUNC setConnectionString(IString* connectionString) override;
     ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) override;
 
+    ErrCode INTERFACE_FUNC setManufacturer(IString* manufacturer) override;
+    ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) override;
+    ErrCode INTERFACE_FUNC setSerialNumber(IString* serialNumber) override;
+    ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) override;
+
     ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) override;
     ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) override;
 
@@ -47,6 +52,8 @@ private:
     StringPtr connectionString;
     ComponentTypePtr componentType;
     PropertyObjectPtr metaData;
+    StringPtr manufacturer;
+    StringPtr serialNumber;
     StringPtr payloadId;
     CredentialPayloadDescriptorPtr payloadDescriptor;
 };

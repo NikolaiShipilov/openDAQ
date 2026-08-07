@@ -19,15 +19,17 @@
 #include <coretypes/impl.h>
 #include <coretypes/list_ptr.h>
 #include <coreobjects/property_object_ptr.h>
+#include <coretypes/serializable.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
  * @brief Common base for `ICredentialPayloadDescriptor` implementations. Stores and returns the
- * `parameters`/`description` given at construction; `getFormat` is left to the format-specific
- * subclass, which is also responsible for shaping the `parameters` property object it passes in.
+ * `parameters`/`description` given at construction; `getFormat` and `ISerializable` implementation are left to the
+ * format-specific subclass, which is also responsible for shaping the `parameters` property object it
+ * passes in.
  */
-class CredentialPayloadDescriptorBaseImpl : public ImplementationOf<ICredentialPayloadDescriptor>
+class CredentialPayloadDescriptorBaseImpl : public ImplementationOf<ICredentialPayloadDescriptor, ISerializable>
 {
 public:
     CredentialPayloadDescriptorBaseImpl(const PropertyObjectPtr& parameters, const StringPtr& description);
@@ -35,7 +37,12 @@ public:
     ErrCode INTERFACE_FUNC getParameters(IPropertyObject** parameters) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
 
-private:
+    // ISerializable
+    ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
+
+protected:
+    virtual void serializeCustomValues(ISerializer* serializer);
+
     PropertyObjectPtr parameters;
     StringPtr description;
 };
@@ -47,8 +54,20 @@ public:
 
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
 
+    // ISerializable
+    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
+    static ConstCharPtr SerializeId();
+    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
+
+protected:
+    void serializeCustomValues(ISerializer* serializer) override;
+
 private:
     static PropertyObjectPtr BuildParameters(const ListPtr<IString>& keys);
+
+    ListPtr<IString> keys;
 };
+
+OPENDAQ_REGISTER_DESERIALIZE_FACTORY(KeyValuePayloadDescriptorImpl)
 
 END_NAMESPACE_OPENDAQ

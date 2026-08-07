@@ -17,6 +17,7 @@
 #pragma once
 
 #include <coretypes/impl.h>
+#include <coretypes/serializable.h>
 #include <opendaq/credential_request.h>
 #include <opendaq/credential_request_builder.h>
 #include <opendaq/component_type_ptr.h>
@@ -24,7 +25,7 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-class CredentialRequestImpl : public ImplementationOf<ICredentialRequest>
+class CredentialRequestImpl : public ImplementationOf<ICredentialRequest, ISerializable>
 {
 public:
     explicit CredentialRequestImpl(ICredentialRequestBuilder* credentialRequestBuilder);
@@ -32,8 +33,16 @@ public:
     ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) override;
     ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) override;
     ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) override;
+    ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) override;
+    ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) override;
     ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
+
+    // ISerializable
+    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
+    ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
+    static ConstCharPtr SerializeId();
+    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
 private:
     explicit CredentialRequestImpl(const DictPtr<IString, IBaseObject>& packedBuilder);
@@ -42,8 +51,12 @@ private:
     StringPtr connectionString;
     ComponentTypePtr componentType;
     PropertyObjectPtr metaData;
+    StringPtr manufacturer;
+    StringPtr serialNumber;
     StringPtr payloadId;
     CredentialPayloadDescriptorPtr payloadDescriptor;
 };
+
+OPENDAQ_REGISTER_DESERIALIZE_FACTORY(CredentialRequestImpl)
 
 END_NAMESPACE_OPENDAQ
