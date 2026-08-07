@@ -10,6 +10,8 @@ DictPtr<IString, IBaseObject> CredentialRequestImpl::PackBuilder(ICredentialRequ
     params.set("ComponentType", builderPtr.getComponentType());
     params.set("ConnectionString", builderPtr.getConnectionString());
     params.set("MetaData", builderPtr.getMetaData());
+    params.set("PayloadId", builderPtr.getPayloadId());
+    params.set("PayloadDescriptor", builderPtr.getPayloadDescriptor());
 
     return params;
 }
@@ -18,6 +20,8 @@ CredentialRequestImpl::CredentialRequestImpl(const DictPtr<IString, IBaseObject>
     : connectionString(packedBuilder.get("ConnectionString"))
     , componentType(packedBuilder.get("ComponentType"))
     , metaData(packedBuilder.get("MetaData"))
+    , payloadId(packedBuilder.get("PayloadId"))
+    , payloadDescriptor(packedBuilder.get("PayloadDescriptor"))
 {
 }
 
@@ -47,6 +51,22 @@ ErrCode CredentialRequestImpl::getMetaData(IPropertyObject** metaData)
     OPENDAQ_PARAM_NOT_NULL(metaData);
 
     *metaData = this->metaData.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestImpl::getPayloadId(IString** payloadId)
+{
+    OPENDAQ_PARAM_NOT_NULL(payloadId);
+
+    *payloadId = this->payloadId.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestImpl::getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor)
+{
+    OPENDAQ_PARAM_NOT_NULL(descriptor);
+
+    *descriptor = this->payloadDescriptor.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

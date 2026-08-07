@@ -65,6 +65,34 @@ ErrCode CredentialRequestBuilderImpl::getMetaData(IPropertyObject** metaData)
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode CredentialRequestBuilderImpl::setPayloadId(IString* payloadId)
+{
+    this->payloadId = payloadId;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getPayloadId(IString** payloadId)
+{
+    OPENDAQ_PARAM_NOT_NULL(payloadId);
+
+    *payloadId = this->payloadId.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor)
+{
+    this->payloadDescriptor = descriptor;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor)
+{
+    OPENDAQ_PARAM_NOT_NULL(descriptor);
+
+    *descriptor = this->payloadDescriptor.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, CredentialRequestBuilder, ICredentialRequestBuilder)
 
 END_NAMESPACE_OPENDAQ

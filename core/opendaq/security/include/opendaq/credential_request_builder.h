@@ -25,6 +25,8 @@ BEGIN_NAMESPACE_OPENDAQ
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
  * [interfaceLibrary(IProperty, "coreobjects")]
  * [interfaceSmartPtr(IProperty, PropertyPtr, "<coreobjects/property_ptr.h>")]
+ * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
  */
 
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequestBuilder, IBaseObject)
@@ -45,6 +47,16 @@ virtual ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) =
 virtual ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) = 0;
 
 virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;
+
+// [returnSelf]
+virtual ErrCode INTERFACE_FUNC setPayloadId(IString* payloadId) = 0;
+
+virtual ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) = 0;
+
+// [returnSelf]
+virtual ErrCode INTERFACE_FUNC setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor) = 0;
+
+virtual ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
 };
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
