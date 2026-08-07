@@ -8,6 +8,7 @@
 #include <opendaq/server_capability_config.h>
 #include <opendaq/device_info_internal.h>
 #include <coretypes/listobject_factory.h>
+#include <coreobjects/property_factory.h>
 #include <fmt/format.h>
 #include <string_view>
 
@@ -71,8 +72,15 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 
 CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config)
 {
+    auto deviceType = CreateType();
+
     auto builder = CredentialRequestBuilder();
-    return builder.setComponentType(CreateType()).setConnectionString(connectionString).build();
+    builder.setConnectionString(connectionString);
+    builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeId", deviceType.getId()).setDescription("The openDAQ device type ID").build());
+    builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeName", deviceType.getName()).setDescription("The openDAQ device type name").build());
+    builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeDescription", deviceType.getDescription()).setDescription("The openDAQ device type description").build());
+
+    return builder.build();
 }
 
 void CredentialDemoDeviceImpl::ValidateConnectionString(const StringPtr& connectionString, const DeviceInfoPtr& info)

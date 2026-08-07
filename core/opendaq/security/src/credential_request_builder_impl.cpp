@@ -5,7 +5,6 @@
 BEGIN_NAMESPACE_OPENDAQ
 CredentialRequestBuilderImpl::CredentialRequestBuilderImpl()
     : connectionString(nullptr)
-    , componentType(nullptr)
     , metaData(PropertyObject())
 {
 }
@@ -24,12 +23,6 @@ ErrCode CredentialRequestBuilderImpl::build(ICredentialRequest** request)
         });
 }
 
-ErrCode CredentialRequestBuilderImpl::setComponentType(IComponentType* componentType)
-{
-    this->componentType = componentType;
-    return OPENDAQ_SUCCESS;
-}
-
 ErrCode CredentialRequestBuilderImpl::setConnectionString(IString* connectionString)
 {
     this->connectionString = connectionString;
@@ -39,14 +32,6 @@ ErrCode CredentialRequestBuilderImpl::setConnectionString(IString* connectionStr
 ErrCode CredentialRequestBuilderImpl::addMetaDataProperty(IProperty* property)
 {
     return metaData->addProperty(property);
-}
-
-ErrCode CredentialRequestBuilderImpl::getComponentType(IComponentType** componentType)
-{
-    OPENDAQ_PARAM_NOT_NULL(componentType);
-
-    *componentType = this->componentType.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
 }
 
 ErrCode CredentialRequestBuilderImpl::getConnectionString(IString** connectionString)

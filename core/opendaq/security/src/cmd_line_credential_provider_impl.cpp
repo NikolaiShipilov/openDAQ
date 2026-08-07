@@ -75,12 +75,14 @@ void CmdLineCredentialProviderImpl::printRequestDetails(const CredentialRequestP
     std::cout << "Authentication required\n";
     std::cout << "============================================================\n\n";
 
-    if (const auto type = request.getComponentType(); type.assigned())
-        std::cout << "Component type : " << type.getName() << '\n';
-
-
     if (const auto connectionString = request.getConnectionString(); connectionString.assigned() && connectionString.getLength() > 0)
         std::cout << "Connection string : " << connectionString << '\n';
+
+    if (const auto metaData = request.getMetaData(); metaData.assigned())
+    {
+        for (const auto& property : metaData.getAllProperties())
+            std::cout << property.getDescription() << " (" << property.getName() << ") : " << metaData.getPropertyValue(property.getName()) << '\n';
+    }
 
     std::cout << '\n';
 }

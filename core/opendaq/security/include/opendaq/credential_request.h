@@ -16,14 +16,14 @@
 
 #pragma once
 #include <coretypes/baseobject.h>
-#include <opendaq/component_type.h>
+#include <coreobjects/property_object_ptr.h>
 #include <opendaq/credential_payload_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
+ * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
  * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
  * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
  */
@@ -32,7 +32,6 @@ struct ICredentialRequestBuilder;
 
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
 {
-    virtual ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) = 0;
     virtual ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) = 0;
     virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) = 0;
 

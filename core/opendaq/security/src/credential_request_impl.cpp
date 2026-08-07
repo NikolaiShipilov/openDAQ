@@ -9,7 +9,6 @@ DictPtr<IString, IBaseObject> CredentialRequestImpl::PackBuilder(ICredentialRequ
 {
     const auto builderPtr = CredentialRequestBuilderPtr::Borrow(builder);
     auto params = Dict<IString, IBaseObject>();
-    params.set("ComponentType", builderPtr.getComponentType());
     params.set("ConnectionString", builderPtr.getConnectionString());
     params.set("MetaData", builderPtr.getMetaData());
     params.set("Manufacturer", builderPtr.getManufacturer());
@@ -22,7 +21,6 @@ DictPtr<IString, IBaseObject> CredentialRequestImpl::PackBuilder(ICredentialRequ
 
 CredentialRequestImpl::CredentialRequestImpl(const DictPtr<IString, IBaseObject>& packedBuilder)
     : connectionString(packedBuilder.get("ConnectionString"))
-    , componentType(packedBuilder.get("ComponentType"))
     , metaData(packedBuilder.get("MetaData"))
     , manufacturer(packedBuilder.get("Manufacturer"))
     , serialNumber(packedBuilder.get("SerialNumber"))
@@ -34,14 +32,6 @@ CredentialRequestImpl::CredentialRequestImpl(const DictPtr<IString, IBaseObject>
 CredentialRequestImpl::CredentialRequestImpl(ICredentialRequestBuilder* credentialRequestBuilder)
     : CredentialRequestImpl(PackBuilder(credentialRequestBuilder))
 {
-}
-
-ErrCode CredentialRequestImpl::getComponentType(IComponentType** componentType)
-{
-    OPENDAQ_PARAM_NOT_NULL(componentType);
-
-    *componentType = this->componentType.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
 }
 
 ErrCode CredentialRequestImpl::getConnectionString(IString** connectionString)
@@ -113,12 +103,6 @@ ErrCode CredentialRequestImpl::serialize(ISerializer* serializer)
         serializer->writeString(connectionString.getCharPtr(), connectionString.getLength());
     }
 
-    if (componentType.assigned())
-    {
-        serializer->key("ComponentType");
-        componentType.serialize(serializer);
-    }
-
     if (metaData.assigned())
     {
         serializer->key("MetaData");
@@ -166,9 +150,6 @@ ErrCode CredentialRequestImpl::Deserialize(ISerializedObject* serialized, IBaseO
 
             if (serializedObj.hasKey("ConnectionString"))
                 builder.setConnectionString(serializedObj.readString("ConnectionString"));
-
-            if (serializedObj.hasKey("ComponentType"))
-                builder.setComponentType(serializedObj.readObject("ComponentType", contextPtr, factoryCallbackPtr));
 
             if (serializedObj.hasKey("MetaData"))
             {

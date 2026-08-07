@@ -17,7 +17,7 @@
 #pragma once
 #include <coretypes/baseobject.h>
 #include <coretypes/string_ptr.h>
-#include <coreobjects/property_object.h>
+#include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -31,7 +31,7 @@ enum class CredentialPayloadFormat : EnumType
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
+ * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
  */
 
 /*!

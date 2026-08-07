@@ -16,6 +16,7 @@
 
 #pragma once
 #include <coretypes/baseobject.h>
+#include <coreobjects/property.h>
 #include <opendaq/credential_request.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -32,11 +33,6 @@ BEGIN_NAMESPACE_OPENDAQ
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequestBuilder, IBaseObject)
 {
 virtual ErrCode INTERFACE_FUNC build(ICredentialRequest** request) = 0;
-
-// [returnSelf]
-virtual ErrCode INTERFACE_FUNC setComponentType(IComponentType* componentType) = 0;
-
-virtual ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) = 0;
 
 // [returnSelf]
 virtual ErrCode INTERFACE_FUNC setConnectionString(IString* connectionString) = 0;

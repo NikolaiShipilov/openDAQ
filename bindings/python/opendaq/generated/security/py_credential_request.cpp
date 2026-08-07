@@ -40,15 +40,6 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
 {
     cls.doc() = "";
 
-    cls.def_property_readonly("component_type",
-        [](daq::ICredentialRequest *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
-            return objectPtr.getComponentType().detach();
-        },
-        py::return_value_policy::take_ownership,
-        "");
     cls.def_property_readonly("connection_string",
         [](daq::ICredentialRequest *object)
         {
