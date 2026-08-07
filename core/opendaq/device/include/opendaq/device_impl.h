@@ -149,6 +149,12 @@ public:
     ErrCode INTERFACE_FUNC getAvailableDevices(IList** availableDevices) override;
     ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) override;
     ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config = nullptr) override;
+    ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
+                                                  IString* connectionString,
+                                                  IString* manufacturer,
+                                                  IString* serialNumber,
+                                                  IPropertyObject* config,
+                                                  IAuthenticationConfig* authenticationConfig) override;
     ErrCode INTERFACE_FUNC addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes = nullptr, IDict* errorInfos = nullptr) override;
     ErrCode INTERFACE_FUNC removeDevice(IDevice* device) override;
     ErrCode INTERFACE_FUNC getDevices(IList** subDevices, ISearchFilter* searchFilter = nullptr) override;
@@ -1345,6 +1351,17 @@ ErrCode GenericDevice<TInterface, Interfaces...>::addDevice(IDevice** device, IS
 
     *device = devicePtr.detach();
     return errCode;
+}
+
+template <typename TInterface, typename... Interfaces>
+ErrCode GenericDevice<TInterface, Interfaces...>::addAuthenticatedDevice(IDevice** /*device*/,
+                                                                         IString* /*connectionString*/,
+                                                                         IString* /*manufacturer*/,
+                                                                         IString* /*serialNumber*/,
+                                                                         IPropertyObject* /*config*/,
+                                                                         IAuthenticationConfig* /*authenticationConfig*/)
+{
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED);
 }
 
 template <typename TInterface, typename... Interfaces>

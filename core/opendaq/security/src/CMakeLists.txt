@@ -56,6 +56,8 @@ function(create_component_source_groups_${BASE_NAME})
         ${SDK_HEADERS_DIR}/userpass_credential_payload_impl.h
         ${SDK_HEADERS_DIR}/cmd_line_credential_provider_impl.h
         ${SDK_HEADERS_DIR}/authentication_config.h
+        ${SDK_HEADERS_DIR}/authentication_config_factory.h
+        ${SDK_HEADERS_DIR}/authentication_config_impl.h
         ${SDK_HEADERS_DIR}/credential_payload_descriptor.h
         ${SDK_HEADERS_DIR}/credential_payload_descriptor_factory.h
         ${SDK_HEADERS_DIR}/credential_payload_descriptor_impl.h
@@ -64,6 +66,7 @@ function(create_component_source_groups_${BASE_NAME})
         ${SDK_SRC_DIR}/cmd_line_credential_provider_impl.cpp
         ${SDK_SRC_DIR}/credential_request_builder_impl.cpp
         ${SDK_SRC_DIR}/credential_payload_descriptor_impl.cpp
+        ${SDK_SRC_DIR}/authentication_config_impl.cpp
     )
 endfunction()
 
@@ -76,6 +79,7 @@ set(SRC_PublicHeaders_Component
     credential_request_builder.h
     credential_request_factory.h
     authentication_config.h
+    authentication_config_factory.h
     credential_payload_descriptor.h
     credential_payload_descriptor_factory.h
     PARENT_SCOPE
@@ -87,6 +91,7 @@ set(SRC_PrivateHeaders_Component
     cmd_line_credential_provider_impl.h
     userpass_credential_payload_impl.h
     credential_payload_descriptor_impl.h
+    authentication_config_impl.h
     PARENT_SCOPE
 )
 
@@ -96,5 +101,6 @@ set(SRC_Cpp_Component
     cmd_line_credential_provider_impl.cpp
     credential_request_builder_impl.cpp
     credential_payload_descriptor_impl.cpp
+    authentication_config_impl.cpp
     PARENT_SCOPE
 )

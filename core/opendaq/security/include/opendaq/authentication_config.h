@@ -26,25 +26,43 @@ BEGIN_NAMESPACE_OPENDAQ
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
  */
 
+/*!
+ * @brief Carries the authentication settings used for a single connection attempt to a device.
+ *
+ * Credential settings do not live in the add-device config or its default. They travel in a dedicated
+ * authentication config object that exists alongside the config and is never serialized.
+ *
+ * An authentication config carries:
+ * - The selected payload - its id and descriptor, fixed at construction from one of the type's supported
+ *   payloads.
+ * - The config - a property object whose fields follow the selected payload's descriptor, covering
+ *   provider hints (e.g. a certificate path) and in some cases even directly supplied credentials.
+ *   It is supplied for this connection attempt only, and is never saved.
+ */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IBaseObject)
 {
     /*!
-     * @brief Gets the id of the payload (secret shape) this authentication method produces.
+     * @brief Gets the id of the payload associated with selected authentication method.
      * @param[out] payloadId The payload id.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) = 0;
 
     /*!
-     * @brief Gets the descriptor of the payload this authentication method produces.
+     * @brief Gets the descriptor of the payload which selected authentication method uses.
      * @param[out] descriptor The payload descriptor.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
 
     /*!
-     * @brief Gets additional, method-specific configuration.
+     * @brief Gets additional configuration specific to selected authentication method.
      * @param[out] config The configuration property object.
      */
     virtual ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) = 0;
 };
+
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
+    LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
+    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor
+)
 
 END_NAMESPACE_OPENDAQ
