@@ -72,7 +72,14 @@ public:
     ErrCode INTERFACE_FUNC getDiscoveryInfo(IDeviceInfo** deviceInfo, IString* manufacturer, IString* serialNumber) override;
 
 private:
-    
+
+    ErrCode createDeviceInternal(IDevice** device,
+                                 IString* connectionString,
+                                 IComponent* parent,
+                                 IPropertyObject* config,
+                                 bool authenticated,
+                                 IAuthenticationConfig* authenticationConfig);
+
     static void PopulateDeviceTypeConfigFromConnStrOptions(PropertyObjectPtr& deviceTypeConfig,
                                                            const tsl::ordered_map<std::string, ObjectPtr<IBaseObject>>& options);
     static PropertyObjectPtr PopulateDeviceTypeConfig(PropertyObjectPtr& addDeviceConfig,
