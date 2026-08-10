@@ -203,8 +203,6 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      * @param connectionString The connection string containing the address of the device. In example an
      * IPv4/IPv6 address. The connection string can be found in the Device Info objects returned by
      * `getAvailableDevices`.
-     * @param manufacturer The manufacturer of the device to connect to. If it is known in advance.
-     * @param serialNumber The serial number of the device to connect to. If it is known in advance.
      * @param config A config object to configure a client device. This object can contain properties like max sample rate,
      * port to use for 3rd party communication, number of channels to generate, or other device specific settings. Can be
      * created from its corresponding Device type object. In case of a null value, it will use the default configuration.
@@ -212,8 +210,6 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      */
     virtual ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
                                                           IString* connectionString,
-                                                          IString* manufacturer = nullptr,
-                                                          IString* serialNumber = nullptr,
                                                           IPropertyObject* config = nullptr,
                                                           IAuthenticationConfig* authenticationConfig = nullptr) = 0;
 

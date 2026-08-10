@@ -56,8 +56,6 @@ public:
     ErrCode INTERFACE_FUNC createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config = nullptr) override;
     ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
                                                      IString* connectionString,
-                                                     IString* manufacturer,
-                                                     IString* serialNumber,
                                                      IComponent* parent,
                                                      IPropertyObject* config,
                                                      IAuthenticationConfig* authenticationConfig) override;

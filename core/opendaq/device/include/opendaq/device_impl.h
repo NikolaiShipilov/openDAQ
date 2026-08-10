@@ -87,10 +87,8 @@ public:
     virtual DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes();
     virtual DevicePtr onAddDevice(const StringPtr& connectionString, const PropertyObjectPtr& config);
     virtual DevicePtr onAddAuthenticatedDevice(const StringPtr& connectionString,
-                                               const StringPtr& manufacturer,
-                                               const StringPtr& serialNumber,
                                                const PropertyObjectPtr& config,
-                                               const AuthenticationConfigPtr& authenticatedConfig);
+                                               const AuthenticationConfigPtr& authenticationConfig);
     virtual void onRemoveDevice(const DevicePtr& device);
     virtual DictPtr<IString, IDevice> onAddDevices(const DictPtr<IString, IPropertyObject>& connectionArgs,
                                                    DictPtr<IString, IInteger> errCodes,
@@ -157,8 +155,6 @@ public:
     ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config = nullptr) override;
     ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
                                                   IString* connectionString,
-                                                  IString* manufacturer,
-                                                  IString* serialNumber,
                                                   IPropertyObject* config,
                                                   IAuthenticationConfig* authenticationConfig) override;
     ErrCode INTERFACE_FUNC addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes = nullptr, IDict* errorInfos = nullptr) override;
@@ -1362,8 +1358,6 @@ ErrCode GenericDevice<TInterface, Interfaces...>::addDevice(IDevice** device, IS
 template <typename TInterface, typename... Interfaces>
 ErrCode GenericDevice<TInterface, Interfaces...>::addAuthenticatedDevice(IDevice** device,
                                                                          IString* connectionString,
-                                                                         IString* manufacturer,
-                                                                         IString* serialNumber,
                                                                          IPropertyObject* config,
                                                                          IAuthenticationConfig* authenticationConfig)
 {
@@ -1374,8 +1368,8 @@ ErrCode GenericDevice<TInterface, Interfaces...>::addAuthenticatedDevice(IDevice
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_COMPONENT_REMOVED);
 
     DevicePtr devicePtr;
-    const ErrCode errCode = wrapHandlerReturn(
-        this, &Self::onAddAuthenticatedDevice, devicePtr, connectionString, manufacturer, serialNumber, config, authenticationConfig);
+    const ErrCode errCode =
+        wrapHandlerReturn(this, &Self::onAddAuthenticatedDevice, devicePtr, connectionString, config, authenticationConfig);
     OPENDAQ_RETURN_IF_FAILED(errCode);
 
     *device = devicePtr.detach();
@@ -1432,10 +1426,8 @@ DevicePtr GenericDevice<TInterface, Interfaces...>::onAddDevice(const StringPtr&
 
 template <typename TInterface, typename... Interfaces>
 DevicePtr GenericDevice<TInterface, Interfaces...>::onAddAuthenticatedDevice(const StringPtr& connectionString,
-                                                                             const StringPtr& manufacturer,
-                                                                             const StringPtr& serialNumber,
                                                                              const PropertyObjectPtr& config,
-                                                                             const AuthenticationConfigPtr& authenticatedConfig)
+                                                                             const AuthenticationConfigPtr& authenticationConfig)
 {
     if (!allowAddDevicesFromModules())
         return nullptr;
@@ -1443,7 +1435,7 @@ DevicePtr GenericDevice<TInterface, Interfaces...>::onAddAuthenticatedDevice(con
     auto lock = this->getRecursiveConfigLock2();
 
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
-    auto device = managerUtils.createAuthenticatedDevice(connectionString, manufacturer, serialNumber, devices, config, authenticatedConfig);
+    auto device = managerUtils.createAuthenticatedDevice(connectionString, devices, config, authenticationConfig);
     addSubDevice(device);
 
     return device;

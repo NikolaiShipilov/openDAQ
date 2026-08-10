@@ -546,12 +546,10 @@ ErrCode InstanceImpl::addDevice(IDevice** device, IString* connectionString, IPr
 
 ErrCode InstanceImpl::addAuthenticatedDevice(IDevice** device,
                                              IString* connectionString,
-                                             IString* manufacturer,
-                                             IString* serialNumber,
                                              IPropertyObject* config,
                                              IAuthenticationConfig* authenticationConfig)
 {
-    return rootDevice->addAuthenticatedDevice(device, connectionString, manufacturer, serialNumber, config, authenticationConfig);
+    return rootDevice->addAuthenticatedDevice(device, connectionString, config, authenticationConfig);
 }
 
 ErrCode InstanceImpl::addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes, IDict* errorInfos)

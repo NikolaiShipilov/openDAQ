@@ -856,8 +856,6 @@ ErrCode ModuleManagerImpl::createDevice(IDevice** device, IString* connectionStr
 
 ErrCode ModuleManagerImpl::createAuthenticatedDevice(IDevice** device,
                                                      IString* connectionString,
-                                                     IString* manufacturer,
-                                                     IString* serialNumber,
                                                      IComponent* parent,
                                                      IPropertyObject* config,
                                                      IAuthenticationConfig* authenticationConfig)
@@ -910,6 +908,11 @@ ErrCode ModuleManagerImpl::createAuthenticatedDevice(IDevice** device,
             discoveredDeviceInfo = getSmartConnectionDeviceInfo(connectionStringPtr);
             connectionStringPtr = resolveSmartConnectionString(connectionStringPtr, discoveredDeviceInfo, generalConfig, loggerComponent);
         }
+
+        // The manufacturer/serial number are only known when the device was resolved from a smart connection string;
+        // otherwise they are left unset and it is up to the module to identify the device from the connection string alone.
+        const StringPtr manufacturer = discoveredDeviceInfo.assigned() ? discoveredDeviceInfo.getManufacturer() : nullptr;
+        const StringPtr serialNumber = discoveredDeviceInfo.assigned() ? discoveredDeviceInfo.getSerialNumber() : nullptr;
 
         for (const auto& library : libraries)
         {

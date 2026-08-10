@@ -58,8 +58,6 @@ public:
     ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config) override;
     ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
                                                   IString* connectionString,
-                                                  IString* manufacturer,
-                                                  IString* serialNumber,
                                                   IPropertyObject* config,
                                                   IAuthenticationConfig* authenticationConfig) override;
     ErrCode INTERFACE_FUNC addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes = nullptr, IDict* errorInfos = nullptr) override;
