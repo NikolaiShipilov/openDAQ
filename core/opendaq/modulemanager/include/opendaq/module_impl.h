@@ -36,6 +36,7 @@
 #include <opendaq/device_info_internal_ptr.h>
 #include <coreobjects/property_object_protected_ptr.h>
 #include <coretypes/dictobject_factory.h>
+#include <opendaq/authentication_config_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -127,6 +128,66 @@ public:
 
         DevicePtr createdDevice;
         errCode = wrapHandlerReturn(this, &Module::onCreateDevice, createdDevice, connectionString, parent, mergeConfig(config, deviceType));
+        OPENDAQ_RETURN_IF_FAILED(errCode);
+
+        if (createdDevice.assigned())
+            createdDevice.getInfo();
+
+        *device = createdDevice.detach();
+        return errCode;
+    }
+
+    /*!
+     * @brief Creates a device object that can communicate with the device described in the specified connection string,
+     * using the provided authentication configuration.
+     * The device object is not automatically added as a sub-device of the caller, but only returned by reference.
+     * @param connectionString Describes the connection info of the device to connect to.
+     * If connection string starts with `daq://`, module chooses the optimal server capability based on protocol type
+     * @param manufacturer The manufacturer of the device to connect to.
+     * @param serialNumber The serial number of the device to connect to.
+     * @param parent The parent component/device to which the device attaches.
+     * @param[out] device The device object created to communicate with and control the device.
+     * @param authenticatedConfig The authentication configuration used to authenticate the connection to the device.
+     */
+    ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
+                                                     IString* connectionString,
+                                                     IString* manufacturer,
+                                                     IString* serialNumber,
+                                                     IComponent* parent,
+                                                     IPropertyObject* config,
+                                                     IAuthenticationConfig* authenticationConfig) override
+    {
+        OPENDAQ_PARAM_NOT_NULL(connectionString);
+        OPENDAQ_PARAM_NOT_NULL(device);
+
+        DictPtr<IString, IDeviceType> types;
+        ErrCode errCode = wrapHandlerReturn(this, &Module::onGetAvailableDeviceTypes, types);
+        OPENDAQ_RETURN_IF_FAILED_EXCEPT(errCode, OPENDAQ_ERR_NOTIMPLEMENTED);
+
+        ComponentTypePtr deviceType;
+        const StringPtr prefix = getPrefixFromConnectionString(connectionString);
+        if (prefix.assigned() && prefix.getLength() != 0)
+        {
+            for (const auto& [_, type] : types)
+            {
+                if (type.getConnectionStringPrefix() == prefix)
+                {
+                    deviceType = type;
+                    break;
+                }
+            }
+        }
+
+        DevicePtr createdDevice;
+        errCode = wrapHandlerReturn(this,
+                                    &Module::onCreateAuthenticatedDevice,
+                                    createdDevice,
+                                    connectionString,
+                                    manufacturer,
+                                    serialNumber,
+                                    parent,
+                                    mergeConfig(config, deviceType),
+                                    authenticationConfig);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         if (createdDevice.assigned())
@@ -341,6 +402,28 @@ public:
      * @returns The device object created to communicate with and control the device.
      */
     virtual DevicePtr onCreateDevice(const StringPtr& connectionString, const ComponentPtr& parent, const PropertyObjectPtr& config)
+    {
+        return nullptr;
+    }
+
+    /*!
+     * @brief Creates a device object that can communicate with the device described in the specified connection string,
+     * using the provided authentication configuration.
+     * The device object is not automatically added as a sub-device of the caller, but only returned by reference.
+     * @param connectionString Describes the connection info of the device to connect to.
+     * @param manufacturer The manufacturer of the device to connect to.
+     * @param serialNumber The serial number of the device to connect to.
+     * @param parent The parent component/device to which the device attaches.
+     * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
+     * @param authenticatedConfig The authentication configuration used to authenticate the connection to the device.
+     * @returns The device object created to communicate with and control the device.
+     */
+    virtual DevicePtr onCreateAuthenticatedDevice(const StringPtr& connectionString,
+                                                  const StringPtr& manufacturer,
+                                                  const StringPtr& serialNumber,
+                                                  const ComponentPtr& parent,
+                                                  const PropertyObjectPtr& config,
+                                                  const AuthenticationConfigPtr& authenticatedConfig)
     {
         return nullptr;
     }

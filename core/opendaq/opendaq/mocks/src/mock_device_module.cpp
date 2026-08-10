@@ -112,6 +112,17 @@ ErrCode MockDeviceModuleImpl::createDevice(IDevice** device,
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode MockDeviceModuleImpl::createAuthenticatedDevice(IDevice** /*device*/,
+                                                        IString* /*connectionString*/,
+                                                        IString* /*manufacturer*/,
+                                                        IString* /*serialNumber*/,
+                                                        IComponent* /*parent*/,
+                                                        IPropertyObject* /*config*/,
+                                                        IAuthenticationConfig* /*authenticationConfig*/)
+{
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+}
+
 ErrCode MockDeviceModuleImpl::getAvailableFunctionBlockTypes(IDict** types)
 {
     auto list = Dict<IString, IFunctionBlockType>();

@@ -40,6 +40,17 @@ ErrCode MockModuleImpl::createDevice(IDevice** device, IString* connectionString
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND);
 }
 
+ErrCode MockModuleImpl::createAuthenticatedDevice(IDevice** device,
+                                                  IString* connectionString,
+                                                  IString* manufacturer,
+                                                  IString* serialNumber,
+                                                  IComponent* parent,
+                                                  IPropertyObject* config,
+                                                  IAuthenticationConfig* authenticationConfig)
+{
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND);
+}
+
 ErrCode MockModuleImpl::getAvailableFunctionBlockTypes(IDict** functionBlockTypes)
 {
     OPENDAQ_PARAM_NOT_NULL(functionBlockTypes);

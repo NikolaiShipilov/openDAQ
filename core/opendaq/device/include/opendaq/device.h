@@ -211,11 +211,11 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      * @param authenticationConfig The authentication configuration used to authenticate the connection to the device.
      */
     virtual ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
-                                                           IString* connectionString,
-                                                           IString* manufacturer = nullptr,
-                                                           IString* serialNumber = nullptr,
-                                                           IPropertyObject* config = nullptr,
-                                                           IAuthenticationConfig* authenticationConfig = nullptr) = 0;
+                                                          IString* connectionString,
+                                                          IString* manufacturer = nullptr,
+                                                          IString* serialNumber = nullptr,
+                                                          IPropertyObject* config = nullptr,
+                                                          IAuthenticationConfig* authenticationConfig = nullptr) = 0;
 
     // [templateType(device, IDevice)]
     /*!

@@ -54,6 +54,13 @@ public:
     ErrCode INTERFACE_FUNC getAvailableDevices(IList** availableDevices) override;
     ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) override;
     ErrCode INTERFACE_FUNC createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config = nullptr) override;
+    ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
+                                                     IString* connectionString,
+                                                     IString* manufacturer,
+                                                     IString* serialNumber,
+                                                     IComponent* parent,
+                                                     IPropertyObject* config,
+                                                     IAuthenticationConfig* authenticationConfig) override;
     ErrCode INTERFACE_FUNC getAvailableFunctionBlockTypes(IDict** functionBlockTypes) override;
     ErrCode INTERFACE_FUNC createFunctionBlock(IFunctionBlock** functionBlock, IString* id, IComponent* parent, IPropertyObject* config = nullptr, IString* localId = nullptr) override;
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) override;

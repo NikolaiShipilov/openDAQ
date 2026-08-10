@@ -51,6 +51,7 @@
 #include <opendaq/module_info_factory.h>
 #include <opendaq/component_type_private.h>
 #include <opendaq/mirrored_device_ptr.h>
+#include <opendaq/authentication_config_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 template <typename TInterface = IDevice, typename... Interfaces>
@@ -85,6 +86,11 @@ public:
     virtual ListPtr<IDeviceInfo> onGetAvailableDevices();
     virtual DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes();
     virtual DevicePtr onAddDevice(const StringPtr& connectionString, const PropertyObjectPtr& config);
+    virtual DevicePtr onAddAuthenticatedDevice(const StringPtr& connectionString,
+                                               const StringPtr& manufacturer,
+                                               const StringPtr& serialNumber,
+                                               const PropertyObjectPtr& config,
+                                               const AuthenticationConfigPtr& authenticatedConfig);
     virtual void onRemoveDevice(const DevicePtr& device);
     virtual DictPtr<IString, IDevice> onAddDevices(const DictPtr<IString, IPropertyObject>& connectionArgs,
                                                    DictPtr<IString, IInteger> errCodes,
@@ -1354,14 +1360,26 @@ ErrCode GenericDevice<TInterface, Interfaces...>::addDevice(IDevice** device, IS
 }
 
 template <typename TInterface, typename... Interfaces>
-ErrCode GenericDevice<TInterface, Interfaces...>::addAuthenticatedDevice(IDevice** /*device*/,
-                                                                         IString* /*connectionString*/,
-                                                                         IString* /*manufacturer*/,
-                                                                         IString* /*serialNumber*/,
-                                                                         IPropertyObject* /*config*/,
-                                                                         IAuthenticationConfig* /*authenticationConfig*/)
+ErrCode GenericDevice<TInterface, Interfaces...>::addAuthenticatedDevice(IDevice** device,
+                                                                         IString* connectionString,
+                                                                         IString* manufacturer,
+                                                                         IString* serialNumber,
+                                                                         IPropertyObject* config,
+                                                                         IAuthenticationConfig* authenticationConfig)
 {
-    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED);
+    OPENDAQ_PARAM_NOT_NULL(connectionString);
+    OPENDAQ_PARAM_NOT_NULL(device);
+
+    if (this->isComponentRemoved)
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_COMPONENT_REMOVED);
+
+    DevicePtr devicePtr;
+    const ErrCode errCode = wrapHandlerReturn(
+        this, &Self::onAddAuthenticatedDevice, devicePtr, connectionString, manufacturer, serialNumber, config, authenticationConfig);
+    OPENDAQ_RETURN_IF_FAILED(errCode);
+
+    *device = devicePtr.detach();
+    return errCode;
 }
 
 template <typename TInterface, typename... Interfaces>
@@ -1407,6 +1425,25 @@ DevicePtr GenericDevice<TInterface, Interfaces...>::onAddDevice(const StringPtr&
 
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
     auto device = managerUtils.createDevice(connectionString, devices, config);
+    addSubDevice(device);
+
+    return device;
+}
+
+template <typename TInterface, typename... Interfaces>
+DevicePtr GenericDevice<TInterface, Interfaces...>::onAddAuthenticatedDevice(const StringPtr& connectionString,
+                                                                             const StringPtr& manufacturer,
+                                                                             const StringPtr& serialNumber,
+                                                                             const PropertyObjectPtr& config,
+                                                                             const AuthenticationConfigPtr& authenticatedConfig)
+{
+    if (!allowAddDevicesFromModules())
+        return nullptr;
+
+    auto lock = this->getRecursiveConfigLock2();
+
+    const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
+    auto device = managerUtils.createAuthenticatedDevice(connectionString, manufacturer, serialNumber, devices, config, authenticatedConfig);
     addSubDevice(device);
 
     return device;

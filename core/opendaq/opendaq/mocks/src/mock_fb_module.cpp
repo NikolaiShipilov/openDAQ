@@ -48,6 +48,18 @@ ErrCode MockFunctionBlockModuleImpl::createDevice(IDevice** device,
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode MockFunctionBlockModuleImpl::createAuthenticatedDevice(IDevice** device,
+                                                               IString* /*connectionString*/,
+                                                               IString* /*manufacturer*/,
+                                                               IString* /*serialNumber*/,
+                                                               IComponent* /*parent*/,
+                                                               IPropertyObject* /*config*/,
+                                                               IAuthenticationConfig* /*authenticationConfig*/)
+{
+    *device = nullptr;
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode MockFunctionBlockModuleImpl::getAvailableFunctionBlockTypes(IDict** functionBlockTypes)
 {
     auto typesDict = Dict<IString, IFunctionBlockType>();
