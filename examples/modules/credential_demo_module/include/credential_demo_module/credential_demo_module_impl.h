@@ -33,6 +33,12 @@ public:
     ListPtr<IDeviceInfo> onGetAvailableDevices() override;
     DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes() override;
     DevicePtr onCreateDevice(const StringPtr& connectionString, const ComponentPtr& parent, const PropertyObjectPtr& config) override;
+    DevicePtr onCreateAuthenticatedDevice(const StringPtr& connectionString,
+                                          const StringPtr& manufacturer,
+                                          const StringPtr& serialNumber,
+                                          const ComponentPtr& parent,
+                                          const PropertyObjectPtr& config,
+                                          const AuthenticationConfigPtr& authenticationConfig) override;
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);

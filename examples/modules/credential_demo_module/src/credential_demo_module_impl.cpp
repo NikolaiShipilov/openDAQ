@@ -35,8 +35,24 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
 {
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
-    CredentialDemoDeviceImpl::ValidateConnectionString(connectionString, info);
+    CredentialDemoDeviceImpl::ValidateConnectionString(connectionString);
 
+    // The plain, non-authenticated path doesn't request credentials - the device is "connected" to anonymously.
+    return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(config, context, parent, info, /*authenticated*/false).detach();
+}
+
+DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& connectionString,
+                                                            const StringPtr& manufacturer,
+                                                            const StringPtr& serialNumber,
+                                                            const ComponentPtr& parent,
+                                                            const PropertyObjectPtr& config,
+                                                            const AuthenticationConfigPtr& /*authenticationConfig*/)
+{
+    const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
+    auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
+    CredentialDemoDeviceImpl::ValidateConnectionString(connectionString);
+
+    // The authenticated path always requests credentials - the device is never connected to anonymously.
     auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), CredentialDemoDeviceImpl::CreateType());
     if (!credentialProvider.assigned())
     {
@@ -44,7 +60,12 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
     }
 
     return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
-        config, context, parent, info, credentialProvider.requestCredentials(CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, config))).detach();
+        config,
+        context,
+        parent,
+        info,
+        /*authenticated*/true,
+        credentialProvider.requestCredentials(CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, manufacturer, serialNumber))).detach();
 }
 
 CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,

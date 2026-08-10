@@ -17,20 +17,28 @@ BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 static constexpr std::string_view GenericDeviceAddress = "credential_demo_device";
 static const std::string UserNamePasswordPayloadId = "UserNamePassword";
 
-CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials)
+CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& config,
+                                                   const ContextPtr& ctx,
+                                                   const ComponentPtr& parent,
+                                                   const DeviceInfoPtr& info,
+                                                   bool authenticated,
+                                                   const CredentialPayloadPtr& credentials)
     : Device(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
-    if (!credentials.assigned())
+    if (authenticated)
     {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no credentials provided");
-    }
+        if (!credentials.assigned())
+        {
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no credentials provided");
+        }
 
-    DictPtr<IString, IBaseObject> usernameAndPassword = credentials.getSecrets();
-    if (!usernameAndPassword.assigned() ||
-        !usernameAndPassword.hasKey("UserName") || usernameAndPassword.get("UserName") != "user" ||
-        !usernameAndPassword.hasKey("Password") || usernameAndPassword.get("Password") != "aaa")
-    {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - wrong credentials");
+        DictPtr<IString, IBaseObject> usernameAndPassword = credentials.getSecrets();
+        if (!usernameAndPassword.assigned() ||
+            !usernameAndPassword.hasKey("UserName") || usernameAndPassword.get("UserName") != "user" ||
+            !usernameAndPassword.hasKey("Password") || usernameAndPassword.get("Password") != "aaa")
+        {
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - wrong credentials");
+        }
     }
 
     this->deviceInfo = info;
@@ -41,7 +49,7 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
     const StringPtr manufacturer = moduleOptions.get("Manufacturer");
     const StringPtr serialNumber = moduleOptions.get("SerialNumber");
 
-    auto connectionString = fmt::format("daq.credential_demo://{}_{}", manufacturer, serialNumber);
+    auto connectionString = fmt::format("daq.credential_demo://{}", GenericDeviceAddress);
     auto devInfo = DeviceInfo(connectionString);
     devInfo.setName("Credential demo device");
     devInfo.setManufacturer(manufacturer);
@@ -70,12 +78,16 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
         .build();
 }
 
-CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config)
+CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const StringPtr& connectionString,
+                                                                       const StringPtr& manufacturer,
+                                                                       const StringPtr& serialNumber)
 {
     auto deviceType = CreateType();
 
     auto builder = CredentialRequestBuilder();
     builder.setConnectionString(connectionString);
+    builder.setManufacturer(manufacturer);
+    builder.setSerialNumber(serialNumber);
     builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeId", deviceType.getId()).setDescription("The openDAQ device type ID").build());
     builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeName", deviceType.getName()).setDescription("The openDAQ device type name").build());
     builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeDescription", deviceType.getDescription()).setDescription("The openDAQ device type description").build());
@@ -83,18 +95,20 @@ CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const Str
     return builder.build();
 }
 
-void CredentialDemoDeviceImpl::ValidateConnectionString(const StringPtr& connectionString, const DeviceInfoPtr& info)
+void CredentialDemoDeviceImpl::ValidateConnectionString(const StringPtr& connectionString)
 {
     const std::string prefix = fmt::format("{}://", CreateType().getConnectionStringPrefix());
     const std::string connStr = connectionString;
     if (connStr.find(prefix) != 0)
+    {
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Invalid connection string \"{}\", no prefix", connectionString);
+    }
 
     const auto address = connStr.substr(prefix.size());
-    const auto manufacturerAndSerial = fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber());
-
-    if (address != manufacturerAndSerial && address != GenericDeviceAddress)
+    if (address != GenericDeviceAddress)
+    {
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Invalid connection string \"{}\", unknown device address", connectionString);
+    }
 }
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

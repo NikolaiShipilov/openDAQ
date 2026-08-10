@@ -41,7 +41,12 @@ int main(int /*argc*/, const char* /*argv*/[])
     auto instance = instanceBuilder.build();
 
     auto device = instance.addDevice("daq://openDAQ_1234");
-    std::cout << "Connected to \"" << device.getInfo().getName() << "\"" << std::endl;
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" without authentication. Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234");
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with authentication." << std::endl;
 
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
     std::cin.get();

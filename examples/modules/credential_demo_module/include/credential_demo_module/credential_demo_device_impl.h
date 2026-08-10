@@ -21,8 +21,10 @@
 #include <opendaq/credential_payload_ptr.h>
 
 /*
- * Minimal device implementation with no signals or channels. Authenticates
- * via the credential framework using a username/password, as the first showcased auth method.
+ * Minimal device implementation with no signals or channels. When connected to via the
+ * authenticated path, authenticates via the credential framework using a username/password,
+ * as the first showcased auth method. When connected to via the plain, non-authenticated
+ * path, no credentials are required or checked.
  */
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -30,12 +32,17 @@ BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 class CredentialDemoDeviceImpl final : public Device
 {
 public:
-    explicit CredentialDemoDeviceImpl(const PropertyObjectPtr& config, const ContextPtr& ctx, const ComponentPtr& parent, const DeviceInfoPtr& info, const CredentialPayloadPtr& credentials);
+    explicit CredentialDemoDeviceImpl(const PropertyObjectPtr& config,
+                                      const ContextPtr& ctx,
+                                      const ComponentPtr& parent,
+                                      const DeviceInfoPtr& info,
+                                      bool authenticated,
+                                      const CredentialPayloadPtr& credentials = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
-    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const PropertyObjectPtr& config);
-    static void ValidateConnectionString(const StringPtr& connectionString, const DeviceInfoPtr& info);
+    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const StringPtr& manufacturer, const StringPtr& serialNumber);
+    static void ValidateConnectionString(const StringPtr& connectionString);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE
