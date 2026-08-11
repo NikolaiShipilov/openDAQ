@@ -18,6 +18,8 @@ ErrCode ComponentTypeBuilderImpl::build(IComponentType** componentType)
 {
     const ErrCode errCode = daqTry([&componentType, this]
     {
+        OPENDAQ_RETURN_IF_FAILED(validateAuthenticationCapabilities());
+
         const auto builderPtr = this->borrowPtr<ComponentTypeBuilderPtr>();
         switch (sort)
         {
@@ -154,6 +156,34 @@ ErrCode ComponentTypeBuilderImpl::getSupportedPayloads(IDict** payloads)
     OPENDAQ_PARAM_NOT_NULL(payloads);
 
     *payloads = supportedPayloads.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ComponentTypeBuilderImpl::validateAuthenticationCapabilities()
+{
+    const bool hasSupportedPayloads = supportedPayloads.assigned() && supportedPayloads.getCount() > 0;
+
+    if (!hasSupportedPayloads)
+    {
+        if (defaultAuthenticationConfig.assigned())
+            return DAQ_MAKE_ERROR_INFO(
+                OPENDAQ_ERR_INVALIDPARAMETER,
+                "A default authentication config is set, but no supported credential payloads are configured");
+
+        return OPENDAQ_SUCCESS;
+    }
+
+    if (!defaultAuthenticationConfig.assigned())
+        return DAQ_MAKE_ERROR_INFO(
+            OPENDAQ_ERR_INVALIDPARAMETER,
+            "Supported credential payloads are configured, but no default authentication config is set");
+
+    const StringPtr defaultPayloadId = defaultAuthenticationConfig.getCredentialPayloadId();
+    if (!defaultPayloadId.assigned() || !supportedPayloads.hasKey(defaultPayloadId))
+        return DAQ_MAKE_ERROR_INFO(
+            OPENDAQ_ERR_INVALIDPARAMETER,
+            "The default authentication config's payload id does not match any of the supported credential payloads");
+
     return OPENDAQ_SUCCESS;
 }
 

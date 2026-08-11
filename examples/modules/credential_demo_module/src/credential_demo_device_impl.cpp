@@ -9,6 +9,7 @@
 #include <opendaq/device_info_internal.h>
 #include <coretypes/listobject_factory.h>
 #include <coreobjects/property_factory.h>
+#include <opendaq/authentication_config_factory.h>
 #include <fmt/format.h>
 #include <string_view>
 
@@ -75,6 +76,7 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix("daq.credential_demo")
         .addSupportedPayload(UserNamePasswordPayloadId, payload)
+        .setDefaultAuthenticationConfig(AuthenticationConfig(UserNamePasswordPayloadId, payload))
         .build();
 }
 

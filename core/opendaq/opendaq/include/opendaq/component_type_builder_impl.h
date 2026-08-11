@@ -57,6 +57,8 @@ public:
     ErrCode INTERFACE_FUNC getSupportedPayloads(IDict** payloads) override;
 
 private:
+    ErrCode validateAuthenticationCapabilities();
+
     ComponentTypeSort sort;
     StringPtr id;
     StringPtr name;
