@@ -22,6 +22,7 @@
 #include <coretypes/dict_ptr.h>
 #include <opendaq/module_info_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/authentication_config_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 class ComponentTypeBuilderImpl : public ImplementationOf<IComponentTypeBuilder>
@@ -49,6 +50,9 @@ public:
     ErrCode INTERFACE_FUNC setDefaultConfig(IPropertyObject* defaultConfig) override;
     ErrCode INTERFACE_FUNC getDefaultConfig(IPropertyObject** defaultConfig) override;
 
+    ErrCode INTERFACE_FUNC setDefaultAuthenticationConfig(IAuthenticationConfig* defaultAuthenticationConfig) override;
+    ErrCode INTERFACE_FUNC getDefaultAuthenticationConfig(IAuthenticationConfig** defaultAuthenticationConfig) override;
+
     ErrCode INTERFACE_FUNC addSupportedPayload(IString* id, ICredentialPayloadDescriptor* payload) override;
     ErrCode INTERFACE_FUNC getSupportedPayloads(IDict** payloads) override;
 
@@ -59,6 +63,7 @@ private:
     StringPtr prefix;
     StringPtr description;
     PropertyObjectPtr defaultConfig;
+    AuthenticationConfigPtr defaultAuthenticationConfig;
     ModuleInfoPtr moduleInfo;
     DictPtr<IString, ICredentialPayloadDescriptor> supportedPayloads;
 };

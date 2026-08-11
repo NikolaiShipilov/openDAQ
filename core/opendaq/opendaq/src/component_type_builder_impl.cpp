@@ -127,6 +127,20 @@ ErrCode ComponentTypeBuilderImpl::getDefaultConfig(IPropertyObject** defaultConf
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode ComponentTypeBuilderImpl::setDefaultAuthenticationConfig(IAuthenticationConfig* defaultAuthenticationConfig)
+{
+    this->defaultAuthenticationConfig = defaultAuthenticationConfig;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ComponentTypeBuilderImpl::getDefaultAuthenticationConfig(IAuthenticationConfig** defaultAuthenticationConfig)
+{
+    OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationConfig);
+
+    *defaultAuthenticationConfig = this->defaultAuthenticationConfig.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode ComponentTypeBuilderImpl::addSupportedPayload(IString* id, ICredentialPayloadDescriptor* payload)
 {
     OPENDAQ_PARAM_NOT_NULL(id);

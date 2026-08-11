@@ -18,6 +18,7 @@
 #include <coreobjects/property_object.h>
 #include <coretypes/stringobject.h>
 #include <opendaq/module_info.h>
+#include <opendaq/authentication_config.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -25,6 +26,8 @@ BEGIN_NAMESPACE_OPENDAQ
  * [templated(defaultAliasName: ComponentTypePtr)]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr)]
  * [interfaceLibrary(IPropertyObject, CoreObjects)]
+ * [interfaceLibrary(IAuthenticationConfig, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationConfig, AuthenticationConfigPtr, "<opendaq/authentication_config_ptr.h>")]
  */
 
 /*!
@@ -75,6 +78,16 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
      * For example: Port=1000, OutputRate=5000, ...
      */
     virtual ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) = 0;
+
+    /*!
+     * @brief The function clones and returns the default authentication config. On each call, a new object is
+     * created, same as with `createDefaultConfig`.
+     * @param[out] authenticationConfig Newly created authentication config object.
+     *
+     * Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the component type does not support authentication, ie. no default
+     * authentication config was set on the type's builder.
+     */
+    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig) = 0;
 
     /*!
      * @brief Retrieves the module information.

@@ -32,7 +32,8 @@ public:
                                const StringPtr& name,
                                const StringPtr& description,
                                const StringPtr& prefix,
-                               const PropertyObjectPtr& defaultConfig);
+                               const PropertyObjectPtr& defaultConfig,
+                               const AuthenticationConfigPtr& defaultAuthenticationConfig = nullptr);
 
     explicit StreamingTypeImpl(const ComponentTypeBuilderPtr& builder);
     

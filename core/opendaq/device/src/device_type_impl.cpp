@@ -14,14 +14,21 @@ DeviceTypeImpl::DeviceTypeImpl(const StringPtr& id,
                                const StringPtr& description,
                                const PropertyObjectPtr& defaultConfig,
                                const StringPtr& prefix,
-                               const DictPtr<IString, ICredentialPayloadDescriptor>& supportedPayloads)
-    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig)
+                               const DictPtr<IString, ICredentialPayloadDescriptor>& supportedPayloads,
+                               const AuthenticationConfigPtr& defaultAuthenticationConfig)
+    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig, defaultAuthenticationConfig)
     , supportedPayloads(supportedPayloads)
 {
 }
 
 DeviceTypeImpl::DeviceTypeImpl(const ComponentTypeBuilderPtr& builder)
-    : DeviceTypeImpl(builder.getId(), builder.getName(), builder.getDescription(), builder.getDefaultConfig(), builder.getConnectionStringPrefix(), builder.getSupportedPayloads())
+    : DeviceTypeImpl(builder.getId(),
+                     builder.getName(),
+                     builder.getDescription(),
+                     builder.getDefaultConfig(),
+                     builder.getConnectionStringPrefix(),
+                     builder.getSupportedPayloads(),
+                     builder.getDefaultAuthenticationConfig())
 {
 }
 

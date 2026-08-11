@@ -25,6 +25,8 @@
 #include <coreobjects/property_object_internal_ptr.h>
 #include <opendaq/module_info_ptr.h>
 #include <opendaq/component_type_private.h>
+#include <opendaq/authentication_config_ptr.h>
+#include <opendaq/authentication_config_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -36,19 +38,22 @@ public:
                                       const StringPtr& id,
                                       const StringPtr& name,
                                       const StringPtr& description,
-                                      const PropertyObjectPtr& defaultConfig);
+                                      const PropertyObjectPtr& defaultConfig,
+                                      const AuthenticationConfigPtr& defaultAuthenticationConfig = nullptr);
 
     explicit GenericComponentTypeImpl(const StructTypePtr& type,
                                       const StringPtr& id,
                                       const StringPtr& name,
                                       const StringPtr& description,
                                       const StringPtr& prefix,
-                                      const PropertyObjectPtr& defaultConfig);
+                                      const PropertyObjectPtr& defaultConfig,
+                                      const AuthenticationConfigPtr& defaultAuthenticationConfig = nullptr);
 
     ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC getName(IString** name) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) override;
+    ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig) override;
     ErrCode INTERFACE_FUNC getModuleInfo(IModuleInfo** moduleInfo) override;
 
     // IComponentTypePrivate
@@ -60,6 +65,7 @@ protected:
     StringPtr description;
     StringPtr prefix;
     PropertyObjectPtr defaultConfig;
+    AuthenticationConfigPtr defaultAuthenticationConfig;
     ModuleInfoPtr moduleInfo;
 };
 
@@ -68,7 +74,8 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
                                                                         const StringPtr& id,
                                                                         const StringPtr& name,
                                                                         const StringPtr& description,
-                                                                        const PropertyObjectPtr& defaultConfig)
+                                                                        const PropertyObjectPtr& defaultConfig,
+                                                                        const AuthenticationConfigPtr& defaultAuthenticationConfig)
     : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(
           type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}}))
     , id(id)
@@ -76,6 +83,7 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
     , description(description)
     , prefix("")
     , defaultConfig(defaultConfig)
+    , defaultAuthenticationConfig(defaultAuthenticationConfig)
 {
 }
 
@@ -85,7 +93,8 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
                                                                         const StringPtr& name,
                                                                         const StringPtr& description,
                                                                         const StringPtr& prefix,
-                                                                        const PropertyObjectPtr& defaultConfig)
+                                                                        const PropertyObjectPtr& defaultConfig,
+                                                                        const AuthenticationConfigPtr& defaultAuthenticationConfig)
     : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(
           type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}, {"Prefix", prefix}}))
     , id(id)
@@ -93,6 +102,7 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
     , description(description)
     , prefix(prefix)
     , defaultConfig(defaultConfig)
+    , defaultAuthenticationConfig(defaultAuthenticationConfig)
 {
 }
 
@@ -132,6 +142,20 @@ ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::createDefaultConfig(IProp
         return this->defaultConfig.template asPtr<IPropertyObjectInternal>()->clone(defaultConfig);
 
     *defaultConfig = PropertyObject().detach();
+    return OPENDAQ_SUCCESS;
+}
+
+template <class Intf, class... Interfaces>
+ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig)
+{
+    OPENDAQ_PARAM_NOT_NULL(authenticationConfig);
+
+    if (!this->defaultAuthenticationConfig.assigned())
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED);
+
+    *authenticationConfig =
+        AuthenticationConfig(this->defaultAuthenticationConfig.getCredentialPayloadId(),
+                             this->defaultAuthenticationConfig.getCredentialPayloadDescriptor()).detach();
     return OPENDAQ_SUCCESS;
 }
 

@@ -18,6 +18,7 @@
 #include <coreobjects/property_object.h>
 #include <opendaq/component_type.h>
 #include <opendaq/credential_payload_descriptor.h>
+#include <opendaq/authentication_config.h>
 #include <coretypes/stringobject.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -42,6 +43,8 @@ enum class ComponentTypeSort
  * [interfaceLibrary(IComponentType, "opendaq")]
  * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
  * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationConfig, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationConfig, AuthenticationConfigPtr, "<opendaq/authentication_config_ptr.h>")]
  */
 
 /*!
@@ -167,6 +170,24 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
      * For example: Port=1000, OutputRate=5000, ...
      */
     virtual ErrCode INTERFACE_FUNC getDefaultConfig(IPropertyObject** defaultConfig) = 0;
+
+    // [returnSelf]
+    /*!
+     * @brief Sets the default authentication config object that will be cloned and passed to users
+     * by the built Component type when requested via `createDefaultAuthenticationConfig`.
+     * @param defaultAuthenticationConfig The default authentication config object.
+     *
+     * When left unset, the built Component type is considered to not support authentication, and
+     * `createDefaultAuthenticationConfig` will fail with `OPENDAQ_ERR_NOT_SUPPORTED`.
+     */
+    virtual ErrCode INTERFACE_FUNC setDefaultAuthenticationConfig(IAuthenticationConfig* defaultAuthenticationConfig) = 0;
+
+    /*!
+     * @brief Gets the default authentication config object that will be cloned and passed to users
+     * by the built Component type when requested via `createDefaultAuthenticationConfig`.
+     * @param[out] defaultAuthenticationConfig The default authentication config object.
+     */
+    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationConfig(IAuthenticationConfig** defaultAuthenticationConfig) = 0;
 
     // [returnSelf]
     /*!
