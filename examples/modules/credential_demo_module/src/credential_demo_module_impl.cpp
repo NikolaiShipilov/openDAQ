@@ -46,7 +46,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
                                                             const StringPtr& serialNumber,
                                                             const ComponentPtr& parent,
                                                             const PropertyObjectPtr& config,
-                                                            const AuthenticationConfigPtr& /*authenticationConfig*/)
+                                                            const AuthenticationConfigPtr& authenticationConfig)
 {
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
@@ -59,13 +59,16 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no credential provider supporting a compatible payload format is registered");
     }
 
+    const bool verboseCredentialRequest = authenticationConfig.getConfig().getPropertyValue("VerboseCredentialRequest");
+
     return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
         config,
         context,
         parent,
         info,
         /*authenticated*/true,
-        credentialProvider.requestCredentials(CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, manufacturer, serialNumber))).detach();
+        credentialProvider.requestCredentials(
+            CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, manufacturer, serialNumber, verboseCredentialRequest))).detach();
 }
 
 CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,

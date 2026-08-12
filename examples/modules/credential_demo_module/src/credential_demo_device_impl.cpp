@@ -67,6 +67,9 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
+    auto additionalConfig = PropertyObject();
+    additionalConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
+
     auto payloadDescriptor = KeyValuePayloadDescriptor(List<IString>("UserName", "Password"), "Username and password");
 
     return DeviceTypeBuilder()
@@ -74,14 +77,15 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix("daq.credential_demo")
-        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, payloadDescriptor)
+        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, payloadDescriptor, additionalConfig)
         .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
 }
 
 CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const StringPtr& connectionString,
                                                                        const StringPtr& manufacturer,
-                                                                       const StringPtr& serialNumber)
+                                                                       const StringPtr& serialNumber,
+                                                                       bool verbose)
 {
     auto deviceType = CreateType();
 
@@ -89,9 +93,12 @@ CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const Str
     builder.setConnectionString(connectionString);
     builder.setManufacturer(manufacturer);
     builder.setSerialNumber(serialNumber);
-    builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeId", deviceType.getId()).setDescription("The openDAQ device type ID").build());
     builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeName", deviceType.getName()).setDescription("The openDAQ device type name").build());
-    builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeDescription", deviceType.getDescription()).setDescription("The openDAQ device type description").build());
+    if (verbose)
+    {
+        builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeId", deviceType.getId()).setDescription("The openDAQ device type ID").build());
+        builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeDescription", deviceType.getDescription()).setDescription("The openDAQ device type description").build());
+    }
 
     return builder.build();
 }

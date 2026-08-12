@@ -45,8 +45,18 @@ int main(int /*argc*/, const char* /*argv*/[])
     std::cin.get();
     instance.removeDevice(device);
 
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234");
-    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with authentication." << std::endl;
+    auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
+    auto authenticationConfig = deviceType.createDefaultAuthenticationConfig();
+
+    authenticationConfig.getConfig().setPropertyValue("VerboseCredentialRequest", False);
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, authenticationConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with authentication, non-verbose credential request. Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+
+    authenticationConfig.getConfig().setPropertyValue("VerboseCredentialRequest", True);
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, authenticationConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with authentication, verbose credential request." << std::endl;
 
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
     std::cin.get();

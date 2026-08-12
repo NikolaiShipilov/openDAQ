@@ -41,7 +41,7 @@ public:
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
-    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const StringPtr& manufacturer, const StringPtr& serialNumber);
+    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const StringPtr& manufacturer, const StringPtr& serialNumber, bool verbose);
     static void ValidateConnectionString(const StringPtr& connectionString);
 };
 
