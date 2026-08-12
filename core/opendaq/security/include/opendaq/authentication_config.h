@@ -62,7 +62,7 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IBaseObject)
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor
+    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor, IPropertyObject*, config
 )
 
 END_NAMESPACE_OPENDAQ

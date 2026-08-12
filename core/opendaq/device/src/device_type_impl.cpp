@@ -14,10 +14,9 @@ DeviceTypeImpl::DeviceTypeImpl(const StringPtr& id,
                                const StringPtr& description,
                                const PropertyObjectPtr& defaultConfig,
                                const StringPtr& prefix,
-                               const DictPtr<IString, ICredentialPayloadDescriptor>& supportedPayloads,
-                               const AuthenticationConfigPtr& defaultAuthenticationConfig)
-    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig, defaultAuthenticationConfig)
-    , supportedPayloads(supportedPayloads)
+                               const DictPtr<IString, IAuthenticationConfig>& supportedAuthenticationConfigs,
+                               const StringPtr& defaultAuthenticationConfigId)
+    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig, supportedAuthenticationConfigs, defaultAuthenticationConfigId)
 {
 }
 
@@ -27,8 +26,8 @@ DeviceTypeImpl::DeviceTypeImpl(const ComponentTypeBuilderPtr& builder)
                      builder.getDescription(),
                      builder.getDefaultConfig(),
                      builder.getConnectionStringPrefix(),
-                     builder.getSupportedPayloads(),
-                     builder.getDefaultAuthenticationConfig())
+                     builder.getSupportedAuthenticationConfigs(),
+                     builder.getDefaultAuthenticationConfigId())
 {
 }
 
@@ -37,14 +36,6 @@ ErrCode DeviceTypeImpl::getConnectionStringPrefix(IString** prefix)
     OPENDAQ_PARAM_NOT_NULL(prefix);
 
     *prefix = this->prefix.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode DeviceTypeImpl::getSupportedPayloads(IDict** payloads)
-{
-    OPENDAQ_PARAM_NOT_NULL(payloads);
-
-    *payloads = this->supportedPayloads.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

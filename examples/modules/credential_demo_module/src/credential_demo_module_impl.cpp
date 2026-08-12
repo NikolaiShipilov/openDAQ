@@ -71,8 +71,9 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
 CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
                                                                            const DeviceTypePtr& deviceType)
 {
-    for (const auto& [_, payload] : deviceType.getSupportedPayloads())
+    for (const auto& [_, authenticationConfig] : deviceType.getSupportedAuthenticationConfigs())
     {
+        const auto payload = authenticationConfig.getCredentialPayloadDescriptor();
         for (const auto& [_, provider] : providers)
         {
             for (const auto& format : provider.getSupportedPayloadFormats())

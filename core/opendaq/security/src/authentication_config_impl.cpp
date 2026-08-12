@@ -3,10 +3,10 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-AuthenticationConfigImpl::AuthenticationConfigImpl(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor)
+AuthenticationConfigImpl::AuthenticationConfigImpl(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor, const PropertyObjectPtr& config)
     : payloadId(payloadId)
     , payloadDescriptor(payloadDescriptor)
-    , config(PropertyObject())
+    , config(config.assigned() ? config : PropertyObject())
 {
 }
 
@@ -36,7 +36,7 @@ ErrCode AuthenticationConfigImpl::getConfig(IPropertyObject** config)
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor
+    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor, IPropertyObject*, config
 )
 
 END_NAMESPACE_OPENDAQ

@@ -9,7 +9,6 @@
 #include <opendaq/device_info_internal.h>
 #include <coretypes/listobject_factory.h>
 #include <coreobjects/property_factory.h>
-#include <opendaq/authentication_config_factory.h>
 #include <fmt/format.h>
 #include <string_view>
 
@@ -68,15 +67,15 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
-    auto payload = KeyValuePayloadDescriptor(List<IString>("UserName", "Password"), "Username and password");
+    auto payloadDescriptor = KeyValuePayloadDescriptor(List<IString>("UserName", "Password"), "Username and password");
 
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix("daq.credential_demo")
-        .addSupportedPayload(UserNamePasswordPayloadId, payload)
-        .setDefaultAuthenticationConfig(AuthenticationConfig(UserNamePasswordPayloadId, payload))
+        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, payloadDescriptor)
+        .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
 }
 

@@ -5,12 +5,13 @@
 #include <opendaq/streaming_type_impl.h>
 #include <coretypes/validation.h>
 #include <coretypes/dictobject_factory.h>
+#include <opendaq/authentication_config_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 ComponentTypeBuilderImpl::ComponentTypeBuilderImpl(ComponentTypeSort sort)
     : sort(sort)
-    , supportedPayloads(Dict<IString, ICredentialPayloadDescriptor>())
+    , supportedAuthenticationConfigs(Dict<IString, IAuthenticationConfig>())
 {
 }
 
@@ -129,60 +130,62 @@ ErrCode ComponentTypeBuilderImpl::getDefaultConfig(IPropertyObject** defaultConf
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::setDefaultAuthenticationConfig(IAuthenticationConfig* defaultAuthenticationConfig)
+ErrCode ComponentTypeBuilderImpl::setDefaultAuthenticationConfigId(IString* id)
 {
-    this->defaultAuthenticationConfig = defaultAuthenticationConfig;
+    this->defaultAuthenticationConfigId = id;
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::getDefaultAuthenticationConfig(IAuthenticationConfig** defaultAuthenticationConfig)
+ErrCode ComponentTypeBuilderImpl::getDefaultAuthenticationConfigId(IString** id)
 {
-    OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationConfig);
+    OPENDAQ_PARAM_NOT_NULL(id);
 
-    *defaultAuthenticationConfig = this->defaultAuthenticationConfig.addRefAndReturn();
+    *id = defaultAuthenticationConfigId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::addSupportedPayload(IString* id, ICredentialPayloadDescriptor* payload)
+ErrCode ComponentTypeBuilderImpl::addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payload, IPropertyObject* config)
 {
     OPENDAQ_PARAM_NOT_NULL(id);
     OPENDAQ_PARAM_NOT_NULL(payload);
 
-    return supportedPayloads->set(id, payload);
+    supportedAuthenticationConfigs.set(id, AuthenticationConfig(id, payload, config));
+    return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::getSupportedPayloads(IDict** payloads)
+ErrCode ComponentTypeBuilderImpl::getSupportedAuthenticationConfigs(IDict** authenticationConfigs)
 {
-    OPENDAQ_PARAM_NOT_NULL(payloads);
+    OPENDAQ_PARAM_NOT_NULL(authenticationConfigs);
 
-    *payloads = supportedPayloads.addRefAndReturn();
+    *authenticationConfigs = supportedAuthenticationConfigs.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
 ErrCode ComponentTypeBuilderImpl::validateAuthenticationCapabilities()
 {
-    const bool hasSupportedPayloads = supportedPayloads.assigned() && supportedPayloads.getCount() > 0;
+    const bool noneAuthenticationConfigs = !supportedAuthenticationConfigs.assigned() || supportedAuthenticationConfigs.getCount() == 0;
 
-    if (!hasSupportedPayloads)
+    if (noneAuthenticationConfigs)
     {
-        if (defaultAuthenticationConfig.assigned())
+        if (defaultAuthenticationConfigId.assigned())
             return DAQ_MAKE_ERROR_INFO(
                 OPENDAQ_ERR_INVALIDPARAMETER,
-                "A default authentication config is set, but no supported credential payloads are configured");
+                "A default authentication config id is set, but no supported authentication configs were added");
 
         return OPENDAQ_SUCCESS;
     }
+    else
+    {
+        if (!defaultAuthenticationConfigId.assigned())
+            return DAQ_MAKE_ERROR_INFO(
+                OPENDAQ_ERR_INVALIDPARAMETER,
+                "Supported authentication configs were added, but no default authentication config id is set");
 
-    if (!defaultAuthenticationConfig.assigned())
-        return DAQ_MAKE_ERROR_INFO(
-            OPENDAQ_ERR_INVALIDPARAMETER,
-            "Supported credential payloads are configured, but no default authentication config is set");
-
-    const StringPtr defaultPayloadId = defaultAuthenticationConfig.getCredentialPayloadId();
-    if (!defaultPayloadId.assigned() || !supportedPayloads.hasKey(defaultPayloadId))
-        return DAQ_MAKE_ERROR_INFO(
-            OPENDAQ_ERR_INVALIDPARAMETER,
-            "The default authentication config's payload id does not match any of the supported credential payloads");
+        if (!supportedAuthenticationConfigs.hasKey(defaultAuthenticationConfigId))
+            return DAQ_MAKE_ERROR_INFO(
+                OPENDAQ_ERR_INVALIDPARAMETER,
+                "The default authentication config id does not match any of the supported authentication configs");
+    }
 
     return OPENDAQ_SUCCESS;
 }

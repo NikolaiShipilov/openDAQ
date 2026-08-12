@@ -90,6 +90,14 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
     virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig) = 0;
 
     /*!
+     * @brief Gets the authentication configs supported by this component type, keyed by payload id (see
+     * `IComponentTypeBuilder::addSupportedAuthenticationConfig`).
+     * @param[out] authenticationConfigs The payload id -> authentication config dictionary.
+     */
+    // [templateType(authenticationConfigs, IString, IAuthenticationConfig)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationConfigs(IDict** authenticationConfigs) = 0;
+
+    /*!
      * @brief Retrieves the module information.
      * @param[out] info The module information.
      */

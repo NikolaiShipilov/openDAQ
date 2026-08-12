@@ -24,7 +24,7 @@ BEGIN_NAMESPACE_OPENDAQ
 class AuthenticationConfigImpl : public ImplementationOf<IAuthenticationConfig>
 {
 public:
-    AuthenticationConfigImpl(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor);
+    AuthenticationConfigImpl(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor, const PropertyObjectPtr& config = nullptr);
 
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;

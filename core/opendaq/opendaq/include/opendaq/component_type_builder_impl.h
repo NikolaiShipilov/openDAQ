@@ -50,11 +50,11 @@ public:
     ErrCode INTERFACE_FUNC setDefaultConfig(IPropertyObject* defaultConfig) override;
     ErrCode INTERFACE_FUNC getDefaultConfig(IPropertyObject** defaultConfig) override;
 
-    ErrCode INTERFACE_FUNC setDefaultAuthenticationConfig(IAuthenticationConfig* defaultAuthenticationConfig) override;
-    ErrCode INTERFACE_FUNC getDefaultAuthenticationConfig(IAuthenticationConfig** defaultAuthenticationConfig) override;
+    ErrCode INTERFACE_FUNC setDefaultAuthenticationConfigId(IString* id) override;
+    ErrCode INTERFACE_FUNC getDefaultAuthenticationConfigId(IString** id) override;
 
-    ErrCode INTERFACE_FUNC addSupportedPayload(IString* id, ICredentialPayloadDescriptor* payload) override;
-    ErrCode INTERFACE_FUNC getSupportedPayloads(IDict** payloads) override;
+    ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payload, IPropertyObject* config = nullptr) override;
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationConfigs(IDict** authenticationConfigs) override;
 
 private:
     ErrCode validateAuthenticationCapabilities();
@@ -65,9 +65,9 @@ private:
     StringPtr prefix;
     StringPtr description;
     PropertyObjectPtr defaultConfig;
-    AuthenticationConfigPtr defaultAuthenticationConfig;
+    StringPtr defaultAuthenticationConfigId;
     ModuleInfoPtr moduleInfo;
-    DictPtr<IString, ICredentialPayloadDescriptor> supportedPayloads;
+    DictPtr<IString, IAuthenticationConfig> supportedAuthenticationConfigs;
 };
 
 END_NAMESPACE_OPENDAQ
