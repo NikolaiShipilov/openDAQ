@@ -31,4 +31,15 @@ inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const ListPtr<IS
     return obj;
 }
 
+/*!
+ * @brief Creates a `CredentialPayloadDescriptor` describing a `String`-format payload - a single secret,
+ * e.g. a PIN, token, or API key.
+ * @param description A human-readable description of the payload, for the user.
+ */
+inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& description)
+{
+    CredentialPayloadDescriptorPtr obj(StringPayloadDescriptor_Create(description));
+    return obj;
+}
+
 END_NAMESPACE_OPENDAQ

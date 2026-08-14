@@ -15,21 +15,26 @@
  */
 
 #pragma once
-
-#include <opendaq/credential_payload_ptr.h>
+#include <opendaq/credential_payload.h>
+#include <coretypes/impl.h>
+#include <coretypes/function_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
-inline CredentialPayloadPtr UserPasswordCredentialPayload(const FunctionPtr& getUserPassCb)
+/*!
+ * @brief Generic single-secret `ICredentialPayload`, used by `String`-format authentication methods
+ * (e.g. a PIN code, a token, an API key). The secret returned by the callback is returned directly
+ * by `getSecrets`, as an `IString`.
+ */
+class StringCredentialPayloadImpl final : public ImplementationOf<ICredentialPayload>
 {
-    CredentialPayloadPtr obj(UserPasswordCredentialPayload_Create(getUserPassCb));
-    return obj;
-}
+public:
+    explicit StringCredentialPayloadImpl(const FunctionPtr& getSecretCb);
 
-inline CredentialPayloadPtr StringCredentialPayload(const FunctionPtr& getSecretCb)
-{
-    CredentialPayloadPtr obj(StringCredentialPayload_Create(getSecretCb));
-    return obj;
-}
+    ErrCode INTERFACE_FUNC getSecrets(IBaseObject** secrets) override;
+
+private:
+    FunctionPtr getSecretCallback;
+};
 
 END_NAMESPACE_OPENDAQ

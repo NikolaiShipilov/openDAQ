@@ -105,4 +105,44 @@ ErrCode KeyValuePayloadDescriptorImpl::Deserialize(ISerializedObject* serialized
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IList*, keys, IString*, description)
 
+StringPayloadDescriptorImpl::StringPayloadDescriptorImpl(const StringPtr& description)
+    : CredentialPayloadDescriptorBaseImpl(PropertyObject(), description)
+{
+}
+
+ErrCode StringPayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format)
+{
+    OPENDAQ_PARAM_NOT_NULL(format);
+
+    *format = CredentialPayloadFormat::String;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode StringPayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
+{
+    *id = SerializeId();
+    return OPENDAQ_SUCCESS;
+}
+
+ConstCharPtr StringPayloadDescriptorImpl::SerializeId()
+{
+    return "StringPayloadDescriptor";
+}
+
+ErrCode StringPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
+{
+    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
+
+    return daqTry(
+        [&]
+        {
+            const auto description = serializedObj.readString("Description");
+
+            *obj = createWithImplementation<ICredentialPayloadDescriptor, StringPayloadDescriptorImpl>(description).detach();
+            return OPENDAQ_SUCCESS;
+        });
+}
+
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
+
 END_NAMESPACE_OPENDAQ

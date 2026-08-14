@@ -19,11 +19,12 @@
 #include <opendaq/device_impl.h>
 #include <opendaq/credential_request_ptr.h>
 #include <opendaq/credential_payload_ptr.h>
+#include <opendaq/credential_payload_descriptor_ptr.h>
 
 /*
  * Minimal device implementation with no signals or channels. When connected to via the
- * authenticated path, authenticates via the credential framework using a username/password,
- * as the first showcased auth method. When connected to via the plain, non-authenticated
+ * authenticated path, authenticates via the credential framework using either a username/password
+ * or a PIN code, the two showcased auth methods. When connected to via the plain, non-authenticated
  * path, no credentials are required or checked.
  */
 
@@ -37,12 +38,22 @@ public:
                                       const ComponentPtr& parent,
                                       const DeviceInfoPtr& info,
                                       bool authenticated,
+                                      const StringPtr& payloadId = nullptr,
                                       const CredentialPayloadPtr& credentials = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
-    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString, const StringPtr& manufacturer, const StringPtr& serialNumber, bool verbose);
+    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString,
+                                                         const StringPtr& manufacturer,
+                                                         const StringPtr& serialNumber,
+                                                         const StringPtr& payloadId,
+                                                         const CredentialPayloadDescriptorPtr& payloadDescriptor,
+                                                         bool verbose,
+                                                         bool hideSecretInput);
     static void ValidateConnectionString(const StringPtr& connectionString);
+
+private:
+    static void authenticate(const CredentialPayloadPtr& credentials, const StringPtr& payloadId);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

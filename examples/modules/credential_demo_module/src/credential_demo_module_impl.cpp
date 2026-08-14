@@ -52,14 +52,24 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
     CredentialDemoDeviceImpl::ValidateConnectionString(connectionString);
 
+    if (!authenticationConfig.assigned())
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
+    }
+
+    const auto payloadId = authenticationConfig.getCredentialPayloadId();
+    const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
+
     // The authenticated path always requests credentials - the device is never connected to anonymously.
-    auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), CredentialDemoDeviceImpl::CreateType());
+    auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), payloadDescriptor);
     if (!credentialProvider.assigned())
     {
         DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no credential provider supporting a compatible payload format is registered");
     }
 
-    const bool verboseCredentialRequest = authenticationConfig.getConfig().getPropertyValue("VerboseCredentialRequest");
+    const auto additionalConfig = authenticationConfig.getConfig();
+    const bool verboseCredentialRequest = additionalConfig.getPropertyValue("VerboseCredentialRequest");
+    const bool hideSecretInput = additionalConfig.getPropertyValue("HideSecretInput");
 
     return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
         config,
@@ -67,23 +77,21 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         parent,
         info,
         /*authenticated*/true,
+        payloadId,
         credentialProvider.requestCredentials(
-            CredentialDemoDeviceImpl::CreateCredentialRequest(connectionString, manufacturer, serialNumber, verboseCredentialRequest))).detach();
+            CredentialDemoDeviceImpl::CreateCredentialRequest(
+                connectionString, manufacturer, serialNumber, payloadId, payloadDescriptor, verboseCredentialRequest, hideSecretInput))).detach();
 }
 
 CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
-                                                                           const DeviceTypePtr& deviceType)
+                                                                           const CredentialPayloadDescriptorPtr& payloadDescriptor)
 {
-    for (const auto& [_, authenticationConfig] : deviceType.getSupportedAuthenticationConfigs())
+    for (const auto& [_, provider] : providers)
     {
-        const auto payload = authenticationConfig.getCredentialPayloadDescriptor();
-        for (const auto& [_, provider] : providers)
+        for (const auto& format : provider.getSupportedPayloadFormats())
         {
-            for (const auto& format : provider.getSupportedPayloadFormats())
-            {
-                if (static_cast<CredentialPayloadFormat>(static_cast<Int>(format)) == payload.getFormat())
-                    return provider;
-            }
+            if (static_cast<CredentialPayloadFormat>(static_cast<Int>(format)) == payloadDescriptor.getFormat())
+                return provider;
         }
     }
 

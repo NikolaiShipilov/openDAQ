@@ -19,6 +19,7 @@
 #include <coretypes/impl.h>
 #include <opendaq/credential_provider.h>
 #include <opendaq/credential_request_ptr.h>
+#include <opendaq/credential_payload_descriptor_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -33,7 +34,10 @@ public:
 
 private:
     static void printRequestDetails(const CredentialRequestPtr& request);
-    static std::string readPassword(const std::string& prompt);
+    static bool ShouldHideSecretInput(const CredentialRequestPtr& request);
+    static DictPtr<IString, IBaseObject> readUserNameAndPassword(bool hide);
+    static StringPtr readStringSecret(const CredentialPayloadDescriptorPtr& descriptor, bool hide);
+    static std::string readLine(const std::string& prompt, bool hide);
 };
 
 END_NAMESPACE_OPENDAQ

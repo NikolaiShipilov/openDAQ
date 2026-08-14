@@ -26,7 +26,7 @@ class UserPasswordCredentialPayloadImpl final : public ImplementationOf<ICredent
 public:
     explicit UserPasswordCredentialPayloadImpl(const FunctionPtr& getUserPassCb);
 
-    ErrCode INTERFACE_FUNC getSecrets(IDict** secrets) override;
+    ErrCode INTERFACE_FUNC getSecrets(IBaseObject** secrets) override;
 
 private:
     FunctionPtr getUsernameAndPasswordCallback;

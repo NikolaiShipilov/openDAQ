@@ -16,30 +16,49 @@ BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
 static constexpr std::string_view GenericDeviceAddress = "credential_demo_device";
 static const std::string UserNamePasswordPayloadId = "UserNamePassword";
+static const std::string PinPayloadId = "Pin";
+
+void CredentialDemoDeviceImpl::authenticate(const CredentialPayloadPtr& credentials, const StringPtr& payloadId)
+{
+    if (!credentials.assigned())
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no credentials provided");
+    }
+
+    const BaseObjectPtr secrets = credentials.getSecrets();
+    const std::string payloadIdStr = payloadId.toStdString();
+
+    if (payloadIdStr == PinPayloadId)
+    {
+        const StringPtr pin = secrets.asPtrOrNull<IString>();
+        if (!pin.assigned() || pin != "1234")
+        {
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - wrong pin-code");
+        }
+    }
+    else
+    {
+        const auto userNameAndPassword = secrets.asPtrOrNull<IDict, DictPtr<IString, IString>>(true);
+        if (!userNameAndPassword.assigned() ||
+            !userNameAndPassword.hasKey("UserName") || userNameAndPassword.get("UserName") != "user" ||
+            !userNameAndPassword.hasKey("Password") || userNameAndPassword.get("Password") != "pass")
+        {
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - wrong username or password");
+        }
+    }
+}
 
 CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& config,
                                                    const ContextPtr& ctx,
                                                    const ComponentPtr& parent,
                                                    const DeviceInfoPtr& info,
                                                    bool authenticated,
+                                                   const StringPtr& payloadId,
                                                    const CredentialPayloadPtr& credentials)
     : Device(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
     if (authenticated)
-    {
-        if (!credentials.assigned())
-        {
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no credentials provided");
-        }
-
-        DictPtr<IString, IBaseObject> usernameAndPassword = credentials.getSecrets();
-        if (!usernameAndPassword.assigned() ||
-            !usernameAndPassword.hasKey("UserName") || usernameAndPassword.get("UserName") != "user" ||
-            !usernameAndPassword.hasKey("Password") || usernameAndPassword.get("Password") != "aaa")
-        {
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - wrong credentials");
-        }
-    }
+        authenticate(credentials, payloadId);
 
     this->deviceInfo = info;
 }
@@ -67,17 +86,24 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
-    auto additionalConfig = PropertyObject();
-    additionalConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
+    auto userNamePasswordConfig = PropertyObject();
+    userNamePasswordConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
+    userNamePasswordConfig.addProperty(BoolProperty("HideSecretInput", True));
 
-    auto payloadDescriptor = KeyValuePayloadDescriptor(List<IString>("UserName", "Password"), "Username and password");
+    auto pinConfig = PropertyObject();
+    pinConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
+    pinConfig.addProperty(BoolProperty("HideSecretInput", True));
+
+    auto userNamePasswordDescriptor = KeyValuePayloadDescriptor(List<IString>("UserName", "Password"), "Username and password");
+    auto pinDescriptor = StringPayloadDescriptor("PIN code");
 
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix("daq.credential_demo")
-        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, payloadDescriptor, additionalConfig)
+        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor, userNamePasswordConfig)
+        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor, pinConfig)
         .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
 }
@@ -85,7 +111,10 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const StringPtr& connectionString,
                                                                        const StringPtr& manufacturer,
                                                                        const StringPtr& serialNumber,
-                                                                       bool verbose)
+                                                                       const StringPtr& payloadId,
+                                                                       const CredentialPayloadDescriptorPtr& payloadDescriptor,
+                                                                       bool verbose,
+                                                                       bool hideSecretInput)
 {
     auto deviceType = CreateType();
 
@@ -93,7 +122,13 @@ CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const Str
     builder.setConnectionString(connectionString);
     builder.setManufacturer(manufacturer);
     builder.setSerialNumber(serialNumber);
+    builder.setPayloadId(payloadId);
+    builder.setPayloadDescriptor(payloadDescriptor);
     builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeName", deviceType.getName()).setDescription("The openDAQ device type name").build());
+    builder.addMetaDataProperty(
+        BoolPropertyBuilder("HideSecretInput", hideSecretInput)
+            .setDescription("Whether the credential provider should mask secret input as it is entered")
+            .build());
     if (verbose)
     {
         builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeId", deviceType.getId()).setDescription("The openDAQ device type ID").build());

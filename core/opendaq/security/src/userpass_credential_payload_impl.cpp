@@ -10,14 +10,17 @@ UserPasswordCredentialPayloadImpl::UserPasswordCredentialPayloadImpl(const Funct
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Function callback to obtain username and password must be assigned on corresponding credential payload creation");
 }
 
-ErrCode UserPasswordCredentialPayloadImpl::getSecrets(IDict** secrets)
+ErrCode UserPasswordCredentialPayloadImpl::getSecrets(IBaseObject** secrets)
 {
     OPENDAQ_PARAM_NOT_NULL(secrets);
 
     return daqTry([&]
     {
-        DictPtr<IString, IBaseObject> userNameAndPassword;
-        userNameAndPassword = getUsernameAndPasswordCallback();
+        const BaseObjectPtr result = getUsernameAndPasswordCallback();
+
+        auto userNameAndPassword = result.asPtrOrNull<IDict, DictPtr<IString, IString>>();
+        if (!userNameAndPassword.assigned())
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDTYPE, "Credential provider's callback did not return a UserName/Password dictionary");
 
         *secrets = userNameAndPassword.detach();
         return OPENDAQ_SUCCESS;

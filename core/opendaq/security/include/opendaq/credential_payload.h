@@ -16,17 +16,28 @@
 
 #pragma once
 #include <coretypes/baseobject.h>
-#include <coretypes/dictobject.h>
 #include <coretypes/function.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 DECLARE_OPENDAQ_INTERFACE(ICredentialPayload, IBaseObject)
 {
-    // [templateType(secrets, IString, IBaseObject)]
-    virtual ErrCode INTERFACE_FUNC getSecrets(IDict** secrets) = 0;
+    /*!
+     * @brief Gets the secret(s) carried by the payload. The concrete type depends on the payload format
+     * the payload was obtained for - `IString` for a `String`-format payload, `IDict<IString, IString>`
+     * for a `KeyValuePairs`-format payload. Callers are expected to know the format (e.g. from the
+     * IAuthenticationConfig and ICredentialPayloadDescriptor used to request the credential) and cast accordingly.
+     * @param[out] secrets The secret(s) carried by the payload.
+     */
+    virtual ErrCode INTERFACE_FUNC getSecrets(IBaseObject** secrets) = 0;
 };
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, UserPasswordCredentialPayload, ICredentialPayload, IFunction*, getUserPassCb)
+
+/*!
+ * @brief Creates a `String`-format `ICredentialPayload`. Its single secret is returned directly by
+ * `getSecrets`, as an `IString`.
+ */
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringCredentialPayload, ICredentialPayload, IFunction*, getSecretCb)
 
 END_NAMESPACE_OPENDAQ

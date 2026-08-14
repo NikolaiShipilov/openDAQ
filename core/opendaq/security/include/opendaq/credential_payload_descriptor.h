@@ -27,6 +27,7 @@ BEGIN_NAMESPACE_OPENDAQ
 enum class CredentialPayloadFormat : EnumType
 {
     KeyValuePairs,  ///< N string pairs - e.g. UserName / Password.
+    String          /// one string — token, API key, PIN
 };
 
 /*#
@@ -62,6 +63,11 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor,
     IList*, keys, IString*, description
+)
+
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
+    LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor,
+    IString*, description
 )
 
 END_NAMESPACE_OPENDAQ

@@ -27,11 +27,12 @@ void createJsonConfigFile()
     file.close();
 }
 
-int main(int /*argc*/, const char* /*argv*/[])
+int main(int argc, const char* argv[])
 {
     using namespace daq;
 
     createJsonConfigFile();
+
     auto credentialProvider = CmdLineCredentialProvider();
 
     auto instanceBuilder = InstanceBuilder();
@@ -40,23 +41,35 @@ int main(int /*argc*/, const char* /*argv*/[])
     instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
     auto instance = instanceBuilder.build();
 
+    // add without authentication
     auto device = instance.addDevice("daq://openDAQ_1234");
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" without authentication. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
 
+    // get the type to obtain default authentication settings
     auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
-    auto authenticationConfig = deviceType.createDefaultAuthenticationConfig();
 
-    authenticationConfig.getConfig().setPropertyValue("VerboseCredentialRequest", False);
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, authenticationConfig);
-    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with authentication, non-verbose credential request. Press \"enter\" to continue..." << std::endl;
+    // authenticate with username and password
+    // UserName/Password authentication - a KeyValuePairs-format credential payload.
+    auto userNamePasswordConfig = deviceType.createDefaultAuthenticationConfig();
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, non-verbose credential request. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
 
-    authenticationConfig.getConfig().setPropertyValue("VerboseCredentialRequest", True);
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, authenticationConfig);
-    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with authentication, verbose credential request." << std::endl;
+    // authenticate with username and password but not hide the password
+    userNamePasswordConfig.getConfig().setPropertyValue("VerboseCredentialRequest", True);
+    userNamePasswordConfig.getConfig().setPropertyValue("HideSecretInput", False);
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, verbose credential request. Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+
+    // PIN authentication - an alternative, String-format credential payload.
+    auto pinConfig = deviceType.getSupportedAuthenticationConfigs().get("Pin");
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with PIN authentication." << std::endl;
 
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
     std::cin.get();
