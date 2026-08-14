@@ -84,7 +84,7 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
      * created, same as with `createDefaultConfig`.
      * @param[out] authenticationConfig Newly created authentication config object.
      *
-     * Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the component type does not support authentication, ie. no default
+     * Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the component type does not support authentication, i.e. no default
      * authentication config was set on the type's builder.
      */
     virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig) = 0;

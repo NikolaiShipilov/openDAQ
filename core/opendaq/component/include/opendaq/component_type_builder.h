@@ -173,7 +173,7 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
 
     // [returnSelf]
     /*!
-     * @brief Sets the id of the supported authentication config (see `addSupportedAuthenticationConfig`) to use as the
+     * @brief Sets the id of the authentication config (see `addSupportedAuthenticationConfig`) to use as the
      * default, returned to users via `createDefaultAuthenticationConfig`.
      * @param id The id of the default authentication config. Must match one of the ids added via
      * `addSupportedAuthenticationConfig`.
@@ -184,7 +184,7 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
     virtual ErrCode INTERFACE_FUNC setDefaultAuthenticationConfigId(IString* id) = 0;
 
     /*!
-     * @brief Gets the id of the supported authentication config (see `addSupportedAuthenticationConfig`) set via
+     * @brief Gets the id of the authentication config (see `addSupportedAuthenticationConfig`) set via
      * `setDefaultAuthenticationConfigId`.
      * @param[out] id The id of the default authentication config, or `nullptr` if none was set.
      */
@@ -193,13 +193,12 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
     // [returnSelf]
     /*!
      * @brief Adds a supported credential payload, keyed by payload id, within the whole authentication config that is
-     * built immediately from the given id, descriptor and additional config, and stored under the same id (see
-     * `getSupportedAuthenticationConfigs`).
+     * built immediately from the given id, descriptor and additional config, and stored under the same id.
      * @param id The payload id.
-     * @param payload The descriptor of the supported payload.
+     * @param payloadDescriptor The descriptor of the supported payload.
      * @param config Additional, payload-specific configuration to carry in the built authentication config.
      */
-    virtual ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payload, IPropertyObject* config = nullptr) = 0;
+    virtual ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payloadDescriptor, IPropertyObject* config = nullptr) = 0;
 
     /*!
      * @brief Gets the authentication configs built for each supported payload added via `addSupportedAuthenticationConfig`, keyed

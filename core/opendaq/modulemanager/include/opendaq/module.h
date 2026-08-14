@@ -77,7 +77,8 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
 
     /*!
      * @brief Creates a device object that can communicate with the device described in the specified connection string,
-     * using the provided authentication configuration.
+     * authenticating the connection by obtaining credentials - as specified by the given authentication configuration -
+     * from a compatible registered credential provider.
      * The device object is not automatically added as a sub-device of the caller, but only returned by reference.
      * @param[out] device The device object created to communicate with and control the device.
      * @param connectionString Describes the connection info of the device to connect to.
@@ -85,7 +86,7 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * @param serialNumber The serial number of the device to connect to.
      * @param parent The parent component/device to which the device attaches.
      * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
-     * @param authenticatedConfig The authentication configuration used to authenticate the connection to the device.
+     * @param authenticationConfig The authentication configuration used to authenticate the connection to the device.
      */
     virtual ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
                                                              IString* connectionString,

@@ -144,12 +144,12 @@ ErrCode ComponentTypeBuilderImpl::getDefaultAuthenticationConfigId(IString** id)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payload, IPropertyObject* config)
+ErrCode ComponentTypeBuilderImpl::addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payloadDescriptor, IPropertyObject* config)
 {
     OPENDAQ_PARAM_NOT_NULL(id);
-    OPENDAQ_PARAM_NOT_NULL(payload);
+    OPENDAQ_PARAM_NOT_NULL(payloadDescriptor);
 
-    supportedAuthenticationConfigs.set(id, AuthenticationConfig(id, payload, config));
+    supportedAuthenticationConfigs.set(id, AuthenticationConfig(id, payloadDescriptor, config));
     return OPENDAQ_SUCCESS;
 }
 

@@ -53,7 +53,7 @@ public:
     ErrCode INTERFACE_FUNC setDefaultAuthenticationConfigId(IString* id) override;
     ErrCode INTERFACE_FUNC getDefaultAuthenticationConfigId(IString** id) override;
 
-    ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payload, IPropertyObject* config = nullptr) override;
+    ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payloadDescriptor, IPropertyObject* config = nullptr) override;
     ErrCode INTERFACE_FUNC getSupportedAuthenticationConfigs(IDict** authenticationConfigs) override;
 
 private:

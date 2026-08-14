@@ -198,7 +198,7 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
 
     // [templateType(device, IDevice)]
     /*!
-     * @brief Connects to a device at the given connection string using the provided authentication configuration and returns it.
+     * @brief Connects to a device at the given connection string using the provided authentication configuration and returns the added device.
      * @param[out] device The added device.
      * @param connectionString The connection string containing the address of the device. In example an
      * IPv4/IPv6 address. The connection string can be found in the Device Info objects returned by

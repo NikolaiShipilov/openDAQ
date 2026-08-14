@@ -67,7 +67,8 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
 
     /*!
      * @brief Creates a device object that can communicate with the device described in the specified connection string,
-     * using the provided authentication configuration.
+     * authenticating the connection by obtaining credentials - as specified by the given authentication configuration -
+     * from a compatible registered credential provider.
      * The device object is not automatically added as a sub-device of the caller, but only returned by reference.
      * @param[out] device The device object created to communicate with and control the device.
      * @param connectionString Describes the connection info of the device to connect to.
