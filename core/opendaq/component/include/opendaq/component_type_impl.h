@@ -58,6 +58,7 @@ public:
     ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) override;
     ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig) override;
     ErrCode INTERFACE_FUNC getSupportedAuthenticationConfigs(IDict** authenticationConfigs) override;
+    ErrCode INTERFACE_FUNC isAuthenticationSupported(Bool* supported) override;
     ErrCode INTERFACE_FUNC getModuleInfo(IModuleInfo** moduleInfo) override;
 
     // IComponentTypePrivate
@@ -172,6 +173,16 @@ ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::getSupportedAuthenticatio
     OPENDAQ_PARAM_NOT_NULL(authenticationConfigs);
 
     *authenticationConfigs = this->supportedAuthenticationConfigs.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+template <class Intf, class... Interfaces>
+ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::isAuthenticationSupported(Bool* supported)
+{
+    OPENDAQ_PARAM_NOT_NULL(supported);
+
+    *supported = this->defaultAuthenticationConfigId.assigned() &&
+                 this->supportedAuthenticationConfigs.hasKey(this->defaultAuthenticationConfigId);
     return OPENDAQ_SUCCESS;
 }
 

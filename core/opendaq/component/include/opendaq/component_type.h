@@ -98,6 +98,17 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationConfigs(IDict** authenticationConfigs) = 0;
 
     /*!
+     * @brief Checks whether the component type supports authentication.
+     * @param[out] supported `True` if the component type supports authentication; `False` otherwise.
+     *
+     * A component type supports authentication when at least one authentication config was added via
+     * `IComponentTypeBuilder::addSupportedAuthenticationConfig`, and a default authentication config id was
+     * set via `IComponentTypeBuilder::setDefaultAuthenticationConfigId` that matches one of the added configs.
+     * When `True`, `createDefaultAuthenticationConfig` is guaranteed to succeed.
+     */
+    virtual ErrCode INTERFACE_FUNC isAuthenticationSupported(Bool* supported) = 0;
+
+    /*!
      * @brief Retrieves the module information.
      * @param[out] info The module information.
      */

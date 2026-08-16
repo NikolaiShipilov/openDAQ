@@ -817,6 +817,7 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
             connectionStringPtr = resolveSmartConnectionString(connectionStringPtr, discoveredDeviceInfo, generalConfig, loggerComponent);
         }
 
+        bool deviceTypeFoundButAuthNotSupported = false;
         for (const auto& library : libraries)
         {
             const auto deviceType = getDeviceTypeFromConnectionString(connectionStringPtr, library.module);
@@ -824,6 +825,12 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
             // Check if module can create device with given connection string
             if (!deviceType.assigned())
                 continue;
+
+            if (authenticated && !deviceType.isAuthenticationSupported())
+            {
+                deviceTypeFoundButAuthNotSupported = true;
+                continue;
+            }
 
             // copy props from input config and connection string to device type config
             const auto deviceTypeConfig = PopulateDeviceTypeConfig(addDeviceConfig, inputConfig, deviceType, connectionStringOptions);
@@ -865,6 +872,11 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
 
             return err;
         }
+        if (deviceTypeFoundButAuthNotSupported)
+            return DAQ_MAKE_ERROR_INFO(
+                OPENDAQ_ERR_NOT_SUPPORTED,
+                fmt::format("Device with given connection string '{}' does not support authentication", StringPtr::Borrow(connectionString)));
+
         return DAQ_MAKE_ERROR_INFO(
             OPENDAQ_ERR_NOTFOUND,
             fmt::format("Device with given connection string '{}' and config is not available", StringPtr::Borrow(connectionString)));
