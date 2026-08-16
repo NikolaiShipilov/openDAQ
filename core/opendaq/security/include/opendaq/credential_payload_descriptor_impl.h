@@ -69,7 +69,7 @@ OPENDAQ_REGISTER_DESERIALIZE_FACTORY(KeyValuePayloadDescriptorImpl)
 class StringPayloadDescriptorImpl final : public CredentialPayloadDescriptorBaseImpl
 {
 public:
-    explicit StringPayloadDescriptorImpl(const StringPtr& description);
+    StringPayloadDescriptorImpl(const StringPtr& description, Bool hidden);
 
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
 
@@ -77,6 +77,9 @@ public:
     ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
     static ConstCharPtr SerializeId();
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
+
+private:
+    static PropertyObjectPtr BuildParameters(Bool hidden);
 };
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(StringPayloadDescriptorImpl)

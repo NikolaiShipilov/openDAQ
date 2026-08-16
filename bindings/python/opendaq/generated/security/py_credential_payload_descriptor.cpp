@@ -48,9 +48,9 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
         return daq::KeyValuePayloadDescriptor_Create(getVariantValue<daq::IDict*>(keys), getVariantValue<daq::IString*>(description));
     }, py::arg("keys"), py::arg("description"));
 
-    m.def("StringPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
-        return daq::StringPayloadDescriptor_Create(getVariantValue<daq::IString*>(description));
-    }, py::arg("description"));
+    m.def("StringPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, const bool hidden){
+        return daq::StringPayloadDescriptor_Create(getVariantValue<daq::IString*>(description), hidden);
+    }, py::arg("description"), py::arg("hidden"));
 
 
     cls.def_property_readonly("format",

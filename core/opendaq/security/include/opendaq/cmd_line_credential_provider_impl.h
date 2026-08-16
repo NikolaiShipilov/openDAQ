@@ -34,9 +34,8 @@ public:
 
 private:
     static void printRequestDetails(const CredentialRequestPtr& request);
-    static bool ShouldHideSecretInput(const CredentialRequestPtr& request);
     static DictPtr<IString, IBaseObject> readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor);
-    static StringPtr readStringSecret(const CredentialPayloadDescriptorPtr& descriptor, bool hide);
+    static StringPtr readStringSecret(const CredentialPayloadDescriptorPtr& descriptor);
     static std::string readLine(const std::string& prompt, bool hide);
 };
 

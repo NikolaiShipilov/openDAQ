@@ -37,10 +37,11 @@ inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const DictPtr<IS
  * @brief Creates a `CredentialPayloadDescriptor` describing a `String`-format payload - a single secret,
  * e.g. a PIN, token, or API key.
  * @param description A human-readable description of the payload, for the user.
+ * @param hidden Whether the secret should be hidden as it is entered.
  */
-inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& description)
+inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& description, Bool hidden = True)
 {
-    CredentialPayloadDescriptorPtr obj(StringPayloadDescriptor_Create(description));
+    CredentialPayloadDescriptorPtr obj(StringPayloadDescriptor_Create(description, hidden));
     return obj;
 }
 

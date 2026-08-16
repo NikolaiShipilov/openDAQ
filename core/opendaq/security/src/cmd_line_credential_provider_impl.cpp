@@ -15,7 +15,6 @@
 BEGIN_NAMESPACE_OPENDAQ
 
 static const std::string CmdLineCredentialProviderName = "CmdLineCredentialProvider";
-static const std::string HideSecretInputMetaDataKey = "HideSecretInput";
 
 CmdLineCredentialProviderImpl::CmdLineCredentialProviderImpl()
 {
@@ -51,8 +50,6 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
     if (!descriptor.assigned())
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no payload descriptor set");
 
-    const bool hide = ShouldHideSecretInput(requestPtr);
-
     switch (descriptor.getFormat())
     {
         case CredentialPayloadFormat::KeyValuePairs:
@@ -70,10 +67,10 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
         case CredentialPayloadFormat::String:
         {
             auto callback = Function(
-                [requestPtr, descriptor, hide]()
+                [requestPtr, descriptor]()
                 {
                     printRequestDetails(requestPtr);
-                    return readStringSecret(descriptor, hide);
+                    return readStringSecret(descriptor);
                 });
 
             *credentials = StringCredentialPayload(callback).detach();
@@ -82,15 +79,6 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
         default:
             return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "Unsupported credential payload format");
     }
-}
-
-bool CmdLineCredentialProviderImpl::ShouldHideSecretInput(const CredentialRequestPtr& request)
-{
-    const auto metaData = request.getMetaData();
-    if (metaData.assigned() && metaData.hasProperty(HideSecretInputMetaDataKey))
-        return metaData.getPropertyValue(HideSecretInputMetaDataKey);
-
-    return true;
 }
 
 DictPtr<IString, IBaseObject> CmdLineCredentialProviderImpl::readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor)
@@ -104,11 +92,12 @@ DictPtr<IString, IBaseObject> CmdLineCredentialProviderImpl::readKeyValuePairs(c
     return secrets;
 }
 
-StringPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialPayloadDescriptorPtr& descriptor, bool hide)
+StringPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialPayloadDescriptorPtr& descriptor)
 {
     const StringPtr description = descriptor.getDescription();
+    const bool hidden = descriptor.getParameters().getPropertyValue("Hidden");
 
-    auto secret = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hide);
+    auto secret = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
     return String(secret);
 }
 

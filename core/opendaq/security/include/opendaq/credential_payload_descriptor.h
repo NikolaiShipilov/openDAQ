@@ -39,9 +39,10 @@ enum class CredentialPayloadFormat : EnumType
  * @brief Describes the details of the payload required for an authentication method used by the module and produced by credential provider.
  *
  * A descriptor carries the payload's format, its format-specific parameter set, and a human-readable
- * description. In particular, for a `KeyValuePairs`-format payload, the parameter set carries a `"Keys"` dict property
- * mapping each expected key to whether its value should be hidden as it is entered
- * (e.g. `{"UserName": False, "Password": True}`).
+ * description. In particular, the parameter set carries whether the payload's value(s) should be hidden as
+ * they are entered: for a `KeyValuePairs`-format payload, a `"Keys"` dict property maps each expected key to
+ * its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String`-format payload, a single
+ * `"Hidden"` bool property applies to the one secret.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 {
@@ -72,7 +73,7 @@ OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, description
+    IString*, description, Bool, hidden
 )
 
 END_NAMESPACE_OPENDAQ

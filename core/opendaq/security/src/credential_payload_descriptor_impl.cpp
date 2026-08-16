@@ -98,9 +98,16 @@ ErrCode KeyValuePayloadDescriptorImpl::Deserialize(ISerializedObject* serialized
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IDict*, keys, IString*, description)
 
-StringPayloadDescriptorImpl::StringPayloadDescriptorImpl(const StringPtr& description)
-    : CredentialPayloadDescriptorBaseImpl(PropertyObject(), description)
+StringPayloadDescriptorImpl::StringPayloadDescriptorImpl(const StringPtr& description, Bool hidden)
+    : CredentialPayloadDescriptorBaseImpl(BuildParameters(hidden), description)
 {
+}
+
+PropertyObjectPtr StringPayloadDescriptorImpl::BuildParameters(Bool hidden)
+{
+    auto params = PropertyObject();
+    params.addProperty(BoolProperty("Hidden", hidden));
+    return params;
 }
 
 ErrCode StringPayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format)
@@ -125,17 +132,21 @@ ConstCharPtr StringPayloadDescriptorImpl::SerializeId()
 ErrCode StringPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
 {
     const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
+    const auto contextPtr = BaseObjectPtr::Borrow(context);
+    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
 
     return daqTry(
         [&]
         {
+            const PropertyObjectPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
+            const Bool hidden = parameters.getPropertyValue("Hidden");
             const auto description = serializedObj.readString("Description");
 
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, StringPayloadDescriptorImpl>(description).detach();
+            *obj = createWithImplementation<ICredentialPayloadDescriptor, StringPayloadDescriptorImpl>(description, hidden).detach();
             return OPENDAQ_SUCCESS;
         });
 }
 
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description, Bool, hidden)
 
 END_NAMESPACE_OPENDAQ

@@ -23,6 +23,11 @@ static CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor(bool hideP
     return KeyValuePayloadDescriptor(Dict<IString, IBoolean>({{"UserName", False}, {"Password", hidePassword}}), "Username and password");
 }
 
+static CredentialPayloadDescriptorPtr BuildPinDescriptor(bool hidePin)
+{
+    return StringPayloadDescriptor("PIN code", hidePin);
+}
+
 static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, const DeviceTypePtr& deviceType, bool verbose)
 {
     builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeName", deviceType.getName()).setDescription("The openDAQ device type name").build());
@@ -103,7 +108,7 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
     auto userNamePasswordDescriptor = BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
-    auto pinDescriptor = StringPayloadDescriptor("PIN code");
+    auto pinDescriptor = BuildPinDescriptor(/*hidePin*/ true);
 
     auto userNamePasswordConfig = PropertyObject();
     userNamePasswordConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
@@ -152,21 +157,18 @@ CredentialRequestPtr CredentialDemoDeviceImpl::CreatePinCredentialRequest(const 
                                                                           const PropertyObjectPtr& additionalConfig,
                                                                           bool verbose)
 {
+    const bool hidePin = additionalConfig.assigned() && additionalConfig.hasProperty("HidePinInput")
+                              ? (bool) additionalConfig.getPropertyValue("HidePinInput")
+                              : true;
+    const auto payloadDescriptor = BuildPinDescriptor(hidePin);
+
     auto builder = CredentialRequestBuilder();
     builder.setConnectionString(connectionString);
     builder.setManufacturer(manufacturer);
     builder.setSerialNumber(serialNumber);
     builder.setPayloadId(PinPayloadId);
-    builder.setPayloadDescriptor(StringPayloadDescriptor("PIN code"));
+    builder.setPayloadDescriptor(payloadDescriptor);
     PopulateCommonMetaData(builder, CreateType(), verbose);
-
-    if (additionalConfig.assigned() && additionalConfig.hasProperty("HidePinInput"))
-    {
-        builder.addMetaDataProperty(
-            BoolPropertyBuilder("HideSecretInput", additionalConfig.getPropertyValue("HidePinInput"))
-                .setDescription("Whether the credential provider should mask secret input as it is entered")
-                .build());
-    }
 
     return builder.build();
 }
