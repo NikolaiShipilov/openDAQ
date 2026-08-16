@@ -43,13 +43,16 @@ public:
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
-    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& connectionString,
-                                                         const StringPtr& manufacturer,
-                                                         const StringPtr& serialNumber,
-                                                         const StringPtr& payloadId,
-                                                         const CredentialPayloadDescriptorPtr& payloadDescriptor,
-                                                         bool verbose,
-                                                         bool hideSecretInput);
+    static CredentialRequestPtr CreateUserNamePasswordCredentialRequest(const StringPtr& connectionString,
+                                                                         const StringPtr& manufacturer,
+                                                                         const StringPtr& serialNumber,
+                                                                         const PropertyObjectPtr& additionalConfig,
+                                                                         bool verbose);
+    static CredentialRequestPtr CreatePinCredentialRequest(const StringPtr& connectionString,
+                                                            const StringPtr& manufacturer,
+                                                            const StringPtr& serialNumber,
+                                                            const PropertyObjectPtr& additionalConfig,
+                                                            bool verbose);
     static void ValidateConnectionString(const StringPtr& connectionString);
 
 private:

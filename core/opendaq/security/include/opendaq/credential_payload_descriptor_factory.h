@@ -16,16 +16,18 @@
 
 #pragma once
 #include <opendaq/credential_payload_descriptor_ptr.h>
-#include <coretypes/listobject.h>
+#include <coretypes/dictobject.h>
+#include <coretypes/boolean.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
  * @brief Creates a `CredentialPayloadDescriptor` describing a `KeyValuePairs`-format payload.
- * @param keys The expected key names (e.g. ["UserName", "Password"]).
+ * @param keys The expected keys, mapped to whether the corresponding value should be hidden as it is
+ * entered (e.g. `{"UserName": False, "Password": True}`).
  * @param description A human-readable description of the payload, for the user.
  */
-inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const ListPtr<IString>& keys, const StringPtr& description)
+inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
 {
     CredentialPayloadDescriptorPtr obj(KeyValuePayloadDescriptor_Create(keys, description));
     return obj;

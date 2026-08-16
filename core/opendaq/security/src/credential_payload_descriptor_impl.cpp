@@ -1,6 +1,7 @@
 #include <opendaq/credential_payload_descriptor_impl.h>
 #include <coreobjects/property_object_factory.h>
 #include <coreobjects/property_factory.h>
+#include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -38,21 +39,23 @@ void CredentialPayloadDescriptorBaseImpl::serializeCustomValues(ISerializer* ser
 {
     serializer->key("Description");
     serializer->writeString(description.getCharPtr(), description.getLength());
+
+    serializer->key("Parameters");
+    parameters.asPtr<ISerializable>().serialize(serializer);
 }
 
-KeyValuePayloadDescriptorImpl::KeyValuePayloadDescriptorImpl(const ListPtr<IString>& keys, const StringPtr& description)
+KeyValuePayloadDescriptorImpl::KeyValuePayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
     : CredentialPayloadDescriptorBaseImpl(BuildParameters(keys), description)
-    , keys(keys)
 {
 }
 
-PropertyObjectPtr KeyValuePayloadDescriptorImpl::BuildParameters(const ListPtr<IString>& keys)
+PropertyObjectPtr KeyValuePayloadDescriptorImpl::BuildParameters(const DictPtr<IString, IBoolean>& keys)
 {
-    if (!keys.assigned())
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "Keys must be assigned when creating a key-value credential payload descriptor");
+    if (!keys.assigned() || keys.getCount() == 0)
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Keys must be assigned and non-empty when creating a key-value credential payload descriptor");
 
     auto params = PropertyObject();
-    params.addProperty(ListProperty("Keys", keys));
+    params.addProperty(DictProperty("Keys", keys));
     return params;
 }
 
@@ -75,17 +78,6 @@ ConstCharPtr KeyValuePayloadDescriptorImpl::SerializeId()
     return "KeyValuePayloadDescriptor";
 }
 
-void KeyValuePayloadDescriptorImpl::serializeCustomValues(ISerializer* serializer)
-{
-    CredentialPayloadDescriptorBaseImpl::serializeCustomValues(serializer);
-
-    serializer->key("Keys");
-    serializer->startList();
-    for (const auto& key : keys)
-        serializer->writeString(key.getCharPtr(), key.getLength());
-    serializer->endList();
-}
-
 ErrCode KeyValuePayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
 {
     const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
@@ -95,7 +87,8 @@ ErrCode KeyValuePayloadDescriptorImpl::Deserialize(ISerializedObject* serialized
     return daqTry(
         [&]
         {
-            const auto keys = serializedObj.readList<IString>("Keys", contextPtr, factoryCallbackPtr);
+            const PropertyObjectPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
+            const DictPtr<IString, IBoolean> keys = parameters.getPropertyValue("Keys");
             const auto description = serializedObj.readString("Description");
 
             *obj = createWithImplementation<ICredentialPayloadDescriptor, KeyValuePayloadDescriptorImpl>(keys, description).detach();
@@ -103,7 +96,7 @@ ErrCode KeyValuePayloadDescriptorImpl::Deserialize(ISerializedObject* serialized
         });
 }
 
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IList*, keys, IString*, description)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IDict*, keys, IString*, description)
 
 StringPayloadDescriptorImpl::StringPayloadDescriptorImpl(const StringPtr& description)
     : CredentialPayloadDescriptorBaseImpl(PropertyObject(), description)

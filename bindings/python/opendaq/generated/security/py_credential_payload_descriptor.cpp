@@ -44,8 +44,8 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
 {
     cls.doc() = "Describes the details of the payload required for an authentication method used by the module and produced by credential provider.";
 
-    m.def("KeyValuePayloadDescriptor", [](std::variant<daq::IList*, py::list, daq::IEvalValue*>& keys, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
-        return daq::KeyValuePayloadDescriptor_Create(getVariantValue<daq::IList*>(keys), getVariantValue<daq::IString*>(description));
+    m.def("KeyValuePayloadDescriptor", [](std::variant<daq::IDict*, py::dict>& keys, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
+        return daq::KeyValuePayloadDescriptor_Create(getVariantValue<daq::IDict*>(keys), getVariantValue<daq::IString*>(description));
     }, py::arg("keys"), py::arg("description"));
 
     m.def("StringPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){

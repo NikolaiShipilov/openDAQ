@@ -60,7 +60,7 @@ int main(int argc, const char* argv[])
 
     // authenticate with username and password but not hide the password
     userNamePasswordConfig.getConfig().setPropertyValue("VerboseCredentialRequest", True);
-    userNamePasswordConfig.getConfig().setPropertyValue("HideSecretInput", False);
+    userNamePasswordConfig.getConfig().setPropertyValue("HidePasswordInput", False);
     device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, verbose credential request. Press \"enter\" to continue..." << std::endl;
     std::cin.get();

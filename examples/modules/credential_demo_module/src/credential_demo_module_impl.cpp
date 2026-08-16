@@ -69,7 +69,13 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
 
     const auto additionalConfig = authenticationConfig.getConfig();
     const bool verboseCredentialRequest = additionalConfig.getPropertyValue("VerboseCredentialRequest");
-    const bool hideSecretInput = additionalConfig.getPropertyValue("HideSecretInput");
+
+    const auto credentialRequest =
+        payloadDescriptor.getFormat() == CredentialPayloadFormat::KeyValuePairs
+            ? CredentialDemoDeviceImpl::CreateUserNamePasswordCredentialRequest(
+                  connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest)
+            : CredentialDemoDeviceImpl::CreatePinCredentialRequest(
+                  connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest);
 
     return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
         config,
@@ -78,9 +84,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         info,
         /*authenticated*/true,
         payloadId,
-        credentialProvider.requestCredentials(
-            CredentialDemoDeviceImpl::CreateCredentialRequest(
-                connectionString, manufacturer, serialNumber, payloadId, payloadDescriptor, verboseCredentialRequest, hideSecretInput))).detach();
+        credentialProvider.requestCredentials(credentialRequest)).detach();
 }
 
 CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,

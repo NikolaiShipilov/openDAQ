@@ -17,7 +17,8 @@
 #pragma once
 #include <opendaq/credential_payload_descriptor.h>
 #include <coretypes/impl.h>
-#include <coretypes/list_ptr.h>
+#include <coretypes/dict_ptr.h>
+#include <coretypes/boolean_factory.h>
 #include <coreobjects/property_object_ptr.h>
 #include <coretypes/serializable.h>
 
@@ -50,7 +51,7 @@ protected:
 class KeyValuePayloadDescriptorImpl final : public CredentialPayloadDescriptorBaseImpl
 {
 public:
-    KeyValuePayloadDescriptorImpl(const ListPtr<IString>& keys, const StringPtr& description);
+    KeyValuePayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
 
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
 
@@ -59,13 +60,8 @@ public:
     static ConstCharPtr SerializeId();
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
-protected:
-    void serializeCustomValues(ISerializer* serializer) override;
-
 private:
-    static PropertyObjectPtr BuildParameters(const ListPtr<IString>& keys);
-
-    ListPtr<IString> keys;
+    static PropertyObjectPtr BuildParameters(const DictPtr<IString, IBoolean>& keys);
 };
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(KeyValuePayloadDescriptorImpl)

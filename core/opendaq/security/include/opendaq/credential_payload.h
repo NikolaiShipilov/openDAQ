@@ -34,9 +34,10 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayload, IBaseObject)
 
 /*!
  * @brief Creates a `KeyValuePairs`-format `ICredentialPayload`. Its secrets are returned by `getSecrets`
- * as an `IDict<IString, IString>` with `"UserName"` and `"Password"` entries.
+ * as an `IDict<IString, IString>`, keyed the same as the `"Keys"` parameter of the `ICredentialPayloadDescriptor`
+ * the payload was obtained for.
  */
-OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, UserPasswordCredentialPayload, ICredentialPayload, IFunction*, getUserPassCb)
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValueCredentialPayload, ICredentialPayload, IFunction*, getValuesCb)
 
 /*!
  * @brief Creates a `String`-format `ICredentialPayload`. Its single secret is returned directly by

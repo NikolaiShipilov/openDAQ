@@ -58,13 +58,13 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
         case CredentialPayloadFormat::KeyValuePairs:
         {
             auto callback = Function(
-                [requestPtr, hide]()
+                [requestPtr, descriptor]()
                 {
                     printRequestDetails(requestPtr);
-                    return readUserNameAndPassword(hide);
+                    return readKeyValuePairs(descriptor);
                 });
 
-            *credentials = UserPasswordCredentialPayload(callback).detach();
+            *credentials = KeyValueCredentialPayload(callback).detach();
             return OPENDAQ_SUCCESS;
         }
         case CredentialPayloadFormat::String:
@@ -93,19 +93,14 @@ bool CmdLineCredentialProviderImpl::ShouldHideSecretInput(const CredentialReques
     return true;
 }
 
-DictPtr<IString, IBaseObject> CmdLineCredentialProviderImpl::readUserNameAndPassword(bool hide)
+DictPtr<IString, IBaseObject> CmdLineCredentialProviderImpl::readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor)
 {
-    std::string username;
-    std::cout << "UserName: ";
-    std::getline(std::cin, username);
-    if (!std::cin)
-        throw std::runtime_error("Credential prompt cancelled");
-
-    auto password = readLine("Password: ", hide);
+    const DictPtr<IString, IBoolean> keys = descriptor.getParameters().getPropertyValue("Keys");
 
     auto secrets = Dict<IString, IString>();
-    secrets.set("UserName", String(username));
-    secrets.set("Password", String(password));
+    for (const auto& [key, hidden] : keys)
+        secrets.set(key, String(readLine(fmt::format("{}: ", key.toStdString()), hidden)));
+
     return secrets;
 }
 

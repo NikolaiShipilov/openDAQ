@@ -20,9 +20,9 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-inline CredentialPayloadPtr UserPasswordCredentialPayload(const FunctionPtr& getUserPassCb)
+inline CredentialPayloadPtr KeyValueCredentialPayload(const FunctionPtr& getValuesCb)
 {
-    CredentialPayloadPtr obj(UserPasswordCredentialPayload_Create(getUserPassCb));
+    CredentialPayloadPtr obj(KeyValueCredentialPayload_Create(getValuesCb));
     return obj;
 }
 

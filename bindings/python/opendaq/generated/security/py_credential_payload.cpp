@@ -40,15 +40,16 @@ void defineICredentialPayload(pybind11::module_ m, PyDaqIntf<daq::ICredentialPay
 {
     cls.doc() = "";
 
-    m.def("UserPasswordCredentialPayload", &daq::UserPasswordCredentialPayload_Create);
+    m.def("KeyValueCredentialPayload", &daq::KeyValueCredentialPayload_Create);
+    m.def("StringCredentialPayload", &daq::StringCredentialPayload_Create);
 
     cls.def_property_readonly("secrets",
         [](daq::ICredentialPayload *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialPayloadPtr::Borrow(object);
-            return objectPtr.getSecrets().detach();
+            return baseObjectToPyObject(objectPtr.getSecrets());
         },
         py::return_value_policy::take_ownership,
-        "");
+        "Gets the secret(s) carried by the payload. The concrete type depends on the payload format the payload was obtained for - `IString` for a `String`-format payload, `IDict<IString, IString>` for a `KeyValuePairs`-format payload. Callers are expected to know the format (e.g. from the IAuthenticationConfig and ICredentialPayloadDescriptor used to request the credential) and cast accordingly.");
 }

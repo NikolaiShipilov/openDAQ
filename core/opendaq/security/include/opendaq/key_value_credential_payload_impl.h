@@ -21,15 +21,15 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-class UserPasswordCredentialPayloadImpl final : public ImplementationOf<ICredentialPayload>
+class KeyValueCredentialPayloadImpl final : public ImplementationOf<ICredentialPayload>
 {
 public:
-    explicit UserPasswordCredentialPayloadImpl(const FunctionPtr& getUserPassCb);
+    explicit KeyValueCredentialPayloadImpl(const FunctionPtr& getValuesCb);
 
     ErrCode INTERFACE_FUNC getSecrets(IBaseObject** secrets) override;
 
 private:
-    FunctionPtr getUsernameAndPasswordCallback;
+    FunctionPtr getValuesCallback;
 };
 
 END_NAMESPACE_OPENDAQ
