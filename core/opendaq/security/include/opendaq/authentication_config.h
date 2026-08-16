@@ -27,16 +27,16 @@ BEGIN_NAMESPACE_OPENDAQ
  */
 
 /*!
- * @brief Carries the authentication settings used for a single connection attempt to a device.
+ * @brief Carries the authentication settings used for a single connection attempt to a component.
  *
- * Credential settings do not live in the add-device config or its default. They travel in a dedicated
- * authentication config object that exists alongside the config and is never serialized.
+ * Credential settings do not live in the base add-component config or its default - they travel in a
+ * dedicated authentication config object that exists alongside base config and is never serialized.
  *
  * An authentication config carries:
- * - The selected payload - its id and descriptor, fixed at construction from one of the type's supported
- *   payloads.
- * - The config - a property object whose fields follow the selected payload's descriptor, covering
- *   provider hints (e.g. a certificate path) and in some cases even directly supplied credentials.
+ * - The selected payload - its id and descriptor.
+ * - The additional config - a property object, defined by the component type alongside the payload, carrying
+ *   settings that might travel with the credential request to the provider (e.g. whether to hide secret input as it
+ *   is typed) and, in some cases, even directly supplied credentials (e.g. a certificate file path).
  *   It is supplied for this connection attempt only, and is never saved.
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IBaseObject)

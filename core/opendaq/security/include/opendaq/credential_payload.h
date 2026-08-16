@@ -32,6 +32,10 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayload, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getSecrets(IBaseObject** secrets) = 0;
 };
 
+/*!
+ * @brief Creates a `KeyValuePairs`-format `ICredentialPayload`. Its secrets are returned by `getSecrets`
+ * as an `IDict<IString, IString>` with `"UserName"` and `"Password"` entries.
+ */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, UserPasswordCredentialPayload, ICredentialPayload, IFunction*, getUserPassCb)
 
 /*!
