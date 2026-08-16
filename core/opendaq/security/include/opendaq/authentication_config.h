@@ -18,12 +18,15 @@
 #include <coretypes/baseobject.h>
 #include <coreobjects/property_object.h>
 #include <opendaq/credential_payload_descriptor.h>
+#include <opendaq/credential_request.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
+ * [interfaceLibrary(ICredentialRequest, "opendaq")]
+ * [interfaceSmartPtr(ICredentialRequest, CredentialRequestPtr, "<opendaq/credential_request_ptr.h>")]
  */
 
 /*!
@@ -58,11 +61,36 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IBaseObject)
      * @param[out] config The configuration property object.
      */
     virtual ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) = 0;
+
+    /*!
+     * @brief Gets the previously formed credential request this config was reconstructed from, if any.
+     * @param[out] request The previously formed credential request, or `nullptr` for a config built for a
+     * live connection attempt.
+     *
+     * Only assigned when this config was reconstructed while reloading a saved device that had previously
+     * been added with authentication. When assigned, a module should use this request as-is - via
+     * `ICredentialProvider::requestCredentials` - instead of forming a new one from the payload descriptor and
+     * additional config; it already carries the resolved, non-secret shape (payload id/descriptor, connection
+     * details, metadata) of what was originally requested from the credential provider.
+     */
+    virtual ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) = 0;
 };
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
     IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor, IPropertyObject*, config
+)
+
+/*!
+ * @brief Reconstructs an `AuthenticationConfig` from a previously formed, saved `CredentialRequest` - used
+ * only when reloading a saved device that had previously been added with authentication. Never exposed to
+ * other language bindings; not meant for regular user code, which should use the `AuthenticationConfig`
+ * factory above instead.
+ */
+//[factory(Hide)]
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
+    LIBRARY_FACTORY, AuthenticationConfigFromCredentialRequest, IAuthenticationConfig,
+    ICredentialRequest*, credentialRequest
 )
 
 END_NAMESPACE_OPENDAQ

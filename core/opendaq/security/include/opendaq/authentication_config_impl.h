@@ -18,6 +18,7 @@
 #include <opendaq/authentication_config.h>
 #include <coretypes/impl.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_request_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -25,15 +26,18 @@ class AuthenticationConfigImpl : public ImplementationOf<IAuthenticationConfig>
 {
 public:
     AuthenticationConfigImpl(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor, const PropertyObjectPtr& config = nullptr);
+    explicit AuthenticationConfigImpl(const CredentialRequestPtr& credentialRequest);
 
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
     ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) override;
+    ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) override;
 
 private:
     StringPtr payloadId;
     CredentialPayloadDescriptorPtr payloadDescriptor;
     PropertyObjectPtr config;
+    CredentialRequestPtr credentialRequest;
 };
 
 END_NAMESPACE_OPENDAQ

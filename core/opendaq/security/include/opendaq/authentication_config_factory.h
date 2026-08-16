@@ -17,6 +17,7 @@
 #pragma once
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_request_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -32,6 +33,18 @@ inline AuthenticationConfigPtr AuthenticationConfig(const StringPtr& payloadId,
                                                     const PropertyObjectPtr& config = nullptr)
 {
     AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadId, payloadDescriptor, config));
+    return obj;
+}
+
+/*!
+ * @brief Reconstructs an `AuthenticationConfig` from a previously formed, saved `CredentialRequest`. Used only
+ * when reloading a saved device that had previously been added with authentication - not meant for regular
+ * user code, which should use the `AuthenticationConfig` factory above instead.
+ * @param credentialRequest The previously formed credential request to reconstruct the config from.
+ */
+inline AuthenticationConfigPtr AuthenticationConfigFromCredentialRequest(const CredentialRequestPtr& credentialRequest)
+{
+    AuthenticationConfigPtr obj(AuthenticationConfigFromCredentialRequest_Create(credentialRequest));
     return obj;
 }
 

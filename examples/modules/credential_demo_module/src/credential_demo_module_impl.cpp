@@ -4,6 +4,7 @@
 
 #include <coretypes/version_info_factory.h>
 #include <opendaq/credential_payload_descriptor_factory.h>
+#include <opendaq/component_private_ptr.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
@@ -67,24 +68,38 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no credential provider supporting a compatible payload format is registered");
     }
 
-    const auto additionalConfig = authenticationConfig.getConfig();
-    const bool verboseCredentialRequest = additionalConfig.getPropertyValue("VerboseCredentialRequest");
+    // A config reconstructed while reloading a saved device already carries the request formed the first
+    // time around - reuse it as-is instead of forming a new one from the payload descriptor and additional
+    // config.
+    auto credentialRequest = authenticationConfig.getCredentialRequest();
+    if (!credentialRequest.assigned())
+    {
+        const auto additionalConfig = authenticationConfig.getConfig();
+        const bool verboseCredentialRequest = additionalConfig.getPropertyValue("VerboseCredentialRequest");
 
-    const auto credentialRequest =
-        payloadDescriptor.getFormat() == CredentialPayloadFormat::KeyValuePairs
-            ? CredentialDemoDeviceImpl::CreateUserNamePasswordCredentialRequest(
-                  connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest)
-            : CredentialDemoDeviceImpl::CreatePinCredentialRequest(
-                  connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest);
+        credentialRequest =
+            payloadDescriptor.getFormat() == CredentialPayloadFormat::KeyValuePairs
+                ? CredentialDemoDeviceImpl::CreateUserNamePasswordCredentialRequest(
+                      connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest)
+                : CredentialDemoDeviceImpl::CreatePinCredentialRequest(
+                      connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest);
+    }
 
-    return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
+    auto device = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
         config,
         context,
         parent,
         info,
         /*authenticated*/true,
         payloadId,
-        credentialProvider.requestCredentials(credentialRequest)).detach();
+        credentialProvider.requestCredentials(credentialRequest));
+
+    // Persisted alongside the device, so a reload can re-request credentials for it without ever having
+    // saved the authentication config or its secrets.
+    if (const auto& componentPrivate = device.asPtrOrNull<IComponentPrivate>(true); componentPrivate.assigned())
+        componentPrivate.setCredentialRequest(credentialRequest);
+
+    return device.detach();
 }
 
 CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,

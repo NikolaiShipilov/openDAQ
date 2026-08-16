@@ -146,31 +146,19 @@ ErrCode CredentialRequestImpl::Deserialize(ISerializedObject* serialized, IBaseO
     return daqTry(
         [&]
         {
-            auto builder = CredentialRequestBuilder();
+            // Built directly as the packed-constructor dict rather than via `CredentialRequestBuilder`, so the
+            // deserialized `MetaData` property object is adopted as-is instead of having its properties
+            // re-added one by one - a property can only ever belong to a single owning property object, and
+            // `addMetaDataProperty` would otherwise try to re-parent an already-owned property.
+            auto packed = Dict<IString, IBaseObject>();
+            packed.set("ConnectionString", serializedObj.hasKey("ConnectionString") ? serializedObj.readString("ConnectionString") : StringPtr());
+            packed.set("MetaData", serializedObj.hasKey("MetaData") ? serializedObj.readObject("MetaData", contextPtr, factoryCallbackPtr) : BaseObjectPtr());
+            packed.set("Manufacturer", serializedObj.hasKey("Manufacturer") ? serializedObj.readString("Manufacturer") : StringPtr());
+            packed.set("SerialNumber", serializedObj.hasKey("SerialNumber") ? serializedObj.readString("SerialNumber") : StringPtr());
+            packed.set("PayloadId", serializedObj.hasKey("PayloadId") ? serializedObj.readString("PayloadId") : StringPtr());
+            packed.set("PayloadDescriptor", serializedObj.hasKey("PayloadDescriptor") ? serializedObj.readObject("PayloadDescriptor", contextPtr, factoryCallbackPtr) : BaseObjectPtr());
 
-            if (serializedObj.hasKey("ConnectionString"))
-                builder.setConnectionString(serializedObj.readString("ConnectionString"));
-
-            if (serializedObj.hasKey("MetaData"))
-            {
-                const PropertyObjectPtr metaData = serializedObj.readObject("MetaData", contextPtr, factoryCallbackPtr);
-                for (const auto& property : metaData.getAllProperties())
-                    builder.addMetaDataProperty(property);
-            }
-
-            if (serializedObj.hasKey("Manufacturer"))
-                builder.setManufacturer(serializedObj.readString("Manufacturer"));
-
-            if (serializedObj.hasKey("SerialNumber"))
-                builder.setSerialNumber(serializedObj.readString("SerialNumber"));
-
-            if (serializedObj.hasKey("PayloadId"))
-                builder.setPayloadId(serializedObj.readString("PayloadId"));
-
-            if (serializedObj.hasKey("PayloadDescriptor"))
-                builder.setPayloadDescriptor(serializedObj.readObject("PayloadDescriptor", contextPtr, factoryCallbackPtr));
-
-            *obj = builder.build().detach();
+            *obj = createWithImplementation<ICredentialRequest, CredentialRequestImpl>(packed).detach();
             return OPENDAQ_SUCCESS;
         });
 }

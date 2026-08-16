@@ -18,12 +18,15 @@
 
 #include <coretypes/listobject.h>
 #include <opendaq/component.h>
+#include <opendaq/credential_request.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(ICoreEventArgs, "coreobjects")]
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
+ * [interfaceLibrary(ICredentialRequest, "opendaq")]
+ * [interfaceSmartPtr(ICredentialRequest, CredentialRequestPtr, "<opendaq/credential_request_ptr.h>")]
  */
 
 /*!
@@ -81,6 +84,24 @@ DECLARE_OPENDAQ_INTERFACE(IComponentPrivate, IBaseObject)
      * @param config The configuration of the component.
      */
     virtual ErrCode INTERFACE_FUNC getComponentConfig(IPropertyObject** config) = 0;
+
+    /*!
+     * @brief Sets the credential request formed by the module when the component was created with
+     * authentication, if any.
+     * @param request The credential request the module formed to authenticate this component.
+     *
+     * Carries no secrets - only the non-secret shape (payload id/descriptor, connection details, metadata)
+     * of what was requested from the credential provider. Persisted alongside the component so a reload can
+     * re-request credentials without ever having stored the actual authentication config or its secrets.
+     */
+    virtual ErrCode INTERFACE_FUNC setCredentialRequest(ICredentialRequest* request) = 0;
+
+    /*!
+     * @brief Retrieves the credential request formed by the module when the component was created with
+     * authentication.
+     * @param request The credential request, or `nullptr` if the component was not created with authentication.
+     */
+    virtual ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) = 0;
 
     /*!
      * @brief Called by parent component to notify this component about parent's active state change.

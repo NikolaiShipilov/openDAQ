@@ -107,6 +107,21 @@ void defineIComponentPrivate(pybind11::module_ m, PyDaqIntf<daq::IComponentPriva
         },
         py::return_value_policy::take_ownership,
         "Retrieves the configuration which was used to create the component. / Sets the configuration which was used to create the component.");
+    cls.def_property("credential_request",
+        [](daq::IComponentPrivate *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::ComponentPrivatePtr::Borrow(object);
+            return objectPtr.getCredentialRequest().detach();
+        },
+        [](daq::IComponentPrivate *object, daq::ICredentialRequest* request)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::ComponentPrivatePtr::Borrow(object);
+            objectPtr.setCredentialRequest(request);
+        },
+        py::return_value_policy::take_ownership,
+        "Retrieves the credential request formed by the module when the component was created with authentication. / Sets the credential request formed by the module when the component was created with authentication, if any.");
     cls.def_property("parent_active",
         nullptr,
         [](daq::IComponentPrivate *object, const bool parentActive, const bool onUpdate)

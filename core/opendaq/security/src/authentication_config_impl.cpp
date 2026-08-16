@@ -10,6 +10,17 @@ AuthenticationConfigImpl::AuthenticationConfigImpl(const StringPtr& payloadId, c
 {
 }
 
+AuthenticationConfigImpl::AuthenticationConfigImpl(const CredentialRequestPtr& credentialRequest)
+    : config(PropertyObject())
+    , credentialRequest(credentialRequest)
+{
+    if (!credentialRequest.assigned())
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Credential request must be assigned when reconstructing an authentication config from it");
+
+    payloadId = credentialRequest.getPayloadId();
+    payloadDescriptor = credentialRequest.getPayloadDescriptor();
+}
+
 ErrCode AuthenticationConfigImpl::getCredentialPayloadId(IString** payloadId)
 {
     OPENDAQ_PARAM_NOT_NULL(payloadId);
@@ -34,9 +45,23 @@ ErrCode AuthenticationConfigImpl::getConfig(IPropertyObject** config)
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode AuthenticationConfigImpl::getCredentialRequest(ICredentialRequest** request)
+{
+    OPENDAQ_PARAM_NOT_NULL(request);
+
+    *request = this->credentialRequest.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
     IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor, IPropertyObject*, config
+)
+
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE_AND_CREATEFUNC(
+    LIBRARY_FACTORY, AuthenticationConfig,
+    IAuthenticationConfig, createAuthenticationConfigFromCredentialRequest,
+    ICredentialRequest*, credentialRequest
 )
 
 END_NAMESPACE_OPENDAQ

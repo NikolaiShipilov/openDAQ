@@ -38,7 +38,7 @@ PyDaqIntf<daq::IAuthenticationConfig, daq::IBaseObject> declareIAuthenticationCo
 
 void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthenticationConfig, daq::IBaseObject> cls)
 {
-    cls.doc() = "Carries the authentication settings used for a single connection attempt to a device.";
+    cls.doc() = "Carries the authentication settings used for a single connection attempt to a component.";
 
     m.def("AuthenticationConfig", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadId, daq::ICredentialPayloadDescriptor* payloadDescriptor, daq::IPropertyObject* config){
         return daq::AuthenticationConfig_Create(getVariantValue<daq::IString*>(payloadId), payloadDescriptor, config);
@@ -71,4 +71,13 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         },
         py::return_value_policy::take_ownership,
         "Gets additional configuration specific to selected authentication method.");
+    cls.def_property_readonly("credential_request",
+        [](daq::IAuthenticationConfig *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            return objectPtr.getCredentialRequest().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the previously formed credential request this config was reconstructed from, if any.");
 }

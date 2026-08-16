@@ -28,6 +28,7 @@ class CredentialRequestImpl : public ImplementationOf<ICredentialRequest, ISeria
 {
 public:
     explicit CredentialRequestImpl(ICredentialRequestBuilder* credentialRequestBuilder);
+    explicit CredentialRequestImpl(const DictPtr<IString, IBaseObject>& packedBuilder);
 
     ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) override;
     ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) override;
@@ -43,7 +44,6 @@ public:
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
 private:
-    explicit CredentialRequestImpl(const DictPtr<IString, IBaseObject>& packedBuilder);
     static DictPtr<IString, IBaseObject> PackBuilder(ICredentialRequestBuilder* dimensionBuilder);
 
     StringPtr connectionString;
