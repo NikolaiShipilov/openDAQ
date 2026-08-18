@@ -56,4 +56,15 @@ inline CredentialPayloadDescriptorPtr FilePathPayloadDescriptor(const StringPtr&
     return obj;
 }
 
+/*!
+ * @brief Creates a `CredentialPayloadDescriptor` describing a `BinaryBlob`-format payload - a single
+ * secret carried as a raw byte buffer (e.g. the bytes of a private key or certificate) rather than text.
+ * @param description A human-readable description of the payload, for the user.
+ */
+inline CredentialPayloadDescriptorPtr BinaryBlobPayloadDescriptor(const StringPtr& description)
+{
+    CredentialPayloadDescriptorPtr obj(BinaryBlobPayloadDescriptor_Create(description));
+    return obj;
+}
+
 END_NAMESPACE_OPENDAQ

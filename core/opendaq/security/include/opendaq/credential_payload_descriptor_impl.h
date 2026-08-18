@@ -99,4 +99,19 @@ public:
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(FilePathPayloadDescriptorImpl)
 
+class BinaryBlobPayloadDescriptorImpl final : public CredentialPayloadDescriptorBaseImpl
+{
+public:
+    explicit BinaryBlobPayloadDescriptorImpl(const StringPtr& description);
+
+    ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
+
+    // ISerializable
+    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
+    static ConstCharPtr SerializeId();
+    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
+};
+
+OPENDAQ_REGISTER_DESERIALIZE_FACTORY(BinaryBlobPayloadDescriptorImpl)
+
 END_NAMESPACE_OPENDAQ

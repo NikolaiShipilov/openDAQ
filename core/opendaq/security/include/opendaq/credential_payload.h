@@ -24,9 +24,11 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayload, IBaseObject)
 {
     /*!
      * @brief Gets the secret(s) carried by the payload. The concrete type depends on the payload format
-     * the payload was obtained for - `IString` for a `String`-format payload, `IDict<IString, IString>`
-     * for a `KeyValuePairs`-format payload. Callers are expected to know the format (e.g. from the
-     * IAuthenticationConfig and ICredentialPayloadDescriptor used to request the credential) and cast accordingly.
+     * the payload was obtained for - `IString` for a `String`- or `FilePath`-format payload,
+     * `IDict<IString, IString>` for a `KeyValuePairs`-format payload, `IBinaryData` for a `BinaryBlob`-format
+     * payload (its raw bytes and size obtained via `IBinaryData::getAddress`/`getSize`). Callers are expected
+     * to know the format (e.g. from the IAuthenticationConfig and ICredentialPayloadDescriptor used to request
+     * the credential) and cast accordingly.
      * @param[out] secrets The secret(s) carried by the payload.
      */
     virtual ErrCode INTERFACE_FUNC getSecrets(IBaseObject** secrets) = 0;
@@ -44,5 +46,11 @@ OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValueCredential
  * `getSecrets`, as an `IString`.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringCredentialPayload, ICredentialPayload, IFunction*, getSecretCb)
+
+/*!
+ * @brief Creates a `BinaryBlob`-format `ICredentialPayload`. Its single secret is returned by `getSecrets`
+ * as an `IBinaryData`, giving the raw bytes and size of the blob via `getAddress`/`getSize`.
+ */
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, BinaryBlobCredentialPayload, ICredentialPayload, IFunction*, getBlobCb)
 
 END_NAMESPACE_OPENDAQ

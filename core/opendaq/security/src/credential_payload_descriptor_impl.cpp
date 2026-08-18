@@ -191,4 +191,46 @@ ErrCode FilePathPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
 
+BinaryBlobPayloadDescriptorImpl::BinaryBlobPayloadDescriptorImpl(const StringPtr& description)
+    : CredentialPayloadDescriptorBaseImpl(PropertyObject(), description)
+{
+}
+
+ErrCode BinaryBlobPayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format)
+{
+    OPENDAQ_PARAM_NOT_NULL(format);
+
+    *format = CredentialPayloadFormat::BinaryBlob;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode BinaryBlobPayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
+{
+    *id = SerializeId();
+    return OPENDAQ_SUCCESS;
+}
+
+ConstCharPtr BinaryBlobPayloadDescriptorImpl::SerializeId()
+{
+    return "BinaryBlobPayloadDescriptor";
+}
+
+ErrCode BinaryBlobPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
+{
+    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
+    const auto contextPtr = BaseObjectPtr::Borrow(context);
+    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
+
+    return daqTry(
+        [&]
+        {
+            const auto description = serializedObj.readString("Description");
+
+            *obj = createWithImplementation<ICredentialPayloadDescriptor, BinaryBlobPayloadDescriptorImpl>(description).detach();
+            return OPENDAQ_SUCCESS;
+        });
+}
+
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, BinaryBlobPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
+
 END_NAMESPACE_OPENDAQ

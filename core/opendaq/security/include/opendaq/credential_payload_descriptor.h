@@ -28,7 +28,8 @@ enum class CredentialPayloadFormat : EnumType
 {
     KeyValuePairs,  ///< N string pairs - e.g. UserName / Password.
     String,         ///< one string - token, API key, PIN.
-    FilePath        ///< one string - path to a file containing the secret, e.g. a private key.
+    FilePath,       ///< one string - path to a file containing the secret, e.g. a private key.
+    BinaryBlob      ///< one raw byte buffer - pointer + size
 };
 
 /*#
@@ -43,7 +44,8 @@ enum class CredentialPayloadFormat : EnumType
  * description. In particular, the parameter set carries whether the payload's value(s) should be hidden as
  * they are entered: for a `KeyValuePairs`-format payload, a `"Keys"` dict property maps each expected key to
  * its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String`-format payload, a
- * single `"Hidden"` bool property applies to the one secret.
+ * single `"Hidden"` bool property applies to the one secret. `FilePath`- and `BinaryBlob`-format payloads
+ * have no parameters.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 {
@@ -79,6 +81,11 @@ OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor,
+    IString*, description
+)
+
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
+    LIBRARY_FACTORY, BinaryBlobPayloadDescriptor, ICredentialPayloadDescriptor,
     IString*, description
 )
 
