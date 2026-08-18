@@ -1,11 +1,14 @@
 #include <opendaq/file_credential_provider_impl.h>
 #include <opendaq/credential_payload_factory.h>
+#include <coreobjects/exceptions.h>
 #include <coretypes/listobject_factory.h>
 #include <iostream>
+#include <fstream>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 static const std::string FileCredentialProviderName = "FileCredentialProvider";
+static constexpr int MaxFilePathAttempts = 3;
 
 FileCredentialProviderImpl::FileCredentialProviderImpl()
 {
@@ -57,15 +60,35 @@ ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* reque
 StringPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescriptorPtr& descriptor)
 {
     const StringPtr description = descriptor.getDescription();
+    const std::string prompt = (description.assigned() ? description.toStdString() : "File path") + ": ";
 
-    std::cout << (description.assigned() ? description.toStdString() : "File path") << ": ";
-    std::cout.flush();
+    for (int attempt = 1; attempt <= MaxFilePathAttempts; ++attempt)
+    {
+        std::cout << prompt;
+        std::cout.flush();
 
-    std::string value;
-    if (!std::getline(std::cin, value))
-        throw std::runtime_error("Input cancelled");
+        std::string value;
+        if (!std::getline(std::cin, value))
+            throw std::runtime_error("Input cancelled");
 
-    return String(value);
+        if (isFileAccessible(value))
+            return String(value);
+
+        const int attemptsLeft = MaxFilePathAttempts - attempt;
+        std::cout << "File \"" << value << "\" does not exist or is not accessible.";
+        if (attemptsLeft > 0)
+            std::cout << " " << attemptsLeft << " attempt(s) left.\n";
+        else
+            std::cout << '\n';
+    }
+
+    DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                         "Credential provider could not obtain an accessible file path after {} attempts", MaxFilePathAttempts);
+}
+
+bool FileCredentialProviderImpl::isFileAccessible(const std::string& path)
+{
+    return std::ifstream(path).good();
 }
 
 void FileCredentialProviderImpl::printRequestDetails(const CredentialRequestPtr& request)

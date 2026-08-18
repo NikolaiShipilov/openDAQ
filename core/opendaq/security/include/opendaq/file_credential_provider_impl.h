@@ -35,6 +35,7 @@ public:
 private:
     static void printRequestDetails(const CredentialRequestPtr& request);
     static StringPtr readFilePath(const CredentialPayloadDescriptorPtr& descriptor);
+    static bool isFileAccessible(const std::string& path);
 };
 
 END_NAMESPACE_OPENDAQ

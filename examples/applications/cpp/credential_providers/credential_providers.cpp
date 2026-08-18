@@ -35,10 +35,14 @@ int main(int argc, const char* argv[])
     createJsonConfigFile();
 
     auto credentialProvider = CmdLineCredentialProvider();
+    auto fileCredentialProvider = FileCredentialProvider();
 
     auto instanceBuilder = InstanceBuilder();
     instanceBuilder.addModulePath(MODULE_PATH);
     instanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
+    // Registered first, so it - not CmdLineCredentialProvider - is the one FindMatchingCredentialProvider
+    // picks for FilePath-format requests (e.g. the PrivateKey auth method below).
+    instanceBuilder.addCredentialProvider(fileCredentialProvider.getName(), fileCredentialProvider);
     instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
     auto instance = instanceBuilder.build();
 
@@ -96,10 +100,12 @@ int main(int argc, const char* argv[])
     // registered, since the reloaded device is re-authenticated (the provider is asked for real credentials
     // again) rather than silently reconnected without any.
     auto reloadedCredentialProvider = CmdLineCredentialProvider();
+    auto reloadedFileCredentialProvider = FileCredentialProvider();
 
     auto reloadedInstanceBuilder = InstanceBuilder();
     reloadedInstanceBuilder.addModulePath(MODULE_PATH);
     reloadedInstanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
+    reloadedInstanceBuilder.addCredentialProvider(reloadedFileCredentialProvider.getName(), reloadedFileCredentialProvider);
     reloadedInstanceBuilder.addCredentialProvider(reloadedCredentialProvider.getName(), reloadedCredentialProvider);
     auto reloadedInstance = reloadedInstanceBuilder.build();
 
