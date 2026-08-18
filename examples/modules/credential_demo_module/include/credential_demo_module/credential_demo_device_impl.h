@@ -39,8 +39,7 @@ public:
                                       const DeviceInfoPtr& info,
                                       bool authenticated,
                                       const StringPtr& payloadId = nullptr,
-                                      const CredentialPayloadPtr& credentials = nullptr,
-                                      const StringPtr& publicKeyPath = nullptr);
+                                      const CredentialPayloadPtr& credentials = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
@@ -68,7 +67,7 @@ public:
     static void ValidateConnectionString(const StringPtr& connectionString);
 
 private:
-    static void authenticate(const CredentialPayloadPtr& credentials, const StringPtr& payloadId, const StringPtr& publicKeyPath);
+    static void authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials, const StringPtr& payloadId);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

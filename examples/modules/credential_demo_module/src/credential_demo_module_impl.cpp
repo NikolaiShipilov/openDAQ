@@ -90,8 +90,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         info,
         /*authenticated*/true,
         payloadId,
-        credentialProvider.requestCredentials(credentialRequest),
-        options.get("PublicKeyPath"));
+        credentialProvider.requestCredentials(credentialRequest));
 
     // Persisted alongside the device, so a reload can re-request credentials for it without ever having
     // saved the authentication config or its secrets.
@@ -118,7 +117,7 @@ CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const
 
 DictPtr<IString, IBaseObject> CredentialDemoModule::populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions)
 {
-    auto defaultOptions = Dict<IString, IBaseObject>({{"Manufacturer", "openDAQ"}, {"SerialNumber", "0"}, {"PublicKeyPath", ""}});
+    auto defaultOptions = Dict<IString, IBaseObject>({{"Manufacturer", "openDAQ"}, {"SerialNumber", "0"}});
 
     for (const auto& [key, value] : inputOptions)
     {

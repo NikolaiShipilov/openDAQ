@@ -108,7 +108,7 @@ static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, c
     }
 }
 
-void CredentialDemoDeviceImpl::authenticate(const CredentialPayloadPtr& credentials, const StringPtr& payloadId, const StringPtr& publicKeyPath)
+void CredentialDemoDeviceImpl::authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials, const StringPtr& payloadId)
 {
     if (!credentials.assigned())
     {
@@ -134,6 +134,8 @@ void CredentialDemoDeviceImpl::authenticate(const CredentialPayloadPtr& credenti
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no private key file path provided");
         }
 
+        const auto moduleOptions = ctx.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID);
+        const StringPtr publicKeyPath = moduleOptions.hasKey("PublicKeyPath") ? moduleOptions.get("PublicKeyPath").asPtr<IString>() : nullptr;
         if (!publicKeyPath.assigned() || publicKeyPath.getLength() == 0)
         {
             DAQ_THROW_EXCEPTION(AuthenticationFailedException,
@@ -163,12 +165,11 @@ CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& conf
                                                    const DeviceInfoPtr& info,
                                                    bool authenticated,
                                                    const StringPtr& payloadId,
-                                                   const CredentialPayloadPtr& credentials,
-                                                   const StringPtr& publicKeyPath)
+                                                   const CredentialPayloadPtr& credentials)
     : Device(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
     if (authenticated)
-        authenticate(credentials, payloadId, publicKeyPath);
+        authenticate(ctx, credentials, payloadId);
 
     this->deviceInfo = info;
 }
