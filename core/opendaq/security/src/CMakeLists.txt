@@ -57,9 +57,7 @@ function(create_component_source_groups_${BASE_NAME})
         ${SDK_HEADERS_DIR}/credential_request_impl.h
         ${SDK_HEADERS_DIR}/credential_request_builder.h
         ${SDK_HEADERS_DIR}/credential_request_builder_impl.h
-        ${SDK_HEADERS_DIR}/key_value_credential_payload_impl.h
-        ${SDK_HEADERS_DIR}/string_credential_payload_impl.h
-        ${SDK_HEADERS_DIR}/binary_blob_credential_payload_impl.h
+        ${SDK_HEADERS_DIR}/credential_payload_impl.h
         ${SDK_HEADERS_DIR}/cmd_line_credential_provider_impl.h
         ${SDK_HEADERS_DIR}/file_credential_provider_impl.h
         ${SDK_HEADERS_DIR}/authentication_config.h
@@ -70,9 +68,7 @@ function(create_component_source_groups_${BASE_NAME})
         ${SDK_HEADERS_DIR}/credential_payload_descriptor_factory.h
         ${SDK_HEADERS_DIR}/credential_payload_descriptor_impl.h
         ${SDK_SRC_DIR}/credential_request_impl.cpp
-        ${SDK_SRC_DIR}/key_value_credential_payload_impl.cpp
-        ${SDK_SRC_DIR}/string_credential_payload_impl.cpp
-        ${SDK_SRC_DIR}/binary_blob_credential_payload_impl.cpp
+        ${SDK_SRC_DIR}/credential_payload_impl.cpp
         ${SDK_SRC_DIR}/cmd_line_credential_provider_impl.cpp
         ${SDK_SRC_DIR}/file_credential_provider_impl.cpp
         ${SDK_SRC_DIR}/credential_request_builder_impl.cpp
@@ -102,9 +98,7 @@ set(SRC_PrivateHeaders_Component
     credential_request_impl.h
     cmd_line_credential_provider_impl.h
     file_credential_provider_impl.h
-    key_value_credential_payload_impl.h
-    string_credential_payload_impl.h
-    binary_blob_credential_payload_impl.h
+    credential_payload_impl.h
     credential_payload_descriptor_impl.h
     authentication_config_impl.h
     PARENT_SCOPE
@@ -112,9 +106,7 @@ set(SRC_PrivateHeaders_Component
 
 set(SRC_Cpp_Component
     credential_request_impl.cpp
-    key_value_credential_payload_impl.cpp
-    string_credential_payload_impl.cpp
-    binary_blob_credential_payload_impl.cpp
+    credential_payload_impl.cpp
     cmd_line_credential_provider_impl.cpp
     file_credential_provider_impl.cpp
     credential_request_builder_impl.cpp

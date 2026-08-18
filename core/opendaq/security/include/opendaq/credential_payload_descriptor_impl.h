@@ -25,93 +25,45 @@
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief Common base for `ICredentialPayloadDescriptor` implementations. Stores and returns the
- * `parameters`/`description` given at construction; `getFormat` and `ISerializable` implementation are left to the
- * format-specific subclass, which is also responsible for shaping the `parameters` property object it
- * passes in.
+ * @brief `ICredentialPayloadDescriptor` impl for all formats, parameterized by `Format`. Which
+ * constructor is used - and so which `parameters` get built - depends on the format: `KeyValuePairs`
+ * takes a `"Keys"` dict, `String` takes a `"Hidden"` bool, `FilePath`/`BinaryBlob` take neither. Only one
+ * constructor is ever exercised per `Format` alias below; the others are simply unused for that alias.
  */
-class CredentialPayloadDescriptorBaseImpl : public ImplementationOf<ICredentialPayloadDescriptor, ISerializable>
+template <CredentialPayloadFormat Format>
+class CredentialPayloadDescriptorImpl final : public ImplementationOf<ICredentialPayloadDescriptor, ISerializable>
 {
 public:
-    CredentialPayloadDescriptorBaseImpl(const PropertyObjectPtr& parameters, const StringPtr& description);
+    // KeyValuePairs
+    CredentialPayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
+    // String
+    CredentialPayloadDescriptorImpl(const StringPtr& description, Bool hidden);
+    // FilePath, BinaryBlob
+    explicit CredentialPayloadDescriptorImpl(const StringPtr& description);
 
+    ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
     ErrCode INTERFACE_FUNC getParameters(IPropertyObject** parameters) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
 
     // ISerializable
     ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
+    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
+    static ConstCharPtr SerializeId();
+    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
-protected:
-    virtual void serializeCustomValues(ISerializer* serializer);
-
+private:
     PropertyObjectPtr parameters;
     StringPtr description;
 };
 
-class KeyValuePayloadDescriptorImpl final : public CredentialPayloadDescriptorBaseImpl
-{
-public:
-    KeyValuePayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
-
-    ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
-
-    // ISerializable
-    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
-    static ConstCharPtr SerializeId();
-    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-
-private:
-    static PropertyObjectPtr BuildParameters(const DictPtr<IString, IBoolean>& keys);
-};
+using KeyValuePayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::KeyValuePairs>;
+using StringPayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::String>;
+using FilePathPayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::FilePath>;
+using BinaryBlobPayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::BinaryBlob>;
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(KeyValuePayloadDescriptorImpl)
-
-class StringPayloadDescriptorImpl final : public CredentialPayloadDescriptorBaseImpl
-{
-public:
-    StringPayloadDescriptorImpl(const StringPtr& description, Bool hidden);
-
-    ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
-
-    // ISerializable
-    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
-    static ConstCharPtr SerializeId();
-    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-
-private:
-    static PropertyObjectPtr BuildParameters(Bool hidden);
-};
-
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(StringPayloadDescriptorImpl)
-
-class FilePathPayloadDescriptorImpl final : public CredentialPayloadDescriptorBaseImpl
-{
-public:
-    explicit FilePathPayloadDescriptorImpl(const StringPtr& description);
-
-    ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
-
-    // ISerializable
-    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
-    static ConstCharPtr SerializeId();
-    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-};
-
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(FilePathPayloadDescriptorImpl)
-
-class BinaryBlobPayloadDescriptorImpl final : public CredentialPayloadDescriptorBaseImpl
-{
-public:
-    explicit BinaryBlobPayloadDescriptorImpl(const StringPtr& description);
-
-    ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
-
-    // ISerializable
-    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
-    static ConstCharPtr SerializeId();
-    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-};
-
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(BinaryBlobPayloadDescriptorImpl)
 
 END_NAMESPACE_OPENDAQ

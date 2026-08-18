@@ -5,13 +5,43 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-CredentialPayloadDescriptorBaseImpl::CredentialPayloadDescriptorBaseImpl(const PropertyObjectPtr& parameters, const StringPtr& description)
-    : parameters(parameters)
+template <CredentialPayloadFormat Format>
+CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
+    : description(description)
+{
+    if (!keys.assigned() || keys.getCount() == 0)
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Keys must be assigned and non-empty when creating a key-value credential payload descriptor");
+
+    parameters = PropertyObject();
+    parameters.addProperty(DictProperty("Keys", keys));
+}
+
+template <CredentialPayloadFormat Format>
+CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const StringPtr& description, Bool hidden)
+    : description(description)
+{
+    parameters = PropertyObject();
+    parameters.addProperty(BoolProperty("Hidden", hidden));
+}
+
+template <CredentialPayloadFormat Format>
+CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const StringPtr& description)
+    : parameters(PropertyObject())
     , description(description)
 {
 }
 
-ErrCode CredentialPayloadDescriptorBaseImpl::getParameters(IPropertyObject** parameters)
+template <CredentialPayloadFormat Format>
+ErrCode CredentialPayloadDescriptorImpl<Format>::getFormat(CredentialPayloadFormat* format)
+{
+    OPENDAQ_PARAM_NOT_NULL(format);
+
+    *format = Format;
+    return OPENDAQ_SUCCESS;
+}
+
+template <CredentialPayloadFormat Format>
+ErrCode CredentialPayloadDescriptorImpl<Format>::getParameters(IPropertyObject** parameters)
 {
     OPENDAQ_PARAM_NOT_NULL(parameters);
 
@@ -19,7 +49,8 @@ ErrCode CredentialPayloadDescriptorBaseImpl::getParameters(IPropertyObject** par
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialPayloadDescriptorBaseImpl::getDescription(IString** description)
+template <CredentialPayloadFormat Format>
+ErrCode CredentialPayloadDescriptorImpl<Format>::getDescription(IString** description)
 {
     OPENDAQ_PARAM_NOT_NULL(description);
 
@@ -27,58 +58,48 @@ ErrCode CredentialPayloadDescriptorBaseImpl::getDescription(IString** descriptio
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialPayloadDescriptorBaseImpl::serialize(ISerializer* serializer)
+template <CredentialPayloadFormat Format>
+ErrCode CredentialPayloadDescriptorImpl<Format>::serialize(ISerializer* serializer)
 {
     serializer->startTaggedObject(this);
-    serializeCustomValues(serializer);
-    serializer->endObject();
-    return OPENDAQ_SUCCESS;
-}
 
-void CredentialPayloadDescriptorBaseImpl::serializeCustomValues(ISerializer* serializer)
-{
     serializer->key("Description");
     serializer->writeString(description.getCharPtr(), description.getLength());
 
     serializer->key("Parameters");
     parameters.asPtr<ISerializable>().serialize(serializer);
-}
 
-KeyValuePayloadDescriptorImpl::KeyValuePayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
-    : CredentialPayloadDescriptorBaseImpl(BuildParameters(keys), description)
-{
-}
-
-PropertyObjectPtr KeyValuePayloadDescriptorImpl::BuildParameters(const DictPtr<IString, IBoolean>& keys)
-{
-    if (!keys.assigned() || keys.getCount() == 0)
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "Keys must be assigned and non-empty when creating a key-value credential payload descriptor");
-
-    auto params = PropertyObject();
-    params.addProperty(DictProperty("Keys", keys));
-    return params;
-}
-
-ErrCode KeyValuePayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format)
-{
-    OPENDAQ_PARAM_NOT_NULL(format);
-
-    *format = CredentialPayloadFormat::KeyValuePairs;
+    serializer->endObject();
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode KeyValuePayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
+template <CredentialPayloadFormat Format>
+ErrCode CredentialPayloadDescriptorImpl<Format>::getSerializeId(ConstCharPtr* id) const
 {
     *id = SerializeId();
     return OPENDAQ_SUCCESS;
 }
 
-ConstCharPtr KeyValuePayloadDescriptorImpl::SerializeId()
+template <CredentialPayloadFormat Format>
+ConstCharPtr CredentialPayloadDescriptorImpl<Format>::SerializeId()
 {
-    return "KeyValuePayloadDescriptor";
+    switch (Format)
+    {
+        case CredentialPayloadFormat::KeyValuePairs:
+            return "KeyValuePayloadDescriptor";
+        case CredentialPayloadFormat::String:
+            return "StringPayloadDescriptor";
+        case CredentialPayloadFormat::FilePath:
+            return "FilePathPayloadDescriptor";
+        case CredentialPayloadFormat::BinaryBlob:
+            return "BinaryBlobPayloadDescriptor";
+        default:
+            return "";
+    }
 }
 
-ErrCode KeyValuePayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
+template <CredentialPayloadFormat Format>
+ErrCode CredentialPayloadDescriptorImpl<Format>::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
 {
     const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
     const auto contextPtr = BaseObjectPtr::Borrow(context);
@@ -87,150 +108,32 @@ ErrCode KeyValuePayloadDescriptorImpl::Deserialize(ISerializedObject* serialized
     return daqTry(
         [&]
         {
-            const PropertyObjectPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
-            const DictPtr<IString, IBoolean> keys = parameters.getPropertyValue("Keys");
             const auto description = serializedObj.readString("Description");
 
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, KeyValuePayloadDescriptorImpl>(keys, description).detach();
+            if constexpr (Format == CredentialPayloadFormat::KeyValuePairs)
+            {
+                const PropertyObjectPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
+                const DictPtr<IString, IBoolean> keys = parameters.getPropertyValue("Keys");
+                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(keys, description).detach();
+            }
+            else if constexpr (Format == CredentialPayloadFormat::String)
+            {
+                const PropertyObjectPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
+                const Bool hidden = parameters.getPropertyValue("Hidden");
+                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(description, hidden).detach();
+            }
+            else
+            {
+                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(description).detach();
+            }
+
             return OPENDAQ_SUCCESS;
         });
 }
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IDict*, keys, IString*, description)
-
-StringPayloadDescriptorImpl::StringPayloadDescriptorImpl(const StringPtr& description, Bool hidden)
-    : CredentialPayloadDescriptorBaseImpl(BuildParameters(hidden), description)
-{
-}
-
-PropertyObjectPtr StringPayloadDescriptorImpl::BuildParameters(Bool hidden)
-{
-    auto params = PropertyObject();
-    params.addProperty(BoolProperty("Hidden", hidden));
-    return params;
-}
-
-ErrCode StringPayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format)
-{
-    OPENDAQ_PARAM_NOT_NULL(format);
-
-    *format = CredentialPayloadFormat::String;
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode StringPayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
-{
-    *id = SerializeId();
-    return OPENDAQ_SUCCESS;
-}
-
-ConstCharPtr StringPayloadDescriptorImpl::SerializeId()
-{
-    return "StringPayloadDescriptor";
-}
-
-ErrCode StringPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-    const auto contextPtr = BaseObjectPtr::Borrow(context);
-    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
-
-    return daqTry(
-        [&]
-        {
-            const PropertyObjectPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
-            const Bool hidden = parameters.getPropertyValue("Hidden");
-            const auto description = serializedObj.readString("Description");
-
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, StringPayloadDescriptorImpl>(description, hidden).detach();
-            return OPENDAQ_SUCCESS;
-        });
-}
-
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description, Bool, hidden)
-
-FilePathPayloadDescriptorImpl::FilePathPayloadDescriptorImpl(const StringPtr& description)
-    : CredentialPayloadDescriptorBaseImpl(PropertyObject(), description)
-{
-}
-
-ErrCode FilePathPayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format)
-{
-    OPENDAQ_PARAM_NOT_NULL(format);
-
-    *format = CredentialPayloadFormat::FilePath;
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode FilePathPayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
-{
-    *id = SerializeId();
-    return OPENDAQ_SUCCESS;
-}
-
-ConstCharPtr FilePathPayloadDescriptorImpl::SerializeId()
-{
-    return "FilePathPayloadDescriptor";
-}
-
-ErrCode FilePathPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-    const auto contextPtr = BaseObjectPtr::Borrow(context);
-    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
-
-    return daqTry(
-        [&]
-        {
-            const auto description = serializedObj.readString("Description");
-
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, FilePathPayloadDescriptorImpl>(description).detach();
-            return OPENDAQ_SUCCESS;
-        });
-}
-
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
-
-BinaryBlobPayloadDescriptorImpl::BinaryBlobPayloadDescriptorImpl(const StringPtr& description)
-    : CredentialPayloadDescriptorBaseImpl(PropertyObject(), description)
-{
-}
-
-ErrCode BinaryBlobPayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format)
-{
-    OPENDAQ_PARAM_NOT_NULL(format);
-
-    *format = CredentialPayloadFormat::BinaryBlob;
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode BinaryBlobPayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
-{
-    *id = SerializeId();
-    return OPENDAQ_SUCCESS;
-}
-
-ConstCharPtr BinaryBlobPayloadDescriptorImpl::SerializeId()
-{
-    return "BinaryBlobPayloadDescriptor";
-}
-
-ErrCode BinaryBlobPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-    const auto contextPtr = BaseObjectPtr::Borrow(context);
-    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
-
-    return daqTry(
-        [&]
-        {
-            const auto description = serializedObj.readString("Description");
-
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, BinaryBlobPayloadDescriptorImpl>(description).detach();
-            return OPENDAQ_SUCCESS;
-        });
-}
-
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, BinaryBlobPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
 
 END_NAMESPACE_OPENDAQ
