@@ -45,4 +45,15 @@ inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& d
     return obj;
 }
 
+/*!
+ * @brief Creates a `CredentialPayloadDescriptor` describing a `FilePath`-format payload - a single secret
+ * stating that the secret is a path to a file (e.g. a private key) rather than the value itself.
+ * @param description A human-readable description of the payload, for the user.
+ */
+inline CredentialPayloadDescriptorPtr FilePathPayloadDescriptor(const StringPtr& description)
+{
+    CredentialPayloadDescriptorPtr obj(FilePathPayloadDescriptor_Create(description));
+    return obj;
+}
+
 END_NAMESPACE_OPENDAQ

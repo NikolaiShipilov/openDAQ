@@ -35,9 +35,9 @@ static CredentialPayloadDescriptorPtr BuildPinDescriptor(bool hidePin)
     return StringPayloadDescriptor("PIN code", hidePin);
 }
 
-static CredentialPayloadDescriptorPtr BuildPrivateKeyDescriptor(bool hidePath)
+static CredentialPayloadDescriptorPtr BuildPrivateKeyDescriptor()
 {
-    return StringPayloadDescriptor("Path to the PEM-encoded private key file", hidePath);
+    return FilePathPayloadDescriptor("Path to the PEM-encoded private key file");
 }
 
 namespace
@@ -198,7 +198,7 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
     auto userNamePasswordDescriptor = BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
     auto pinDescriptor = BuildPinDescriptor(/*hidePin*/ true);
-    auto privateKeyDescriptor = BuildPrivateKeyDescriptor(/*hidePath*/ false);
+    auto privateKeyDescriptor = BuildPrivateKeyDescriptor();
 
     auto userNamePasswordConfig = PropertyObject();
     userNamePasswordConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
@@ -210,7 +210,6 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 
     auto privateKeyConfig = PropertyObject();
     privateKeyConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
-    privateKeyConfig.addProperty(BoolProperty("HidePrivateKeyPathInput", False));
 
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
@@ -295,10 +294,7 @@ CredentialRequestPtr CredentialDemoDeviceImpl::CreatePrivateKeyCredentialRequest
                                                                                   const PropertyObjectPtr& additionalConfig,
                                                                                   bool verbose)
 {
-    const bool hidePath = additionalConfig.assigned() && additionalConfig.hasProperty("HidePrivateKeyPathInput")
-                               ? (bool) additionalConfig.getPropertyValue("HidePrivateKeyPathInput")
-                               : false;
-    const auto payloadDescriptor = BuildPrivateKeyDescriptor(hidePath);
+    const auto payloadDescriptor = BuildPrivateKeyDescriptor();
 
     auto builder = CredentialRequestBuilder();
     builder.setConnectionString(connectionString);

@@ -35,6 +35,7 @@ ErrCode CmdLineCredentialProviderImpl::getSupportedPayloadFormats(IList** format
     auto supportedFormats = List<IInteger>();
     supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::KeyValuePairs));
     supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::String));
+    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::FilePath));
 
     *formats = supportedFormats.detach();
     return OPENDAQ_SUCCESS;
@@ -65,6 +66,7 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
             return OPENDAQ_SUCCESS;
         }
         case CredentialPayloadFormat::String:
+        case CredentialPayloadFormat::FilePath:
         {
             auto callback = Function(
                 [requestPtr, descriptor]()
@@ -95,7 +97,8 @@ DictPtr<IString, IBaseObject> CmdLineCredentialProviderImpl::readKeyValuePairs(c
 StringPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialPayloadDescriptorPtr& descriptor)
 {
     const StringPtr description = descriptor.getDescription();
-    const bool hidden = descriptor.getParameters().getPropertyValue("Hidden");
+    const auto parameters = descriptor.getParameters();
+    const bool hidden = parameters.assigned() && parameters.hasProperty("Hidden") && (bool) parameters.getPropertyValue("Hidden");
 
     auto secret = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
     return String(secret);

@@ -35,7 +35,8 @@ PyDaqIntf<daq::ICredentialPayloadDescriptor, daq::IBaseObject> declareICredentia
 {
     py::enum_<daq::CredentialPayloadFormat>(m, "CredentialPayloadFormat")
         .value("KeyValuePairs", daq::CredentialPayloadFormat::KeyValuePairs)
-        .value("String", daq::CredentialPayloadFormat::String);
+        .value("String", daq::CredentialPayloadFormat::String)
+        .value("FilePath", daq::CredentialPayloadFormat::FilePath);
 
     return wrapInterface<daq::ICredentialPayloadDescriptor, daq::IBaseObject>(m, "ICredentialPayloadDescriptor");
 }
@@ -51,6 +52,10 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
     m.def("StringPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, const bool hidden){
         return daq::StringPayloadDescriptor_Create(getVariantValue<daq::IString*>(description), hidden);
     }, py::arg("description"), py::arg("hidden"));
+
+    m.def("FilePathPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
+        return daq::FilePathPayloadDescriptor_Create(getVariantValue<daq::IString*>(description));
+    }, py::arg("description"));
 
 
     cls.def_property_readonly("format",

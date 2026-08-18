@@ -149,4 +149,46 @@ ErrCode StringPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, 
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description, Bool, hidden)
 
+FilePathPayloadDescriptorImpl::FilePathPayloadDescriptorImpl(const StringPtr& description)
+    : CredentialPayloadDescriptorBaseImpl(PropertyObject(), description)
+{
+}
+
+ErrCode FilePathPayloadDescriptorImpl::getFormat(CredentialPayloadFormat* format)
+{
+    OPENDAQ_PARAM_NOT_NULL(format);
+
+    *format = CredentialPayloadFormat::FilePath;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode FilePathPayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
+{
+    *id = SerializeId();
+    return OPENDAQ_SUCCESS;
+}
+
+ConstCharPtr FilePathPayloadDescriptorImpl::SerializeId()
+{
+    return "FilePathPayloadDescriptor";
+}
+
+ErrCode FilePathPayloadDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
+{
+    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
+    const auto contextPtr = BaseObjectPtr::Borrow(context);
+    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
+
+    return daqTry(
+        [&]
+        {
+            const auto description = serializedObj.readString("Description");
+
+            *obj = createWithImplementation<ICredentialPayloadDescriptor, FilePathPayloadDescriptorImpl>(description).detach();
+            return OPENDAQ_SUCCESS;
+        });
+}
+
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
+
 END_NAMESPACE_OPENDAQ
