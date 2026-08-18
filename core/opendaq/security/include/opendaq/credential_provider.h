@@ -60,4 +60,12 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, CmdLineCredentialProvider, ICredentialProvider)
 
+/*!
+ * @brief Creates a `ICredentialProvider` dedicated to `FilePath`-format payloads. Currently prompts for
+ * the file's path via the command line, the same way `CmdLineCredentialProvider` does for that format;
+ * kept as its own provider so it can diverge from `CmdLineCredentialProvider` later - e.g. to hand back
+ * the file's content directly instead of just its path.
+ */
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FileCredentialProvider, ICredentialProvider)
+
 END_NAMESPACE_OPENDAQ
