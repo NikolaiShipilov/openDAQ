@@ -79,12 +79,8 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         const auto additionalConfig = authenticationConfig.getConfig();
         const bool verboseCredentialRequest = additionalConfig.getPropertyValue("VerboseCredentialRequest");
 
-        credentialRequest =
-            payloadDescriptor.getFormat() == CredentialPayloadFormat::KeyValuePairs
-                ? CredentialDemoDeviceImpl::CreateUserNamePasswordCredentialRequest(
-                      connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest)
-                : CredentialDemoDeviceImpl::CreatePinCredentialRequest(
-                      connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest);
+        credentialRequest = CredentialDemoDeviceImpl::CreateCredentialRequest(
+            payloadId, connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest);
     }
 
     auto device = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
@@ -94,7 +90,8 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         info,
         /*authenticated*/true,
         payloadId,
-        credentialProvider.requestCredentials(credentialRequest));
+        credentialProvider.requestCredentials(credentialRequest),
+        options.get("PublicKeyPath"));
 
     // Persisted alongside the device, so a reload can re-request credentials for it without ever having
     // saved the authentication config or its secrets.
@@ -121,7 +118,7 @@ CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const
 
 DictPtr<IString, IBaseObject> CredentialDemoModule::populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions)
 {
-    auto defaultOptions = Dict<IString, IBaseObject>({{"Manufacturer", "openDAQ"}, {"SerialNumber", "0"}});
+    auto defaultOptions = Dict<IString, IBaseObject>({{"Manufacturer", "openDAQ"}, {"SerialNumber", "0"}, {"PublicKeyPath", ""}});
 
     for (const auto& [key, value] : inputOptions)
     {

@@ -134,6 +134,7 @@ if (APP_ENABLE_WEBPAGE_EXAMPLES)
         if (DAQMODULES_CREDENTIAL_DEMO_MODULE)
             add_executable(credential_providers cpp/credential_providers/credential_providers.cpp)
             target_link_libraries(credential_providers PRIVATE daq::opendaq)
+            target_compile_definitions(credential_providers PRIVATE CREDENTIAL_DEMO_KEYS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../modules/credential_demo_module/keys")
         endif()
 	
 	if(DAQMODULES_LICENSING_MODULE AND NOT APPLE)

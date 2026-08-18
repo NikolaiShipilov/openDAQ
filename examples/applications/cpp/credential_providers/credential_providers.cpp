@@ -12,7 +12,8 @@ void createJsonConfigFile()
     "Modules": {
         "CredentialDemoModule": {
             "Manufacturer": "openDAQ",
-            "SerialNumber": "1234"
+            "SerialNumber": "1234",
+            "PublicKeyPath": ")" + std::string(CREDENTIAL_DEMO_KEYS_DIR) + R"(/public_key.pem"
             }
         }
     }
@@ -46,6 +47,17 @@ int main(int argc, const char* argv[])
     // get the type to obtain default authentication settings
     auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
 
+    // PrivateKey authentication - another String-format credential payload, but instead of comparing a
+    // fixed secret, the module verifies a signed challenge against the public key configured via the
+    // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
+    // to the matching private key.
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    auto privateKeyConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKey");
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication. Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+/*
     // add without authentication
     device = instance.addDevice("daq://openDAQ_1234");
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" without authentication. Press \"enter\" to continue..." << std::endl;
@@ -99,7 +111,7 @@ int main(int argc, const char* argv[])
 
     auto reloadedDevice = reloadedDevices[0];
     std::cout << "Reloaded instance re-authenticated and reconnected to \"" << reloadedDevice.getInfo().getName() << std::endl;
-
+*/
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
     std::cin.get();
     return 0;

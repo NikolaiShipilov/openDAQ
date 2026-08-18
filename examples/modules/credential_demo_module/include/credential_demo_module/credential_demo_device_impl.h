@@ -23,9 +23,9 @@
 
 /*
  * Minimal device implementation with no signals or channels. When connected to via the
- * authenticated path, authenticates via the credential framework using either a username/password
- * or a PIN code, the two showcased auth methods. When connected to via the plain, non-authenticated
- * path, no credentials are required or checked.
+ * authenticated path, authenticates via the credential framework using a username/password, a PIN
+ * code, or a private-key challenge, the three showcased auth methods. When connected to via the
+ * plain, non-authenticated path, no credentials are required or checked.
  */
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -39,10 +39,17 @@ public:
                                       const DeviceInfoPtr& info,
                                       bool authenticated,
                                       const StringPtr& payloadId = nullptr,
-                                      const CredentialPayloadPtr& credentials = nullptr);
+                                      const CredentialPayloadPtr& credentials = nullptr,
+                                      const StringPtr& publicKeyPath = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
+    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
+                                                         const StringPtr& connectionString,
+                                                         const StringPtr& manufacturer,
+                                                         const StringPtr& serialNumber,
+                                                         const PropertyObjectPtr& additionalConfig,
+                                                         bool verbose);
     static CredentialRequestPtr CreateUserNamePasswordCredentialRequest(const StringPtr& connectionString,
                                                                          const StringPtr& manufacturer,
                                                                          const StringPtr& serialNumber,
@@ -53,10 +60,15 @@ public:
                                                             const StringPtr& serialNumber,
                                                             const PropertyObjectPtr& additionalConfig,
                                                             bool verbose);
+    static CredentialRequestPtr CreatePrivateKeyCredentialRequest(const StringPtr& connectionString,
+                                                                   const StringPtr& manufacturer,
+                                                                   const StringPtr& serialNumber,
+                                                                   const PropertyObjectPtr& additionalConfig,
+                                                                   bool verbose);
     static void ValidateConnectionString(const StringPtr& connectionString);
 
 private:
-    static void authenticate(const CredentialPayloadPtr& credentials, const StringPtr& payloadId);
+    static void authenticate(const CredentialPayloadPtr& credentials, const StringPtr& payloadId, const StringPtr& publicKeyPath);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE
