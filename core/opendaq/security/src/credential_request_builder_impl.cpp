@@ -4,7 +4,8 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 CredentialRequestBuilderImpl::CredentialRequestBuilderImpl()
-    : connectionString(nullptr)
+    : componentType(nullptr)
+    , connectionString(nullptr)
     , metaData(PropertyObject())
 {
 }
@@ -21,6 +22,20 @@ ErrCode CredentialRequestBuilderImpl::build(ICredentialRequest** request)
             *request = CredentialRequestFromBuilder(builderPtr).detach();
             return OPENDAQ_SUCCESS;
         });
+}
+
+ErrCode CredentialRequestBuilderImpl::setComponentType(IComponentType* componentType)
+{
+    this->componentType = componentType;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getComponentType(IComponentType** componentType)
+{
+    OPENDAQ_PARAM_NOT_NULL(componentType);
+
+    *componentType = this->componentType.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
 }
 
 ErrCode CredentialRequestBuilderImpl::setConnectionString(IString* connectionString)

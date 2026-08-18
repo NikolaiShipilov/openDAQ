@@ -18,6 +18,7 @@
 
 #include <coretypes/impl.h>
 #include <opendaq/credential_request_builder.h>
+#include <opendaq/component_type_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -29,6 +30,8 @@ public:
 
     ErrCode INTERFACE_FUNC build(ICredentialRequest** dimension) override;
 
+    ErrCode INTERFACE_FUNC setComponentType(IComponentType* componentType) override;
+    ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) override;
     ErrCode INTERFACE_FUNC setConnectionString(IString* connectionString) override;
     ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) override;
 
@@ -46,6 +49,7 @@ public:
     ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
 
 private:
+    ComponentTypePtr componentType;
     StringPtr connectionString;
     PropertyObjectPtr metaData;
     StringPtr manufacturer;

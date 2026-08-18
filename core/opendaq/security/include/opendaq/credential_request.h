@@ -26,13 +26,41 @@ BEGIN_NAMESPACE_OPENDAQ
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
  * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
  * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
+ * [interfaceLibrary(IComponentType, "opendaq")]
+ * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr, "<opendaq/component_type_ptr.h>")]
  */
 
 struct ICredentialRequestBuilder;
+struct IComponentType;
 
+/*!
+ * @brief Carries the non-secret details of a credential request handed to `ICredentialProvider::requestCredentials`
+ * when authentication is required for a connection attempt.
+ *
+ * Built via `ICredentialRequestBuilder`, or reconstructed on load. Never carries the actual secrets - only
+ * enough context (the component type, connection details, and the negotiated payload's id and descriptor)
+ * for the provider to determine how to provide the secrets.
+ */
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
 {
+    /*!
+     * @brief Gets the type of the component the request is for.
+     * @param[out] componentType The component type.
+     */
+    // [templateType(componentType, IComponentType)]
+    virtual ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) = 0;
+
+    /*!
+     * @brief Gets the connection string used for the connection attempt this request was formed for.
+     * @param[out] connectionString The connection string.
+     */
     virtual ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) = 0;
+
+    /*!
+     * @brief Gets additional metadata describing the request, for the credential provider to present to
+     * the user (e.g. device type name/id/description).
+     * @param[out] metaData The metadata property object.
+     */
     virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) = 0;
 
     /*!
@@ -61,6 +89,9 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
 };
 
+/*!
+ * @brief Creates a `CredentialRequest` from a `ICredentialRequestBuilder`.
+ */
 //[factory(Hide)]
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, CredentialRequestFromBuilder, ICredentialRequest,

@@ -16,13 +16,14 @@
 
 #pragma once
 #include <opendaq/authentication_config.h>
+#include <opendaq/authentication_config_private.h>
 #include <coretypes/impl.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 #include <opendaq/credential_request_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
-class AuthenticationConfigImpl : public ImplementationOf<IAuthenticationConfig>
+class AuthenticationConfigImpl : public ImplementationOf<IAuthenticationConfig, IAuthenticationConfigPrivate>
 {
 public:
     AuthenticationConfigImpl(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor, const PropertyObjectPtr& config = nullptr);
@@ -31,6 +32,8 @@ public:
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
     ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) override;
+
+    // IAuthenticationConfigPrivate
     ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) override;
 
 private:

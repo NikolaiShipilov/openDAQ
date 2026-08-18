@@ -9,6 +9,7 @@ DictPtr<IString, IBaseObject> CredentialRequestImpl::PackBuilder(ICredentialRequ
 {
     const auto builderPtr = CredentialRequestBuilderPtr::Borrow(builder);
     auto params = Dict<IString, IBaseObject>();
+    params.set("ComponentType", builderPtr.getComponentType());
     params.set("ConnectionString", builderPtr.getConnectionString());
     params.set("MetaData", builderPtr.getMetaData());
     params.set("Manufacturer", builderPtr.getManufacturer());
@@ -20,7 +21,8 @@ DictPtr<IString, IBaseObject> CredentialRequestImpl::PackBuilder(ICredentialRequ
 }
 
 CredentialRequestImpl::CredentialRequestImpl(const DictPtr<IString, IBaseObject>& packedBuilder)
-    : connectionString(packedBuilder.get("ConnectionString"))
+    : componentType(packedBuilder.get("ComponentType"))
+    , connectionString(packedBuilder.get("ConnectionString"))
     , metaData(packedBuilder.get("MetaData"))
     , manufacturer(packedBuilder.get("Manufacturer"))
     , serialNumber(packedBuilder.get("SerialNumber"))
@@ -32,6 +34,14 @@ CredentialRequestImpl::CredentialRequestImpl(const DictPtr<IString, IBaseObject>
 CredentialRequestImpl::CredentialRequestImpl(ICredentialRequestBuilder* credentialRequestBuilder)
     : CredentialRequestImpl(PackBuilder(credentialRequestBuilder))
 {
+}
+
+ErrCode CredentialRequestImpl::getComponentType(IComponentType** componentType)
+{
+    OPENDAQ_PARAM_NOT_NULL(componentType);
+
+    *componentType = this->componentType.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
 }
 
 ErrCode CredentialRequestImpl::getConnectionString(IString** connectionString)
@@ -97,6 +107,12 @@ ErrCode CredentialRequestImpl::serialize(ISerializer* serializer)
 {
     serializer->startTaggedObject(this);
 
+    if (componentType.assigned())
+    {
+        serializer->key("ComponentType");
+        componentType.serialize(serializer);
+    }
+
     if (connectionString.assigned())
     {
         serializer->key("ConnectionString");
@@ -151,6 +167,7 @@ ErrCode CredentialRequestImpl::Deserialize(ISerializedObject* serialized, IBaseO
             // re-added one by one - a property can only ever belong to a single owning property object, and
             // `addMetaDataProperty` would otherwise try to re-parent an already-owned property.
             auto packed = Dict<IString, IBaseObject>();
+            packed.set("ComponentType", serializedObj.hasKey("ComponentType") ? serializedObj.readObject("ComponentType", contextPtr, factoryCallbackPtr) : BaseObjectPtr());
             packed.set("ConnectionString", serializedObj.hasKey("ConnectionString") ? serializedObj.readString("ConnectionString") : StringPtr());
             packed.set("MetaData", serializedObj.hasKey("MetaData") ? serializedObj.readObject("MetaData", contextPtr, factoryCallbackPtr) : BaseObjectPtr());
             packed.set("Manufacturer", serializedObj.hasKey("Manufacturer") ? serializedObj.readString("Manufacturer") : StringPtr());

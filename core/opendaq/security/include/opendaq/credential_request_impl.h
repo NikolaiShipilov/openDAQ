@@ -20,6 +20,7 @@
 #include <coretypes/serializable.h>
 #include <opendaq/credential_request.h>
 #include <opendaq/credential_request_builder.h>
+#include <opendaq/component_type_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -30,6 +31,7 @@ public:
     explicit CredentialRequestImpl(ICredentialRequestBuilder* credentialRequestBuilder);
     explicit CredentialRequestImpl(const DictPtr<IString, IBaseObject>& packedBuilder);
 
+    ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) override;
     ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) override;
     ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) override;
     ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) override;
@@ -46,6 +48,7 @@ public:
 private:
     static DictPtr<IString, IBaseObject> PackBuilder(ICredentialRequestBuilder* dimensionBuilder);
 
+    ComponentTypePtr componentType;
     StringPtr connectionString;
     PropertyObjectPtr metaData;
     StringPtr manufacturer;

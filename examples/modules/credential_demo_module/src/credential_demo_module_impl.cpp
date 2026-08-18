@@ -4,6 +4,8 @@
 
 #include <coretypes/version_info_factory.h>
 #include <opendaq/credential_payload_descriptor_factory.h>
+#include <opendaq/authentication_config_factory.h>
+#include <opendaq/authentication_config_private_ptr.h>
 #include <opendaq/component_private_ptr.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -71,7 +73,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
     // A config reconstructed while reloading a saved device already carries the request formed the first
     // time around - reuse it as-is instead of forming a new one from the payload descriptor and additional
     // config.
-    auto credentialRequest = authenticationConfig.getCredentialRequest();
+    auto credentialRequest = authenticationConfig.asPtr<IAuthenticationConfigPrivate>(true).getCredentialRequest();
     if (!credentialRequest.assigned())
     {
         const auto additionalConfig = authenticationConfig.getConfig();

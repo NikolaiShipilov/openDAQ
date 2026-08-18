@@ -71,13 +71,4 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         },
         py::return_value_policy::take_ownership,
         "Gets additional configuration specific to selected authentication method.");
-    cls.def_property_readonly("credential_request",
-        [](daq::IAuthenticationConfig *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getCredentialRequest().detach();
-        },
-        py::return_value_policy::take_ownership,
-        "Gets the previously formed credential request this config was reconstructed from, if any.");
 }

@@ -30,6 +30,7 @@ static CredentialPayloadDescriptorPtr BuildPinDescriptor(bool hidePin)
 
 static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, const DeviceTypePtr& deviceType, bool verbose)
 {
+    builder.setComponentType(deviceType);
     builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeName", deviceType.getName()).setDescription("The openDAQ device type name").build());
 
     if (verbose)
