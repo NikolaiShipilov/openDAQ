@@ -66,6 +66,28 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
     virtual ErrCode INTERFACE_FUNC createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config = nullptr) = 0;
 
     /*!
+     * @brief Creates a device object that can communicate with the device described in the specified connection string,
+     * authenticating the connection by obtaining credentials - as specified by the given authentication configuration -
+     * from a compatible registered credential provider.
+     * The device object is not automatically added as a sub-device of the caller, but only returned by reference.
+     * @param[out] device The device object created to communicate with and control the device.
+     * @param connectionString Describes the connection info of the device to connect to.
+     * @param parent The parent component/device to which the device attaches.
+     * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
+     * @param authenticationConfig The authentication configuration used to authenticate the connection to the device.
+     *
+     * Iterates through all loaded modules and creates a device with the first module that accepts the provided connection string.
+     * The manufacturer and serial number identifying the target device are not accepted here - if the connection string is a
+     * smart (`daq://`) connection string, they are resolved from discovery info and forwarded to the module; otherwise they
+     * are left unset.
+     */
+    virtual ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
+                                                             IString* connectionString,
+                                                             IComponent* parent,
+                                                             IPropertyObject* config,
+                                                             IAuthenticationConfig* authenticationConfig) = 0;
+
+    /*!
      * @brief Returns a dictionary of known and available function block types this module can create.
      * @param[out] functionBlockTypes The dictionary of known function block types.
      *

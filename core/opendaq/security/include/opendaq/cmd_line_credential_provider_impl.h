@@ -19,6 +19,7 @@
 #include <coretypes/impl.h>
 #include <opendaq/credential_provider.h>
 #include <opendaq/credential_request_ptr.h>
+#include <opendaq/credential_payload_descriptor_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -29,10 +30,13 @@ public:
 
     ErrCode INTERFACE_FUNC getName(IString** name) override;
     ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials) override;
+    ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) override;
 
 private:
     static void printRequestDetails(const CredentialRequestPtr& request);
-    static std::string readPassword(const std::string& prompt);
+    static DictPtr<IString, IBaseObject> readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor);
+    static StringPtr readStringSecret(const CredentialPayloadDescriptorPtr& descriptor);
+    static std::string readLine(const std::string& prompt, bool hide);
 };
 
 END_NAMESPACE_OPENDAQ

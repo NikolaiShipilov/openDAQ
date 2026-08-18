@@ -51,6 +51,9 @@
 #include <opendaq/module_info_factory.h>
 #include <opendaq/component_type_private.h>
 #include <opendaq/mirrored_device_ptr.h>
+#include <opendaq/authentication_config_ptr.h>
+#include <opendaq/authentication_config_factory.h>
+#include <opendaq/credential_request_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 template <typename TInterface = IDevice, typename... Interfaces>
@@ -85,6 +88,9 @@ public:
     virtual ListPtr<IDeviceInfo> onGetAvailableDevices();
     virtual DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes();
     virtual DevicePtr onAddDevice(const StringPtr& connectionString, const PropertyObjectPtr& config);
+    virtual DevicePtr onAddAuthenticatedDevice(const StringPtr& connectionString,
+                                               const PropertyObjectPtr& config,
+                                               const AuthenticationConfigPtr& authenticationConfig);
     virtual void onRemoveDevice(const DevicePtr& device);
     virtual DictPtr<IString, IDevice> onAddDevices(const DictPtr<IString, IPropertyObject>& connectionArgs,
                                                    DictPtr<IString, IInteger> errCodes,
@@ -149,6 +155,10 @@ public:
     ErrCode INTERFACE_FUNC getAvailableDevices(IList** availableDevices) override;
     ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) override;
     ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config = nullptr) override;
+    ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
+                                                  IString* connectionString,
+                                                  IPropertyObject* config,
+                                                  IAuthenticationConfig* authenticationConfig) override;
     ErrCode INTERFACE_FUNC addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes = nullptr, IDict* errorInfos = nullptr) override;
     ErrCode INTERFACE_FUNC removeDevice(IDevice* device) override;
     ErrCode INTERFACE_FUNC getDevices(IList** subDevices, ISearchFilter* searchFilter = nullptr) override;
@@ -1348,6 +1358,27 @@ ErrCode GenericDevice<TInterface, Interfaces...>::addDevice(IDevice** device, IS
 }
 
 template <typename TInterface, typename... Interfaces>
+ErrCode GenericDevice<TInterface, Interfaces...>::addAuthenticatedDevice(IDevice** device,
+                                                                         IString* connectionString,
+                                                                         IPropertyObject* config,
+                                                                         IAuthenticationConfig* authenticationConfig)
+{
+    OPENDAQ_PARAM_NOT_NULL(connectionString);
+    OPENDAQ_PARAM_NOT_NULL(device);
+
+    if (this->isComponentRemoved)
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_COMPONENT_REMOVED);
+
+    DevicePtr devicePtr;
+    const ErrCode errCode =
+        wrapHandlerReturn(this, &Self::onAddAuthenticatedDevice, devicePtr, connectionString, config, authenticationConfig);
+    OPENDAQ_RETURN_IF_FAILED(errCode);
+
+    *device = devicePtr.detach();
+    return errCode;
+}
+
+template <typename TInterface, typename... Interfaces>
 ErrCode GenericDevice<TInterface, Interfaces...>::addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes, IDict* errorInfos)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionArgs);
@@ -1390,6 +1421,23 @@ DevicePtr GenericDevice<TInterface, Interfaces...>::onAddDevice(const StringPtr&
 
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
     auto device = managerUtils.createDevice(connectionString, devices, config);
+    addSubDevice(device);
+
+    return device;
+}
+
+template <typename TInterface, typename... Interfaces>
+DevicePtr GenericDevice<TInterface, Interfaces...>::onAddAuthenticatedDevice(const StringPtr& connectionString,
+                                                                             const PropertyObjectPtr& config,
+                                                                             const AuthenticationConfigPtr& authenticationConfig)
+{
+    if (!allowAddDevicesFromModules())
+        return nullptr;
+
+    auto lock = this->getRecursiveConfigLock2();
+
+    const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
+    auto device = managerUtils.createAuthenticatedDevice(connectionString, devices, config, authenticationConfig);
     addSubDevice(device);
 
     return device;
@@ -2130,6 +2178,17 @@ void GenericDevice<TInterface, Interfaces...>::updateDevice(const std::string& d
         else if (serializedDevice.hasKey("ComponentConfig"))
             updatetableDeviceConfig.updateInternal(serializedDevice.readSerializedObject("ComponentConfig"), context);
 
+        // A device previously added with authentication carries the credential request it was authenticated
+        // with - never the authentication config or its secrets. Reconstructing it here lets the device be
+        // re-authenticated (the credential provider is asked again for real credentials) instead of silently
+        // reconnecting without any.
+        AuthenticationConfigPtr authenticationConfig;
+        if (serializedDevice.hasKey("CredentialRequest"))
+        {
+            const CredentialRequestPtr credentialRequest = serializedDevice.readObject("CredentialRequest", context);
+            authenticationConfig = AuthenticationConfigFromCredentialRequest(credentialRequest);
+        }
+
         DeviceInfoPtr discoveredDeviceInfo;
         StringPtr manufacturer;
         StringPtr serialNumber;
@@ -2194,11 +2253,15 @@ void GenericDevice<TInterface, Interfaces...>::updateDevice(const std::string& d
             device = findConnectedDeviceForRemap(manufacturer, serialNumber, connectionString);
 
             if (!device.assigned())
-                device = onAddDevice(connectionString, deviceConfig);
+                device = authenticationConfig.assigned()
+                             ? onAddAuthenticatedDevice(connectionString, deviceConfig, authenticationConfig)
+                             : onAddDevice(connectionString, deviceConfig);
         }
         else
         {
-            device = onAddDevice(connectionString, deviceConfig);
+            device = authenticationConfig.assigned()
+                         ? onAddAuthenticatedDevice(connectionString, deviceConfig, authenticationConfig)
+                         : onAddDevice(connectionString, deviceConfig);
         }
 
         if (!device.assigned())

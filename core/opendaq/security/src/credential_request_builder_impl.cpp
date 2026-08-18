@@ -4,8 +4,8 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 CredentialRequestBuilderImpl::CredentialRequestBuilderImpl()
-    : connectionString(nullptr)
-    , componentType(nullptr)
+    : componentType(nullptr)
+    , connectionString(nullptr)
     , metaData(PropertyObject())
 {
 }
@@ -30,6 +30,14 @@ ErrCode CredentialRequestBuilderImpl::setComponentType(IComponentType* component
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode CredentialRequestBuilderImpl::getComponentType(IComponentType** componentType)
+{
+    OPENDAQ_PARAM_NOT_NULL(componentType);
+
+    *componentType = this->componentType.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode CredentialRequestBuilderImpl::setConnectionString(IString* connectionString)
 {
     this->connectionString = connectionString;
@@ -41,14 +49,6 @@ ErrCode CredentialRequestBuilderImpl::addMetaDataProperty(IProperty* property)
     return metaData->addProperty(property);
 }
 
-ErrCode CredentialRequestBuilderImpl::getComponentType(IComponentType** componentType)
-{
-    OPENDAQ_PARAM_NOT_NULL(componentType);
-
-    *componentType = this->componentType.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
 ErrCode CredentialRequestBuilderImpl::getConnectionString(IString** connectionString)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
@@ -57,11 +57,67 @@ ErrCode CredentialRequestBuilderImpl::getConnectionString(IString** connectionSt
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode CredentialRequestBuilderImpl::setManufacturer(IString* manufacturer)
+{
+    this->manufacturer = manufacturer;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getManufacturer(IString** manufacturer)
+{
+    OPENDAQ_PARAM_NOT_NULL(manufacturer);
+
+    *manufacturer = this->manufacturer.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::setSerialNumber(IString* serialNumber)
+{
+    this->serialNumber = serialNumber;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getSerialNumber(IString** serialNumber)
+{
+    OPENDAQ_PARAM_NOT_NULL(serialNumber);
+
+    *serialNumber = this->serialNumber.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode CredentialRequestBuilderImpl::getMetaData(IPropertyObject** metaData)
 {
     OPENDAQ_PARAM_NOT_NULL(metaData);
 
     *metaData = this->metaData.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::setPayloadId(IString* payloadId)
+{
+    this->payloadId = payloadId;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getPayloadId(IString** payloadId)
+{
+    OPENDAQ_PARAM_NOT_NULL(payloadId);
+
+    *payloadId = this->payloadId.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor)
+{
+    this->payloadDescriptor = descriptor;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor)
+{
+    OPENDAQ_PARAM_NOT_NULL(descriptor);
+
+    *descriptor = this->payloadDescriptor.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

@@ -544,6 +544,14 @@ ErrCode InstanceImpl::addDevice(IDevice** device, IString* connectionString, IPr
     return rootDevice->addDevice(device, connectionString, config);
 }
 
+ErrCode InstanceImpl::addAuthenticatedDevice(IDevice** device,
+                                             IString* connectionString,
+                                             IPropertyObject* config,
+                                             IAuthenticationConfig* authenticationConfig)
+{
+    return rootDevice->addAuthenticatedDevice(device, connectionString, config, authenticationConfig);
+}
+
 ErrCode InstanceImpl::addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes, IDict* errorInfos)
 {
     return rootDevice->addDevices(devices, connectionArgs, errCodes, errorInfos);

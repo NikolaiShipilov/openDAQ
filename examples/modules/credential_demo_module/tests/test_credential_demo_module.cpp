@@ -79,7 +79,7 @@ TEST_F(CredentialDemoModuleTest, EnumerateDevices)
 
     ASSERT_EQ(deviceInfo[0].getManufacturer(), "openDAQ");
     ASSERT_EQ(deviceInfo[0].getSerialNumber(), "0");
-    ASSERT_EQ(deviceInfo[0].getConnectionString(), "daq.credential_demo://openDAQ_0");
+    ASSERT_EQ(deviceInfo[0].getConnectionString(), "daq.credential_demo://credential_demo_device");
 }
 
 TEST_F(CredentialDemoModuleTest, EnumerateDevicesWithModuleOptions)
@@ -93,7 +93,7 @@ TEST_F(CredentialDemoModuleTest, EnumerateDevicesWithModuleOptions)
 
     ASSERT_EQ(deviceInfo[0].getManufacturer(), "TestManufacturer");
     ASSERT_EQ(deviceInfo[0].getSerialNumber(), "42");
-    ASSERT_EQ(deviceInfo[0].getConnectionString(), "daq.credential_demo://TestManufacturer_42");
+    ASSERT_EQ(deviceInfo[0].getConnectionString(), "daq.credential_demo://credential_demo_device");
 }
 
 TEST_F(CredentialDemoModuleTest, GetAvailableDeviceTypes)

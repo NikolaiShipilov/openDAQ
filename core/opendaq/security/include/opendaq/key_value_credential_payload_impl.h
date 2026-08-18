@@ -15,21 +15,21 @@
  */
 
 #pragma once
-
-#include <opendaq/credential_payload_ptr.h>
+#include <opendaq/credential_payload.h>
+#include <coretypes/impl.h>
+#include <coretypes/function_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
-inline CredentialPayloadPtr KeyValueCredentialPayload(const FunctionPtr& getValuesCb)
+class KeyValueCredentialPayloadImpl final : public ImplementationOf<ICredentialPayload>
 {
-    CredentialPayloadPtr obj(KeyValueCredentialPayload_Create(getValuesCb));
-    return obj;
-}
+public:
+    explicit KeyValueCredentialPayloadImpl(const FunctionPtr& getValuesCb);
 
-inline CredentialPayloadPtr StringCredentialPayload(const FunctionPtr& getSecretCb)
-{
-    CredentialPayloadPtr obj(StringCredentialPayload_Create(getSecretCb));
-    return obj;
-}
+    ErrCode INTERFACE_FUNC getSecrets(IBaseObject** secrets) override;
+
+private:
+    FunctionPtr getValuesCallback;
+};
 
 END_NAMESPACE_OPENDAQ

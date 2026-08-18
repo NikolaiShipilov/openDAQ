@@ -18,15 +18,46 @@
 #include <coretypes/baseobject.h>
 #include <opendaq/credential_request.h>
 #include <opendaq/credential_payload.h>
+#include <opendaq/credential_payload_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
+/*#
+ * [interfaceLibrary(IInteger, "coretypes")]
+ * [interfaceSmartPtr(IInteger, IntegerPtr, "<coretypes/integer.h>")]
+ */
+
+/*!
+ * @brief Supplies the secrets requested via a `ICredentialRequest` - e.g. by prompting the user, reading
+ * from a file, or fetching from a secret store.
+ */
 DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 {
+    /*!
+     * @brief Gets the name of the credential provider.
+     * @param[out] name The provider name.
+     */
     virtual ErrCode INTERFACE_FUNC getName(IString** name) = 0;
+
+    /*!
+     * @brief Requests credentials for the given request, in the format described by its payload descriptor.
+     * @param request The credential request to obtain credentials for.
+     * @param[out] credentials The obtained credential payload.
+     */
     virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials) = 0;
+
+    // [elementType(formats, IInteger)]
+    /*!
+     * @brief Gets a list of the credential payload formats this provider can provide. Used for
+     * format-matching against a device type's supported payload formats.
+     * @param[out] formats The list of supported payload formats.
+     */
+    virtual ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) = 0;
 };
 
+/*!
+ * @brief Creates a `ICredentialProvider` that prompts the user for secrets via the command line.
+ */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, CmdLineCredentialProvider, ICredentialProvider)
 
 END_NAMESPACE_OPENDAQ

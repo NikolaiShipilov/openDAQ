@@ -13,13 +13,21 @@ DeviceTypeImpl::DeviceTypeImpl(const StringPtr& id,
                                const StringPtr& name,
                                const StringPtr& description,
                                const PropertyObjectPtr& defaultConfig,
-                               const StringPtr& prefix)
-    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig)
+                               const StringPtr& prefix,
+                               const DictPtr<IString, IAuthenticationConfig>& supportedAuthenticationConfigs,
+                               const StringPtr& defaultAuthenticationConfigId)
+    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig, supportedAuthenticationConfigs, defaultAuthenticationConfigId)
 {
 }
 
 DeviceTypeImpl::DeviceTypeImpl(const ComponentTypeBuilderPtr& builder)
-    : DeviceTypeImpl(builder.getId(), builder.getName(), builder.getDescription(), builder.getDefaultConfig(), builder.getConnectionStringPrefix())
+    : DeviceTypeImpl(builder.getId(),
+                     builder.getName(),
+                     builder.getDescription(),
+                     builder.getDefaultConfig(),
+                     builder.getConnectionStringPrefix(),
+                     builder.getSupportedAuthenticationConfigs(),
+                     builder.getDefaultAuthenticationConfigId())
 {
 }
 

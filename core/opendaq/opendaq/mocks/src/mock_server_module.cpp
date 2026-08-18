@@ -49,6 +49,18 @@ ErrCode MockServerModuleImpl::createDevice(IDevice** device,
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode MockServerModuleImpl::createAuthenticatedDevice(IDevice** device,
+                                                        IString* /*connectionString*/,
+                                                        IString* /*manufacturer*/,
+                                                        IString* /*serialNumber*/,
+                                                        IComponent* /*parent*/,
+                                                        IPropertyObject* /*config*/,
+                                                        IAuthenticationConfig* /*authenticationConfig*/)
+{
+    *device = nullptr;
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode MockServerModuleImpl::getAvailableFunctionBlockTypes(IDict** functionBlockTypes)
 {
     *functionBlockTypes = Dict<IString, IFunctionBlockType>().detach();

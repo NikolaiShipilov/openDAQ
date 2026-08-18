@@ -1,5 +1,8 @@
 #include <opendaq/cmd_line_credential_provider_impl.h>
 #include <opendaq/credential_payload_factory.h>
+#include <coretypes/listobject_factory.h>
+#include <coretypes/dictobject_factory.h>
+#include <fmt/format.h>
 #include <iostream>
 
 #ifdef _WIN32
@@ -25,35 +28,77 @@ ErrCode CmdLineCredentialProviderImpl::getName(IString** name)
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode CmdLineCredentialProviderImpl::getSupportedPayloadFormats(IList** formats)
+{
+    OPENDAQ_PARAM_NOT_NULL(formats);
+
+    auto supportedFormats = List<IInteger>();
+    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::KeyValuePairs));
+    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::String));
+
+    *formats = supportedFormats.detach();
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials)
 {
     OPENDAQ_PARAM_NOT_NULL(credentials);
     OPENDAQ_PARAM_NOT_NULL(request);
 
     const auto requestPtr = CredentialRequestPtr::Borrow(request);
-    auto callback = Function(
-        [requestPtr]()
+    const auto descriptor = requestPtr.getPayloadDescriptor();
+    if (!descriptor.assigned())
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no payload descriptor set");
+
+    switch (descriptor.getFormat())
+    {
+        case CredentialPayloadFormat::KeyValuePairs:
         {
-            printRequestDetails(requestPtr);
+            auto callback = Function(
+                [requestPtr, descriptor]()
+                {
+                    printRequestDetails(requestPtr);
+                    return readKeyValuePairs(descriptor);
+                });
 
-            std::string username;
-            {
-                std::cout << "UserName: ";
-                std::getline(std::cin, username);
-                if (!std::cin)
-                    throw std::runtime_error("Credential prompt cancelled");
-            }
-            auto password = readPassword("Password: ");
+            *credentials = KeyValueCredentialPayload(callback).detach();
+            return OPENDAQ_SUCCESS;
+        }
+        case CredentialPayloadFormat::String:
+        {
+            auto callback = Function(
+                [requestPtr, descriptor]()
+                {
+                    printRequestDetails(requestPtr);
+                    return readStringSecret(descriptor);
+                });
 
-            auto secret = Dict<IString, IString>();
-            secret.set("UserName", String(username));
-            secret.set("Password", String(password));
+            *credentials = StringCredentialPayload(callback).detach();
+            return OPENDAQ_SUCCESS;
+        }
+        default:
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "Unsupported credential payload format");
+    }
+}
 
-            return secret;
-        });
+DictPtr<IString, IBaseObject> CmdLineCredentialProviderImpl::readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor)
+{
+    const DictPtr<IString, IBoolean> keys = descriptor.getParameters().getPropertyValue("Keys");
 
-    *credentials = UserPasswordCredentialPayload(callback).detach();
-    return OPENDAQ_SUCCESS;
+    auto secrets = Dict<IString, IString>();
+    for (const auto& [key, hidden] : keys)
+        secrets.set(key, String(readLine(fmt::format("{}: ", key.toStdString()), hidden)));
+
+    return secrets;
+}
+
+StringPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialPayloadDescriptorPtr& descriptor)
+{
+    const StringPtr description = descriptor.getDescription();
+    const bool hidden = descriptor.getParameters().getPropertyValue("Hidden");
+
+    auto secret = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
+    return String(secret);
 }
 
 void CmdLineCredentialProviderImpl::printRequestDetails(const CredentialRequestPtr& request)
@@ -66,21 +111,35 @@ void CmdLineCredentialProviderImpl::printRequestDetails(const CredentialRequestP
     if (const auto type = request.getComponentType(); type.assigned())
         std::cout << "Component type : " << type.getName() << '\n';
 
-
     if (const auto connectionString = request.getConnectionString(); connectionString.assigned() && connectionString.getLength() > 0)
         std::cout << "Connection string : " << connectionString << '\n';
+
+    if (const auto metaData = request.getMetaData(); metaData.assigned())
+    {
+        for (const auto& property : metaData.getAllProperties())
+            std::cout << property.getDescription() << " (" << property.getName() << ") : " << metaData.getPropertyValue(property.getName()) << '\n';
+    }
 
     std::cout << '\n';
 }
 
-std::string CmdLineCredentialProviderImpl::readPassword(const std::string &prompt)
+std::string CmdLineCredentialProviderImpl::readLine(const std::string& prompt, bool hide)
 {
     std::cout << prompt;
     std::cout.flush();
 
+    if (!hide)
+    {
+        std::string value;
+        if (!std::getline(std::cin, value))
+            throw std::runtime_error("Input cancelled");
+
+        return value;
+    }
+
 #ifdef _WIN32
 
-    std::wstring password;
+    std::wstring value;
 
     while (true)
     {
@@ -90,14 +149,14 @@ std::string CmdLineCredentialProviderImpl::readPassword(const std::string &promp
         {
             case L'\r': // Enter
                 std::wcout << std::endl;
-                return StringConverter::Utf16ToUtf8(password);
+                return StringConverter::Utf16ToUtf8(value);
 
             case 3: // Ctrl+C
-                throw std::runtime_error("Password entry cancelled.");
+                throw std::runtime_error("Input cancelled.");
 
             case L'\b': // Backspace
-                if (!password.empty())
-                    password.pop_back();
+                if (!value.empty())
+                    value.pop_back();
                 break;
 
             case 0:
@@ -106,7 +165,7 @@ std::string CmdLineCredentialProviderImpl::readPassword(const std::string &promp
                 break;
 
             default:
-                password.push_back(ch);
+                value.push_back(ch);
                 break;
         }
     }
@@ -138,14 +197,14 @@ std::string CmdLineCredentialProviderImpl::readPassword(const std::string &promp
     if (tcsetattr(STDIN_FILENO, TCSANOW, &newAttr) != 0)
         throw std::runtime_error("Failed to disable terminal echo.");
 
-    std::string password;
+    std::string value;
 
-    if (!std::getline(std::cin, password))
-        throw std::runtime_error("Password entry cancelled.");
+    if (!std::getline(std::cin, value))
+        throw std::runtime_error("Input cancelled.");
 
     std::cout << std::endl;
 
-    return password;
+    return value;
 
 #endif
 }

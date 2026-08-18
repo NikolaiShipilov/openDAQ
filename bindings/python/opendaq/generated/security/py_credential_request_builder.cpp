@@ -50,21 +50,6 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             return objectPtr.build().detach();
         },
         "");
-    cls.def_property("component_type",
-        [](daq::ICredentialRequestBuilder *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
-            return objectPtr.getComponentType().detach();
-        },
-        [](daq::ICredentialRequestBuilder *object, daq::IComponentType* componentType)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
-            objectPtr.setComponentType(componentType);
-        },
-        py::return_value_policy::take_ownership,
-        "");
     cls.def_property("connection_string",
         [](daq::ICredentialRequestBuilder *object)
         {

@@ -17,6 +17,8 @@
 #pragma once
 #include <coreobjects/property_object.h>
 #include <opendaq/component_type.h>
+#include <opendaq/credential_payload_descriptor.h>
+#include <opendaq/authentication_config.h>
 #include <coretypes/stringobject.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -39,6 +41,10 @@ enum class ComponentTypeSort
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceLibrary(IComponentType, "opendaq")]
+ * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationConfig, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationConfig, AuthenticationConfigPtr, "<opendaq/authentication_config_ptr.h>")]
  */
 
 /*!
@@ -164,6 +170,43 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
      * For example: Port=1000, OutputRate=5000, ...
      */
     virtual ErrCode INTERFACE_FUNC getDefaultConfig(IPropertyObject** defaultConfig) = 0;
+
+    // [returnSelf]
+    /*!
+     * @brief Sets the id of the authentication config (see `addSupportedAuthenticationConfig`) to use as the
+     * default, returned to users via `createDefaultAuthenticationConfig`.
+     * @param id The id of the default authentication config. Must match one of the ids added via
+     * `addSupportedAuthenticationConfig`.
+     *
+     * When left unset, the built Component type is considered to not support authentication, and
+     * `createDefaultAuthenticationConfig` will fail with `OPENDAQ_ERR_NOT_SUPPORTED`.
+     */
+    virtual ErrCode INTERFACE_FUNC setDefaultAuthenticationConfigId(IString* id) = 0;
+
+    /*!
+     * @brief Gets the id of the authentication config (see `addSupportedAuthenticationConfig`) set via
+     * `setDefaultAuthenticationConfigId`.
+     * @param[out] id The id of the default authentication config, or `nullptr` if none was set.
+     */
+    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationConfigId(IString** id) = 0;
+
+    // [returnSelf]
+    /*!
+     * @brief Adds a supported credential payload, keyed by payload id, within the whole authentication config that is
+     * built immediately from the given id, descriptor and additional config, and stored under the same id.
+     * @param id The payload id.
+     * @param payloadDescriptor The descriptor of the supported payload.
+     * @param config Additional, payload-specific configuration to carry settings that might travel with the credential request to the provider.
+     */
+    virtual ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payloadDescriptor, IPropertyObject* config = nullptr) = 0;
+
+    /*!
+     * @brief Gets the authentication configs built for each supported payload added via `addSupportedAuthenticationConfig`, keyed
+     * by the same payload id.
+     * @param[out] authenticationConfigs The payload id -> authentication config dictionary.
+     */
+    // [templateType(authenticationConfigs, IString, IAuthenticationConfig)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationConfigs(IDict** authenticationConfigs) = 0;
 };
 /*!@}*/
 

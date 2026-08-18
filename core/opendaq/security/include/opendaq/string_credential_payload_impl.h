@@ -21,15 +21,20 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-class UserPasswordCredentialPayloadImpl final : public ImplementationOf<ICredentialPayload>
+/*!
+ * @brief Generic single-secret `ICredentialPayload`, used by `String`-format authentication methods
+ * (e.g. a PIN code, a token, an API key). The secret returned by the callback is returned directly
+ * by `getSecrets`, as an `IString`.
+ */
+class StringCredentialPayloadImpl final : public ImplementationOf<ICredentialPayload>
 {
 public:
-    explicit UserPasswordCredentialPayloadImpl(const FunctionPtr& getUserPassCb);
+    explicit StringCredentialPayloadImpl(const FunctionPtr& getSecretCb);
 
-    ErrCode INTERFACE_FUNC getSecrets(IDict** secrets) override;
+    ErrCode INTERFACE_FUNC getSecrets(IBaseObject** secrets) override;
 
 private:
-    FunctionPtr getUsernameAndPasswordCallback;
+    FunctionPtr getSecretCallback;
 };
 
 END_NAMESPACE_OPENDAQ

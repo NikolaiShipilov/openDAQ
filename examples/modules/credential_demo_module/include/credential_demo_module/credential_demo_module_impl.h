@@ -17,6 +17,7 @@
 #pragma once
 #include <credential_demo_module/common.h>
 #include <opendaq/module_impl.h>
+#include <opendaq/credential_payload_descriptor_ptr.h>
 
 /*
  * Showcase module for authentication-method integration with the credential
@@ -33,9 +34,16 @@ public:
     ListPtr<IDeviceInfo> onGetAvailableDevices() override;
     DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes() override;
     DevicePtr onCreateDevice(const StringPtr& connectionString, const ComponentPtr& parent, const PropertyObjectPtr& config) override;
+    DevicePtr onCreateAuthenticatedDevice(const StringPtr& connectionString,
+                                          const StringPtr& manufacturer,
+                                          const StringPtr& serialNumber,
+                                          const ComponentPtr& parent,
+                                          const PropertyObjectPtr& config,
+                                          const AuthenticationConfigPtr& authenticationConfig) override;
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);
+    static CredentialProviderPtr FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers, const CredentialPayloadDescriptorPtr& payloadDescriptor);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

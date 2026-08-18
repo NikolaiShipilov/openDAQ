@@ -18,6 +18,9 @@
 #include <opendaq/component_type_impl.h>
 #include <opendaq/component_type_builder_ptr.h>
 #include <opendaq/device_type.h>
+#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/authentication_config_ptr.h>
+#include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -30,7 +33,9 @@ public:
                             const StringPtr& name,
                             const StringPtr& description,
                             const PropertyObjectPtr& defaultConfig,
-                            const StringPtr& prefix);
+                            const StringPtr& prefix,
+                            const DictPtr<IString, IAuthenticationConfig>& supportedAuthenticationConfigs = Dict<IString, IAuthenticationConfig>(),
+                            const StringPtr& defaultAuthenticationConfigId = nullptr);
 
     explicit DeviceTypeImpl(const ComponentTypeBuilderPtr& builder);
 

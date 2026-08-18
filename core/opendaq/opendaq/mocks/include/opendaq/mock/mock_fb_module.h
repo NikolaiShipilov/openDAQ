@@ -30,6 +30,13 @@ public:
     daq::ErrCode INTERFACE_FUNC getAvailableDevices(daq::IList** availableDevices) override;
     daq::ErrCode INTERFACE_FUNC getAvailableDeviceTypes(daq::IDict** deviceTypes) override;
     daq::ErrCode INTERFACE_FUNC createDevice(daq::IDevice** device, daq::IString* connectionString, daq::IComponent* parent, daq::IPropertyObject* config) override;
+    daq::ErrCode INTERFACE_FUNC createAuthenticatedDevice(daq::IDevice** device,
+                                                          daq::IString* connectionString,
+                                                          daq::IString* manufacturer,
+                                                          daq::IString* serialNumber,
+                                                          daq::IComponent* parent,
+                                                          daq::IPropertyObject* config,
+                                                          daq::IAuthenticationConfig* authenticationConfig) override;
 
     daq::ErrCode INTERFACE_FUNC getAvailableFunctionBlockTypes(daq::IDict** functionBlockTypes) override;
     daq::ErrCode INTERFACE_FUNC createFunctionBlock(daq::IFunctionBlock** functionBlock, daq::IString* id, daq::IComponent* parent, daq::IString* localId, daq::IPropertyObject* config) override;

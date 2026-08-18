@@ -761,7 +761,12 @@ ErrCode ModuleManagerImpl::getAvailableDeviceTypes(IDict** deviceTypes)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ModuleManagerImpl::createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config)
+ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
+                                                IString* connectionString,
+                                                IComponent* parent,
+                                                IPropertyObject* config,
+                                                bool authenticated,
+                                                IAuthenticationConfig* authenticationConfig)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
     OPENDAQ_PARAM_NOT_NULL(device);
@@ -812,6 +817,7 @@ ErrCode ModuleManagerImpl::createDevice(IDevice** device, IString* connectionStr
             connectionStringPtr = resolveSmartConnectionString(connectionStringPtr, discoveredDeviceInfo, generalConfig, loggerComponent);
         }
 
+        bool deviceTypeFoundButAuthNotSupported = false;
         for (const auto& library : libraries)
         {
             const auto deviceType = getDeviceTypeFromConnectionString(connectionStringPtr, library.module);
@@ -820,9 +826,29 @@ ErrCode ModuleManagerImpl::createDevice(IDevice** device, IString* connectionStr
             if (!deviceType.assigned())
                 continue;
 
+            if (authenticated && !deviceType.isAuthenticationSupported())
+            {
+                deviceTypeFoundButAuthNotSupported = true;
+                continue;
+            }
+
             // copy props from input config and connection string to device type config
             const auto deviceTypeConfig = PopulateDeviceTypeConfig(addDeviceConfig, inputConfig, deviceType, connectionStringOptions);
-            auto err = library.module->createDevice(device, connectionStringPtr, parent, deviceTypeConfig);
+
+            ErrCode err;
+            if (authenticated)
+            {
+                // The manufacturer/serial number are only known when the device was resolved from a smart connection string; otherwise
+                // they are left unset and it is up to the module / credential manager to identify the device from the connection string alone.
+                const StringPtr manufacturer = (useSmartConnection && discoveredDeviceInfo.assigned()) ? discoveredDeviceInfo.getManufacturer() : nullptr;
+                const StringPtr serialNumber = (useSmartConnection && discoveredDeviceInfo.assigned()) ? discoveredDeviceInfo.getSerialNumber() : nullptr;
+                err = library.module->createAuthenticatedDevice(
+                    device, connectionStringPtr, manufacturer, serialNumber, parent, deviceTypeConfig, authenticationConfig);
+            }
+            else
+            {
+                err = library.module->createDevice(device, connectionStringPtr, parent, deviceTypeConfig);
+            }
             OPENDAQ_RETURN_IF_FAILED(err);
 
             const auto devicePtr = DevicePtr::Borrow(*device);
@@ -846,12 +872,31 @@ ErrCode ModuleManagerImpl::createDevice(IDevice** device, IString* connectionStr
 
             return err;
         }
+        if (deviceTypeFoundButAuthNotSupported)
+            return DAQ_MAKE_ERROR_INFO(
+                OPENDAQ_ERR_NOT_SUPPORTED,
+                fmt::format("Device with given connection string '{}' does not support authentication", StringPtr::Borrow(connectionString)));
+
         return DAQ_MAKE_ERROR_INFO(
             OPENDAQ_ERR_NOTFOUND,
             fmt::format("Device with given connection string '{}' and config is not available", StringPtr::Borrow(connectionString)));
     });
     OPENDAQ_RETURN_IF_FAILED(errCode, fmt::format("Failed to create device from connection string '{}' and config", StringPtr::Borrow(connectionString)));
     return errCode;
+}
+
+ErrCode ModuleManagerImpl::createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config)
+{
+    return createDeviceInternal(device, connectionString, parent, config, false, nullptr);
+}
+
+ErrCode ModuleManagerImpl::createAuthenticatedDevice(IDevice** device,
+                                                     IString* connectionString,
+                                                     IComponent* parent,
+                                                     IPropertyObject* config,
+                                                     IAuthenticationConfig* authenticationConfig)
+{
+    return createDeviceInternal(device, connectionString, parent, config, true, authenticationConfig);
 }
 
 ErrCode ModuleManagerImpl::createDevices(IDict** devices, IDict* connectionArgs, IComponent* parent, IDict* errCodes, IDict* errorInfos)
