@@ -83,19 +83,16 @@ ErrCode CredentialPayloadDescriptorImpl<Format>::getSerializeId(ConstCharPtr* id
 template <CredentialPayloadFormat Format>
 ConstCharPtr CredentialPayloadDescriptorImpl<Format>::SerializeId()
 {
-    switch (Format)
-    {
-        case CredentialPayloadFormat::KeyValuePairs:
-            return "KeyValuePayloadDescriptor";
-        case CredentialPayloadFormat::String:
-            return "StringPayloadDescriptor";
-        case CredentialPayloadFormat::FilePath:
-            return "FilePathPayloadDescriptor";
-        case CredentialPayloadFormat::BinaryBlob:
-            return "BinaryBlobPayloadDescriptor";
-        default:
-            return "";
-    }
+    if constexpr (Format == CredentialPayloadFormat::KeyValuePairs)
+        return "KeyValuePayloadDescriptor";
+    else if constexpr (Format == CredentialPayloadFormat::String)
+        return "StringPayloadDescriptor";
+    else if constexpr (Format == CredentialPayloadFormat::FilePath)
+        return "FilePathPayloadDescriptor";
+    else if constexpr (Format == CredentialPayloadFormat::BinaryBlob)
+        return "BinaryBlobPayloadDescriptor";
+    else
+        return "";
 }
 
 template <CredentialPayloadFormat Format>
