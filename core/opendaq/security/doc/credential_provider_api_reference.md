@@ -28,8 +28,6 @@ enum class CredentialPayloadFormat : EnumType
 };
 ```
 
-`FilePath` and `BinaryBlob` formats cover two different ways of handing over a file-backed secret (e.g. a private key) — as a path the module reads itself, or as raw bytes the provider has already read on the module's behalf. Neither format has descriptor parameters (no hidden-input flag applies, unlike `String`/`KeyValuePairs`).
-
 ---
 
 ### `IAuthenticationConfig`
@@ -181,7 +179,7 @@ Extended with an additional `credentialProviders` parameter (`DictPtr<IString, I
 
 ## 3. Two Ways to Add a Device
 
-Every device can be added either **without authentication** (the plain, anonymous path) or **with authentication**. Both paths exist side by side — a device type that supports authentication doesn't lose its plain connection option, and the two are chosen simply by which method is called.
+The device can be added either **without authentication** (the plain, anonymous path) or **with authentication**. Both paths exist side by side — a device type that supports authentication doesn't lose its plain connection option, and the two are chosen simply by which method is called.
 
 ### The plain path (no authentication)
 
@@ -213,15 +211,11 @@ Without one, the call resolves straight down to the module's plain device-constr
 
 With one, the module manager first confirms the target device type actually supports authentication, then hands off to the module together with the authentication config. From there, the module works out which payload it needs, locates a credential provider capable of supplying it, and obtains a credential request — either reusing one carried over from a previous save (on reload) or building a fresh one. That request is handed to the provider, which returns the requested secrets; the module then verifies them and constructs the device. Whether the request was fresh or reused, the resulting credential request is stored on the device afterward, so a future reload can repeat this same process rather than needing the original secrets to be saved anywhere.
 
-Any of these steps can fail — an unsupported device type, no matching provider, or invalid credentials — in which case the device is never added at all, and no partial state is left behind.
-
 ![Adding a device — with vs without authentication (API-level flow)](credential_flow_diagram.png)
 
 ---
 
 ## 5. Application-Level Usage
-
-From the application's point of view, the whole framework reduces to a handful of calls — the request/provider machinery described in section 5 is entirely internal to the module and is never touched directly by application code.
 
 ### Registering credential providers
 
