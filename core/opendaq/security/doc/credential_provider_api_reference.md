@@ -127,24 +127,6 @@ Supplies the secrets requested via an `ICredentialRequest` — by prompting the 
 
 ---
 
-## 1a. Private-Key Challenge Authentication
-
-Demonstrated in the credential demo module, using two new authentication configs — `PrivateKeyFile` (`FilePath`-format payload) and `PrivateKeyBlob` (`BinaryBlob`-format payload) — both authenticating against the same challenge mechanism, differing only in whether the module or the provider reads the key file.
-
-**The challenge itself** (`VerifyPrivateKeyChallenge`, using OpenSSL's EVP API):
-1. A random 32-byte challenge is generated (`RAND_bytes`).
-2. The challenge is signed using the private key supplied via the credential payload (`EVP_DigestSign`, SHA-256).
-3. The signature is verified against a public key loaded from a path configured as a module option (`PublicKeyPath`) (`EVP_DigestVerify`).
-4. Authentication succeeds only if the signature verifies — proving whoever supplied the private key genuinely holds the key matching the module's known public key, without the module ever needing to store or compare the private key itself.
-
-**`PrivateKeyFile` path:** the credential provider (e.g. `FileCredentialProvider`) hands back only the *path* to the key file (`IString`); the module reads and parses the PEM file itself (`ReadPemKeyFile`).
-
-**`PrivateKeyBlob` path:** the credential provider reads the file itself and hands back the raw key bytes directly (`IBinaryData`); the module parses the key from memory (`ReadPemPrivateKeyFromMemory`) and never sees the file or its path at all.
-
-**Provider selection in practice:** the example application registers `FileCredentialProvider` *before* `CmdLineCredentialProvider`, since `FindMatchingCredentialProvider` (in the demo module) picks the first registered provider whose supported formats include the requested one — confirming that, as implemented, provider selection is governed purely by registration order and format support, with no default-provider-binding mechanism actually present in the code.
-
----
-
 ## 2. Extensions to Existing Interfaces
 
 ### `IComponentType`
@@ -223,7 +205,21 @@ A device type only exposes this path if it supports authentication at all (`ICom
 
 ---
 
-## 4. Application-Level Usage
+## 4. Authentication Flow
+
+Both ways of adding a device converge on the same entry point at the application level — a connection string and a config object — and diverge based on whether an `IAuthenticationConfig` is supplied.
+
+Without one, the call resolves straight down to the module's plain device-construction path: the module manager locates the appropriate device type from the connection string, and the module builds the device with no further involvement from the credential framework at all.
+
+With one, the module manager first confirms the target device type actually supports authentication, then hands off to the module together with the authentication config. From there, the module works out which payload it needs, locates a credential provider capable of supplying it, and obtains a credential request — either reusing one carried over from a previous save (on reload) or building a fresh one. That request is handed to the provider, which returns the requested secrets; the module then verifies them and constructs the device. Whether the request was fresh or reused, the resulting credential request is stored on the device afterward, so a future reload can repeat this same process rather than needing the original secrets to be saved anywhere.
+
+Any of these steps can fail — an unsupported device type, no matching provider, or invalid credentials — in which case the device is never added at all, and no partial state is left behind.
+
+![Adding a device — with vs without authentication (API-level flow)](credential_flow_diagram.png)
+
+---
+
+## 5. Application-Level Usage
 
 From the application's point of view, the whole framework reduces to a handful of calls — the request/provider machinery described in section 5 is entirely internal to the module and is never touched directly by application code.
 
@@ -278,19 +274,6 @@ auto privateKeyBlobConfig = deviceType.getSupportedAuthenticationConfigs().get("
 auto device2 = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyBlobConfig);
 ```
 
-The module's public key is supplied via a module option (`PublicKeyPath`), set through the instance's JSON config provider:
-
-```json
-{
-  "Modules": {
-    "CredentialDemoModule": {
-      "Manufacturer": "openDAQ",
-      "SerialNumber": "1234",
-      "PublicKeyPath": "/path/to/keys/public_key.pem"
-    }
-  }
-}
-```
 
 ### Save and reload
 
@@ -298,7 +281,7 @@ Saving an instance persists the connected device's `CredentialRequest` (connecti
 
 ---
 
-## 5. Module-Level Implementation
+## 6. Module-Level Implementation
 
 This section describes what a module does internally when `Module::createAuthenticatedDevice` is called — none of this is visible to, or called directly by, application code.
 
@@ -315,6 +298,4 @@ This section describes what a module does internally when `Module::createAuthent
 5. **Construct the device and authenticate.** The device is constructed and its `authenticate(payload, payloadId)` step runs — extracting the secrets (`getSecrets()`) and verifying them against whatever the specific authentication method requires (a fixed value, a signed challenge, etc.). A mismatch throws `AuthenticationFailedException`, and device creation fails.
 
 6. **Persist the credential request for later reload.** On success, the module stores the credential request on the newly created device (`IComponentPrivate::setCredentialRequest`) — this is what step 3 reads back on a future reload, without ever needing to persist the secrets themselves.
-
-![Adding a device — with vs without authentication (API-level flow)](credential_flow_diagram.png)
 
