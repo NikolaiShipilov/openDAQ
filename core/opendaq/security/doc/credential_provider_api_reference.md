@@ -277,7 +277,7 @@ auto device2 = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pr
 
 ### Save and reload
 
-Saving an instance persists the connected device's `CredentialRequest` (connection info, payload id and descriptor, metadata) as part of the tree — but never the `AuthenticationConfig` or the actual secrets. Reloading that saved configuration into a new instance re-authenticates the device from scratch: the new instance must have its own compatible credential provider registered, or the reload fails. A device added with authentication is therefore never silently reconnected without re-authenticating.
+Saving an instance persists the connected device's `CredentialRequest` (connection info, payload id and descriptor, metadata) as part of the tree — but never the `AuthenticationConfig` or the actual secrets. Reloading that saved configuration into a new instance re-authenticates the device from scratch: the new instance must have its own compatible credential provider registered, or the reload fails.
 
 ---
 
