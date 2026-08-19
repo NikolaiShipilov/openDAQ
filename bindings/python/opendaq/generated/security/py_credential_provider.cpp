@@ -38,9 +38,10 @@ PyDaqIntf<daq::ICredentialProvider, daq::IBaseObject> declareICredentialProvider
 
 void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialProvider, daq::IBaseObject> cls)
 {
-    cls.doc() = "";
+    cls.doc() = "Supplies the secrets requested via a `ICredentialRequest` - e.g. by prompting the user, reading from a file, or fetching from a secret store.";
 
     m.def("CmdLineCredentialProvider", &daq::CmdLineCredentialProvider_Create);
+    m.def("FileCredentialProvider", &daq::FileCredentialProvider_Create);
 
     cls.def_property_readonly("name",
         [](daq::ICredentialProvider *object)
@@ -49,7 +50,7 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
             const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
             return objectPtr.getName().toStdString();
         },
-        "");
+        "Gets the name of the credential provider.");
     cls.def("request_credentials",
         [](daq::ICredentialProvider *object, daq::ICredentialRequest* request)
         {
@@ -58,5 +59,14 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
             return objectPtr.requestCredentials(request).detach();
         },
         py::arg("request"),
-        "");
+        "Requests credentials for the given request, in the format described by its payload descriptor.");
+    cls.def_property_readonly("supported_payload_formats",
+        [](daq::ICredentialProvider *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
+            return objectPtr.getSupportedPayloadFormats().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "Gets a list of the credential payload formats this provider can provide. Used for format-matching against a device type's supported payload formats.");
 }

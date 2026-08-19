@@ -36,7 +36,8 @@ PyDaqIntf<daq::ICredentialPayloadDescriptor, daq::IBaseObject> declareICredentia
     py::enum_<daq::CredentialPayloadFormat>(m, "CredentialPayloadFormat")
         .value("KeyValuePairs", daq::CredentialPayloadFormat::KeyValuePairs)
         .value("String", daq::CredentialPayloadFormat::String)
-        .value("FilePath", daq::CredentialPayloadFormat::FilePath);
+        .value("FilePath", daq::CredentialPayloadFormat::FilePath)
+        .value("BinaryBlob", daq::CredentialPayloadFormat::BinaryBlob);
 
     return wrapInterface<daq::ICredentialPayloadDescriptor, daq::IBaseObject>(m, "ICredentialPayloadDescriptor");
 }
@@ -55,6 +56,10 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
 
     m.def("FilePathPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
         return daq::FilePathPayloadDescriptor_Create(getVariantValue<daq::IString*>(description));
+    }, py::arg("description"));
+
+    m.def("BinaryBlobPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
+        return daq::BinaryBlobPayloadDescriptor_Create(getVariantValue<daq::IString*>(description));
     }, py::arg("description"));
 
 
