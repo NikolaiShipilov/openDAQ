@@ -141,26 +141,24 @@ Demonstrated in the credential demo module, using two new authentication configs
 
 **`PrivateKeyBlob` path:** the credential provider reads the file itself and hands back the raw key bytes directly (`IBinaryData`); the module parses the key from memory (`ReadPemPrivateKeyFromMemory`) and never sees the file or its path at all.
 
-```
-Module                          Credential Provider (FileCredentialProvider)
-  │── requestCredentials(request, FilePath descriptor) ──▶│
-  │                                                         │── prompts user for path
-  │◀── StringCredentialPayload(path) ─────────────────────│
-  │                                                         │
-  │── reads & parses PEM file itself ──                      │
-  │── signs/verifies challenge against configured           │
-  │   public key ──                                            │
+```mermaid
+sequenceDiagram
+    participant Module
+    participant Provider as FileCredentialProvider
 
-  ── OR, for the BinaryBlob variant ──
-
-  │── requestCredentials(request, BinaryBlob descriptor) ─▶│
-  │                                                         │── prompts user for path
-  │                                                         │── reads file itself
-  │◀── BinaryBlobCredentialPayload(raw bytes) ─────────────│
-  │                                                         │
-  │── parses key from memory, no file access ──               │
-  │── signs/verifies challenge against configured           │
-  │   public key ──                                            │
+    alt FilePath payload
+        Module->>Provider: requestCredentials(request, FilePath descriptor)
+        Provider->>Provider: prompt user for path
+        Provider-->>Module: StringCredentialPayload(path)
+        Module->>Module: read & parse PEM file itself
+    else BinaryBlob payload
+        Module->>Provider: requestCredentials(request, BinaryBlob descriptor)
+        Provider->>Provider: prompt user for path
+        Provider->>Provider: read file itself
+        Provider-->>Module: BinaryBlobCredentialPayload(raw bytes)
+        Module->>Module: parse key from memory, no file access
+    end
+    Module->>Module: sign/verify challenge against configured public key
 ```
 
 **Provider selection in practice:** the example application registers `FileCredentialProvider` *before* `CmdLineCredentialProvider`, since `FindMatchingCredentialProvider` (in the demo module) picks the first registered provider whose supported formats include the requested one — confirming that, as implemented, provider selection is governed purely by registration order and format support, with no default-provider-binding mechanism actually present in the code.
@@ -219,127 +217,65 @@ Extended with an additional `credentialProviders` parameter (`DictPtr<IString, I
 
 ---
 
-## 3. The Authentication Flow, End to End
+## 3. Two Ways to Add a Device
 
-The flow below reflects the actual wiring across `ModuleManagerImpl`, `GenericDevice`, and the credential demo module.
+Every device can be added either **without authentication** (the plain, anonymous path) or **with authentication**. Both paths exist side by side — a device type that supports authentication doesn't lose its plain connection option, and the two are chosen simply by which method is called.
 
-### Adding a component with authentication
-
-```
-Application                    Instance/ModuleManager              Module (e.g. CredentialDemoModule)
-    │                                    │                                    │
-    │── instance.addAuthenticatedDevice( ─────────────────────────────────────▶
-    │     connectionString,               │                                    │
-    │     config,                          │                                    │
-    │     authenticationConfig) ──────────▶│                                    │
-    │                                    │                                    │
-    │                                    │── resolve smart connection string    │
-    │                                    │   (if daq://) → manufacturer/serial  │
-    │                                    │                                    │
-    │                                    │── find device type from connection   │
-    │                                    │   string; check isAuthenticationSupported
-    │                                    │   (fail early with OPENDAQ_ERR_NOT_SUPPORTED
-    │                                    │    if the matching type doesn't support it)
-    │                                    │                                    │
-    │                                    │── module.createAuthenticatedDevice( ──▶
-    │                                    │     connectionString, manufacturer,   │
-    │                                    │     serialNumber, parent, config,     │
-    │                                    │     authenticationConfig)             │
-    │                                    │                                    │
-    │                                    │                                    │── get payloadId + payloadDescriptor
-    │                                    │                                    │   from authenticationConfig
-    │                                    │                                    │
-    │                                    │                                    │── find a registered credential
-    │                                    │                                    │   provider whose supported payload
-    │                                    │                                    │   formats include this descriptor's
-    │                                    │                                    │   format (fail if none found)
-    │                                    │                                    │
-    │                                    │                                    │── check IAuthenticationConfigPrivate
-    │                                    │                                    │   for an existing CredentialRequest
-    │                                    │                                    │   (present only on reload) — reuse
-    │                                    │                                    │   it as-is if present, otherwise
-    │                                    │                                    │   build a NEW one via
-    │                                    │                                    │   CredentialRequestBuilder, dispatching
-    │                                    │                                    │   on payloadId (format alone is
-    │                                    │                                    │   ambiguous across multiple
-    │                                    │                                    │   payload kinds)
-    │                                    │                                    │
-    │                                    │                                    │── provider.requestCredentials(
-    │                                    │                                    │     request) → CredentialPayload
-    │                                    │                                    │
-    │                                    │                                    │── construct device, calling
-    │                                    │                                    │   authenticate(payload, payloadId)
-    │                                    │                                    │   — verifies secrets match
-    │                                    │                                    │     expected value; throws
-    │                                    │                                    │     AuthenticationFailedException
-    │                                    │                                    │     on mismatch
-    │                                    │                                    │
-    │                                    │                                    │── componentPrivate.setCredentialRequest(
-    │                                    │                                    │     request) — persisted alongside
-    │                                    │                                    │     the device for later reload
-    │                                    │◀── device ─────────────────────────│
-    │◀── device ─────────────────────────│                                    │
-```
-
-### Save / reload
-
-```
-Save:
-  device tree serialized, including the device's stored CredentialRequest
-  (payload id, descriptor, connection info, metadata) — NEVER the
-  AuthenticationConfig or the actual secrets
-
-Reload (new Instance, own registered credential providers):
-  updateDevice() reads the "CredentialRequest" key from the serialized tree
-        │
-        ▼
-  AuthenticationConfigFromCredentialRequest(credentialRequest)
-        │
-        ▼
-  onAddAuthenticatedDevice(connectionString, config, reconstructedConfig)
-        │
-        ▼
-  (same module flow as above) — but since IAuthenticationConfigPrivate::
-  getCredentialRequest() now returns the reconstructed request, the module
-  reuses it as-is rather than building a new one, and calls
-  provider.requestCredentials(request) again — re-authenticating with
-  FRESH credentials from whatever provider is registered on the new instance
-```
-
-**Key property:** a device added with authentication is never silently reconnected on reload without re-authenticating — the reloaded instance must have a compatible credential provider registered, or reload fails.
-
-### Default / supported authentication configs, at the component-type level
+### The plain path (no authentication)
 
 ```cpp
-// Building a component type with two supported authentication methods:
-DeviceTypeBuilder()
-    .setId("CredentialDemoDevice")
-    .addSupportedAuthenticationConfig(
-        "UserNamePassword",
-        KeyValuePayloadDescriptor({"UserName": false, "Password": true}, "Username and password"),
-        userNamePasswordConfig)
-    .addSupportedAuthenticationConfig(
-        "Pin",
-        StringPayloadDescriptor("PIN code", /*hidden*/true),
-        pinConfig)
-    .setDefaultAuthenticationConfigId("UserNamePassword")
-    .build();
+auto device = instance.addDevice("daq://openDAQ_1234");
 ```
 
+At the application level, this is a single call — no credential provider needs to be registered, and no authentication config is involved at all.
+
+At the module level, this resolves to `Module::createDevice` (unchanged from before the credential framework existed). The device is constructed with `authenticated = false`, and the module's `authenticate(...)` step is skipped entirely — no payload, no provider lookup, no challenge or comparison of any kind.
+
+### The authenticated path
+
 ```cpp
-// Application-side usage:
+auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, authenticationConfig);
+```
+
+The same connection string is used, but an `IAuthenticationConfig` is supplied, and everything described in the rest of this section — payload negotiation, provider lookup, credential retrieval, verification — is triggered as a result.
+
+A device type only exposes this path if it supports authentication at all (`IComponentType::isAuthenticationSupported`); calling `addAuthenticatedDevice` against a type that doesn't returns `OPENDAQ_ERR_NOT_SUPPORTED`.
+
+---
+
+## 4. Application-Level Usage
+
+From the application's point of view, the whole framework reduces to a handful of calls — the request/provider machinery described in section 5 is entirely internal to the module and is never touched directly by application code.
+
+### Registering credential providers
+
+```cpp
+auto credentialProvider = CmdLineCredentialProvider();
+
+auto instanceBuilder = InstanceBuilder();
+instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
+auto instance = instanceBuilder.build();
+```
+
+Provider registration happens once, at instance-build time, and is **never serialized** — a reloaded instance must register its own providers independently, since provider setup is platform-/host-specific. Multiple providers can be registered; when more than one supports the same payload format, the first one registered is the one used.
+
+### Selecting an authentication method
+
+A device type may support several authentication methods at once. The application either accepts the type's default, or explicitly picks a different supported one:
+
+```cpp
 auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
 
-// Default config (UserNamePassword, per setDefaultAuthenticationConfigId):
+// Use the type's default authentication method:
 auto config = deviceType.createDefaultAuthenticationConfig();
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, config);
 
-// Explicitly selecting the non-default (PIN) config instead:
+// Or explicitly select a specific supported method instead (e.g. "Pin"):
 auto pinConfig = deviceType.getSupportedAuthenticationConfigs().get("Pin");
 auto device2 = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
 ```
 
-### Private-key challenge authentication
+### Example: private-key challenge authentication
 
 ```cpp
 auto fileCredentialProvider = FileCredentialProvider();
@@ -376,15 +312,130 @@ The module's public key is supplied via a module option (`PublicKeyPath`), set t
 }
 ```
 
-### Registering credential providers on an instance
+### Save and reload
 
-```cpp
-auto credentialProvider = CmdLineCredentialProvider();
+Saving an instance persists the connected device's `CredentialRequest` (connection info, payload id and descriptor, metadata) as part of the tree — but never the `AuthenticationConfig` or the actual secrets. Reloading that saved configuration into a new instance re-authenticates the device from scratch: the new instance must have its own compatible credential provider registered, or the reload fails. A device added with authentication is therefore never silently reconnected without re-authenticating.
 
-auto instanceBuilder = InstanceBuilder();
-instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
-auto instance = instanceBuilder.build();
-```
+---
 
-Provider registration happens at instance-build time and is **never serialized** — a reloaded instance must register its own providers independently, since provider setup is platform-/host-specific.
+## 5. Module-Level Implementation
 
+This section describes what a module does internally when `Module::createAuthenticatedDevice` is called — none of this is visible to, or called directly by, application code.
+
+> **Note:** the steps below describe how the credential-demo prototype implements this — provider lookup (currently: first registered provider whose supported formats match) and retry/fallback behavior on failure may differ in a production implementation, since neither is prescribed by the core interfaces themselves.
+
+1. **Resolve the payload to provide.** The module reads the payload id and descriptor off the supplied `IAuthenticationConfig` (`getCredentialPayloadId`, `getCredentialPayloadDescriptor`).
+
+2. **Find a matching credential provider.** The module looks through the providers registered on the context (`IContext::getCredentialProviders`) and picks the first one whose `getSupportedPayloadFormats()` includes the payload descriptor's format. If none match, authentication fails immediately.
+
+3. **Obtain or reuse the credential request.** If the `IAuthenticationConfig` was reconstructed from a saved device (i.e. this is a reload, not a fresh connection), `IAuthenticationConfigPrivate::getCredentialRequest()` returns the original request as-is, and the module reuses it unchanged. Otherwise, the module builds a new `ICredentialRequest` via `ICredentialRequestBuilder`, populating connection string, manufacturer/serial number (if resolved), and metadata for the provider to present to the user.
+
+4. **Request the credentials.** The module calls `provider.requestCredentials(request)`, receiving an `ICredentialPayload` in return, in whatever format the payload descriptor specified.
+
+5. **Construct the device and authenticate.** The device is constructed and its `authenticate(payload, payloadId)` step runs — extracting the secrets (`getSecrets()`) and verifying them against whatever the specific authentication method requires (a fixed value, a signed challenge, etc.). A mismatch throws `AuthenticationFailedException`, and device creation fails.
+
+6. **Persist the credential request for later reload.** On success, the module stores the credential request on the newly created device (`IComponentPrivate::setCredentialRequest`) — this is what step 3 reads back on a future reload, without ever needing to persist the secrets themselves.
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1460" width="1200" height="1460" font-family="Helvetica, Arial, sans-serif">
+<defs>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+    <path d="M0,0 L0,6 L9,3 z" fill="#333"/>
+  </marker>
+</defs>
+<rect x="0" y="0" width="1200" height="1460" fill="#ffffff"/>
+<line x1="200.0" y1="236" x2="200.0" y2="266" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<line x1="200.0" y1="326" x2="200.0" y2="356" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<line x1="200.0" y1="436" x2="200.0" y2="1270" stroke="#666" stroke-width="1.6" stroke-dasharray="6,5" marker-end="url(#arrow)"/>
+<text x="208.0" y="853.0" font-size="12" font-family="Helvetica" font-style="italic" fill="#666">skips credential steps</text>
+<line x1="630.0" y1="236" x2="630.0" y2="266" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<line x1="630.0" y1="326" x2="630.0" y2="356" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<line x1="630.0" y1="456" x2="630.0" y2="486" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="638.0" y="471.0" font-size="12" font-family="Helvetica" fill="#333">yes</text>
+<polyline points="760,406.0 780,406.0 780,408.0 900,408.0" fill="none" stroke="#a94442" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="768" y="400.0" font-size="12" font-family="Helvetica" fill="#a94442">no</text>
+<line x1="630.0" y1="556" x2="630.0" y2="586" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<line x1="630.0" y1="686" x2="630.0" y2="716" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="638.0" y="701.0" font-size="12" font-family="Helvetica" fill="#333">yes</text>
+<polyline points="760,636.0 780,636.0 780,638.0 900,638.0" fill="none" stroke="#a94442" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="768" y="630.0" font-size="12" font-family="Helvetica" fill="#a94442">no</text>
+<polyline points="630.0,826 630.0,841.0 535.0,841.0 535.0,856" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="582.5" y="835.0" font-size="12" text-anchor="middle" font-family="Helvetica" fill="#333">yes (reload)</text>
+<polyline points="630.0,826 630.0,841.0 725.0,841.0 725.0,856" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="677.5" y="835.0" font-size="12" text-anchor="middle" font-family="Helvetica" fill="#333">no (fresh)</text>
+<polyline points="535.0,920 535.0,935.0 630.0,935.0 630.0,950" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<polyline points="725.0,920 725.0,935.0 630.0,935.0 630.0,950" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<line x1="630.0" y1="1010" x2="630.0" y2="1040" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<line x1="630.0" y1="1110" x2="630.0" y2="1140" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<line x1="630.0" y1="1240" x2="630.0" y2="1270" stroke="#333" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="638.0" y="1255.0" font-size="12" font-family="Helvetica" fill="#333">yes</text>
+<polyline points="760,1190.0 780,1190.0 780,1192.0 900,1192.0" fill="none" stroke="#a94442" stroke-width="1.6" marker-end="url(#arrow)"/>
+<text x="768" y="1184.0" font-size="12" font-family="Helvetica" fill="#a94442">no</text>
+<rect x="40" y="20" width="1120" height="40" rx="6" ry="6" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" stroke-dasharray="0"/>
+<text x="600.0" y="44.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">Adding a Device — With vs Without Authentication</text>
+<rect x="460" y="68" width="340" height="44" rx="6" ry="6" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" stroke-dasharray="0"/>
+<text x="630.0" y="86.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Reflects the credential-demo prototype&#x27;s behavior.</text>
+<text x="630.0" y="103.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Provider lookup / retry logic may differ in practice.</text>
+<rect x="40" y="120" width="320" height="36" rx="6" ry="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" stroke-dasharray="0"/>
+<text x="200.0" y="142.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">addDevice()  —  no authentication</text>
+<rect x="460" y="120" width="340" height="36" rx="6" ry="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5" stroke-dasharray="0"/>
+<text x="630.0" y="142.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#1a1a1a">addAuthenticatedDevice()  —  with authentication</text>
+<rect x="40" y="176" width="320" height="60" rx="10" ry="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="200.0" y="202.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Application</text>
+<text x="200.0" y="219.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">instance.addDevice(connectionString, config)</text>
+<rect x="40" y="266" width="320" height="60" rx="10" ry="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="2"/>
+<text x="200.0" y="292.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Instance / ModuleManager</text>
+<text x="200.0" y="309.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">find device type from connection string</text>
+<rect x="40" y="356" width="320" height="80" rx="10" ry="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="200.0" y="383.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Module: createDevice(connectionString, parent, config)</text>
+<text x="200.0" y="400.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Device built with authenticated = false —</text>
+<text x="200.0" y="417.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">no payload, provider, or challenge steps</text>
+<rect x="40" y="1270" width="320" height="60" rx="10" ry="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="200.0" y="1304.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Device returned to application</text>
+<rect x="460" y="176" width="340" height="60" rx="10" ry="10" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2"/>
+<text x="630.0" y="202.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Application</text>
+<text x="630.0" y="219.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">instance.addAuthenticatedDevice(connectionString, config, authConfig)</text>
+<rect x="460" y="266" width="340" height="60" rx="10" ry="10" fill="#e1d5e7" stroke="#9673a6" stroke-width="2"/>
+<text x="630.0" y="292.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Instance / ModuleManager</text>
+<text x="630.0" y="309.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">resolve smart connection string → manufacturer / serial</text>
+<polygon points="630.0,356 760,406.0 630.0,456 500,406.0" fill="#e1d5e7" stroke="#9673a6" stroke-width="2"/>
+<text x="630.0" y="402.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Device type supports</text>
+<text x="630.0" y="419.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">authentication?</text>
+<rect x="900" y="376" width="260" height="64" rx="10" ry="10" fill="#f8cecc" stroke="#b85450" stroke-width="2"/>
+<text x="1030.0" y="404.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Fail:</text>
+<text x="1030.0" y="421.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">OPENDAQ_ERR_NOT_SUPPORTED</text>
+<rect x="460" y="486" width="340" height="70" rx="10" ry="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="630.0" y="517.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Module: createAuthenticatedDevice(...)</text>
+<text x="630.0" y="534.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">read payloadId + payloadDescriptor from authConfig</text>
+<polygon points="630.0,586 760,636.0 630.0,686 500,636.0" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="630.0" y="632.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Matching credential</text>
+<text x="630.0" y="649.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">provider registered?</text>
+<rect x="900" y="606" width="260" height="64" rx="10" ry="10" fill="#f8cecc" stroke="#b85450" stroke-width="2"/>
+<text x="1030.0" y="634.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Fail:</text>
+<text x="1030.0" y="651.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">no compatible provider registered</text>
+<polygon points="630.0,716 760,771.0 630.0,826 500,771.0" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="630.0" y="767.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Reload — credential</text>
+<text x="630.0" y="784.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">request already exists?</text>
+<rect x="460" y="856" width="150" height="64" rx="10" ry="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="535.0" y="884.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Reuse existing</text>
+<text x="535.0" y="901.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">CredentialRequest as-is</text>
+<rect x="650" y="856" width="150" height="64" rx="10" ry="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="725.0" y="884.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Build new CredentialRequest</text>
+<text x="725.0" y="901.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">via CredentialRequestBuilder</text>
+<rect x="460" y="950" width="340" height="60" rx="10" ry="10" fill="#d5e8d4" stroke="#82b366" stroke-width="2"/>
+<text x="630.0" y="984.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Provider: requestCredentials(request) → CredentialPayload</text>
+<rect x="460" y="1040" width="340" height="70" rx="10" ry="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="630.0" y="1071.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Module: construct device,</text>
+<text x="630.0" y="1088.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">run authenticate(payload, payloadId)</text>
+<polygon points="630.0,1140 760,1190.0 630.0,1240 500,1190.0" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="630.0" y="1194.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Secrets valid?</text>
+<rect x="900" y="1160" width="260" height="64" rx="10" ry="10" fill="#f8cecc" stroke="#b85450" stroke-width="2"/>
+<text x="1030.0" y="1188.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Fail:</text>
+<text x="1030.0" y="1205.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">AuthenticationFailedException</text>
+<rect x="460" y="1270" width="340" height="60" rx="10" ry="10" fill="#ffe6cc" stroke="#d79b00" stroke-width="2"/>
+<text x="630.0" y="1296.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Persist CredentialRequest (setCredentialRequest)</text>
+<text x="630.0" y="1313.0" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">→ device returned to application</text>
+<rect x="40" y="1370" width="1120" height="60" rx="6" ry="6" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" stroke-dasharray="0"/>
+<text x="600.0" y="1404.5" font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" text-anchor="middle" fill="#1a1a1a">Legend:  Application (blue)   Instance / ModuleManager (purple)   Module (orange)   Credential Provider (green)   Failure (red)</text>
+</svg>
+
+*Diagram source (editable in [diagrams.net](https://app.diagrams.net)): `credential_flow_diagram.drawio`, provided alongside this document.*
