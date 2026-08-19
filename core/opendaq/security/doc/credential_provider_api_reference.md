@@ -233,7 +233,7 @@ instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialPr
 auto instance = instanceBuilder.build();
 ```
 
-Provider registration happens once, at instance-build time, and is **never serialized** — a reloaded instance must register its own providers independently, since provider setup is platform-/host-specific. Multiple providers can be registered; when more than one supports the same payload format, the first one registered is the one used.
+Provider registration happens once, at instance-build time, and is **never serialized** — a reloaded instance must register its own providers independently, since provider setup is platform-/host-specific. Multiple providers can be registered; when more than one supports the same payload format, the first one registered is enumerated first by the module while providers look-up.
 
 ### Selecting an authentication method
 
