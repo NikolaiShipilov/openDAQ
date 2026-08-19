@@ -38,7 +38,7 @@ PyDaqIntf<daq::ICredentialRequestBuilder, daq::IBaseObject> declareICredentialRe
 
 void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICredentialRequestBuilder, daq::IBaseObject> cls)
 {
-    cls.doc() = "";
+    cls.doc() = "Builds `ICredentialRequest` objects - used by a device/module to form the request it hands to `ICredentialProvider::requestCredentials` when authentication is required for a connection attempt.";
 
     m.def("CredentialRequestBuilder", &daq::CredentialRequestBuilder_Create);
 
@@ -49,7 +49,22 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
             return objectPtr.build().detach();
         },
-        "");
+        "Builds and returns a `CredentialRequest` using the currently configured values.");
+    cls.def_property("component_type",
+        [](daq::ICredentialRequestBuilder *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            return objectPtr.getComponentType().detach();
+        },
+        [](daq::ICredentialRequestBuilder *object, daq::IComponentType* componentType)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            objectPtr.setComponentType(componentType);
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the type of the component the request is being built for. / Sets the type of the component the request is being built for.");
     cls.def_property("connection_string",
         [](daq::ICredentialRequestBuilder *object)
         {
@@ -63,7 +78,35 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
             objectPtr.setConnectionString(getVariantValue<daq::IString*>(connectionString));
         },
-        "");
+        "Gets the connection string used for the connection attempt the request is being built for. / Sets the connection string used for the connection attempt the request is being built for.");
+    cls.def_property("manufacturer",
+        [](daq::ICredentialRequestBuilder *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            return objectPtr.getManufacturer().toStdString();
+        },
+        [](daq::ICredentialRequestBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& manufacturer)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            objectPtr.setManufacturer(getVariantValue<daq::IString*>(manufacturer));
+        },
+        "Gets the manufacturer of the device the request is being built for. / Sets the manufacturer of the device the request is being built for.");
+    cls.def_property("serial_number",
+        [](daq::ICredentialRequestBuilder *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            return objectPtr.getSerialNumber().toStdString();
+        },
+        [](daq::ICredentialRequestBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& serialNumber)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            objectPtr.setSerialNumber(getVariantValue<daq::IString*>(serialNumber));
+        },
+        "Gets the serial number of the device the request is being built for. / Sets the serial number of the device the request is being built for.");
     cls.def("add_meta_data_property",
         [](daq::ICredentialRequestBuilder *object, daq::IProperty* property)
         {
@@ -72,7 +115,7 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             objectPtr.addMetaDataProperty(property);
         },
         py::arg("property"),
-        "");
+        "Adds a property to the request's metadata, describing additional, request-specific information for the credential provider to present to the user (e.g. device type name/id/description).");
     cls.def_property_readonly("meta_data",
         [](daq::ICredentialRequestBuilder *object)
         {
@@ -81,5 +124,34 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             return objectPtr.getMetaData().detach();
         },
         py::return_value_policy::take_ownership,
-        "");
+        "Gets the metadata property object accumulated via `addMetaDataProperty`.");
+    cls.def_property("payload_id",
+        [](daq::ICredentialRequestBuilder *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            return objectPtr.getPayloadId().toStdString();
+        },
+        [](daq::ICredentialRequestBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadId)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            objectPtr.setPayloadId(getVariantValue<daq::IString*>(payloadId));
+        },
+        "Gets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on save & replayed on load. / Sets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on save & replayed on load.");
+    cls.def_property("payload_descriptor",
+        [](daq::ICredentialRequestBuilder *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            return objectPtr.getPayloadDescriptor().detach();
+        },
+        [](daq::ICredentialRequestBuilder *object, daq::ICredentialPayloadDescriptor* descriptor)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            objectPtr.setPayloadDescriptor(descriptor);
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the descriptor of the payload the provider must provide - serialized on save or re-attached from the device type on load. / Sets the descriptor of the payload the provider must provide - serialized on save or re-attached from the device type on load.");
 }

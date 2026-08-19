@@ -60,4 +60,12 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, CmdLineCredentialProvider, ICredentialProvider)
 
+/*!
+ * @brief Creates a `ICredentialProvider` dedicated to file-backed secrets. Prompts for the file's path
+ * via the command line, the same way `CmdLineCredentialProvider` does. For a `FilePath`-format request it
+ * hands back the path itself; for a `BinaryBlob`-format request it reads the file and hands back its raw
+ * bytes instead, so the caller never has to touch the file itself.
+ */
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FileCredentialProvider, ICredentialProvider)
+
 END_NAMESPACE_OPENDAQ

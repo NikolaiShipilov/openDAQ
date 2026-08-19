@@ -32,4 +32,10 @@ inline CredentialPayloadPtr StringCredentialPayload(const FunctionPtr& getSecret
     return obj;
 }
 
+inline CredentialPayloadPtr BinaryBlobCredentialPayload(const FunctionPtr& getBlobCb)
+{
+    CredentialPayloadPtr obj(BinaryBlobCredentialPayload_Create(getBlobCb));
+    return obj;
+}
+
 END_NAMESPACE_OPENDAQ

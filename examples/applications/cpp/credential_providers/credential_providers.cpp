@@ -12,7 +12,8 @@ void createJsonConfigFile()
     "Modules": {
         "CredentialDemoModule": {
             "Manufacturer": "openDAQ",
-            "SerialNumber": "1234"
+            "SerialNumber": "1234",
+            "PublicKeyPath": ")" + std::string(CREDENTIAL_DEMO_KEYS_DIR) + R"(/public_key.pem"
             }
         }
     }
@@ -34,10 +35,14 @@ int main(int argc, const char* argv[])
     createJsonConfigFile();
 
     auto credentialProvider = CmdLineCredentialProvider();
+    auto fileCredentialProvider = FileCredentialProvider();
 
     auto instanceBuilder = InstanceBuilder();
     instanceBuilder.addModulePath(MODULE_PATH);
     instanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
+    // Registered first, so it - not CmdLineCredentialProvider - is the one FindMatchingCredentialProvider
+    // picks for FilePath-format requests (e.g. the PrivateKeyFile auth method below).
+    instanceBuilder.addCredentialProvider(fileCredentialProvider.getName(), fileCredentialProvider);
     instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
     auto instance = instanceBuilder.build();
 
@@ -45,6 +50,28 @@ int main(int argc, const char* argv[])
 
     // get the type to obtain default authentication settings
     auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
+
+    // PrivateKeyFile authentication - another String-format credential payload, but instead of comparing a
+    // fixed secret, the module verifies a signed challenge against the public key configured via the
+    // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
+    // to the matching private key.
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    auto privateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication. Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+
+    // PrivateKeyBlob authentication - the same private-key challenge, but via a BinaryBlob-format
+    // credential payload instead of a FilePath one: fileCredentialProvider still prompts for the file's
+    // path, but now reads the file itself and hands the module the raw key bytes directly, so the module
+    // never touches the file (or even learns its path).
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    auto privateKeyBlobConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyBlobConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via a binary blob. Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
 
     // add without authentication
     device = instance.addDevice("daq://openDAQ_1234");
@@ -84,10 +111,12 @@ int main(int argc, const char* argv[])
     // registered, since the reloaded device is re-authenticated (the provider is asked for real credentials
     // again) rather than silently reconnected without any.
     auto reloadedCredentialProvider = CmdLineCredentialProvider();
+    auto reloadedFileCredentialProvider = FileCredentialProvider();
 
     auto reloadedInstanceBuilder = InstanceBuilder();
     reloadedInstanceBuilder.addModulePath(MODULE_PATH);
     reloadedInstanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
+    reloadedInstanceBuilder.addCredentialProvider(reloadedFileCredentialProvider.getName(), reloadedFileCredentialProvider);
     reloadedInstanceBuilder.addCredentialProvider(reloadedCredentialProvider.getName(), reloadedCredentialProvider);
     auto reloadedInstance = reloadedInstanceBuilder.build();
 

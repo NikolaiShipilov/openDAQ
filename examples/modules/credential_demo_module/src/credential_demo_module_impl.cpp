@@ -79,12 +79,8 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         const auto additionalConfig = authenticationConfig.getConfig();
         const bool verboseCredentialRequest = additionalConfig.getPropertyValue("VerboseCredentialRequest");
 
-        credentialRequest =
-            payloadDescriptor.getFormat() == CredentialPayloadFormat::KeyValuePairs
-                ? CredentialDemoDeviceImpl::CreateUserNamePasswordCredentialRequest(
-                      connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest)
-                : CredentialDemoDeviceImpl::CreatePinCredentialRequest(
-                      connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest);
+        credentialRequest = CredentialDemoDeviceImpl::CreateCredentialRequest(
+            payloadId, connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest);
     }
 
     auto device = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(

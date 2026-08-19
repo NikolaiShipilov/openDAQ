@@ -26,4 +26,10 @@ inline CredentialProviderPtr CmdLineCredentialProvider()
     return obj;
 }
 
+inline CredentialProviderPtr FileCredentialProvider()
+{
+    CredentialProviderPtr obj(FileCredentialProvider_Create());
+    return obj;
+}
+
 END_NAMESPACE_OPENDAQ
