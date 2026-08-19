@@ -20,6 +20,7 @@
 #include <opendaq/credential_provider.h>
 #include <opendaq/credential_request_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <coretypes/binarydata_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -35,6 +36,7 @@ public:
 private:
     static void printRequestDetails(const CredentialRequestPtr& request);
     static StringPtr readFilePath(const CredentialPayloadDescriptorPtr& descriptor);
+    static BinaryDataPtr readFileBlob(const CredentialPayloadDescriptorPtr& descriptor);
     static bool isFileAccessible(const std::string& path);
 };
 

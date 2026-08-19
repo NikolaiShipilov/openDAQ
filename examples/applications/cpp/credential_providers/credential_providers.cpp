@@ -41,7 +41,7 @@ int main(int argc, const char* argv[])
     instanceBuilder.addModulePath(MODULE_PATH);
     instanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
     // Registered first, so it - not CmdLineCredentialProvider - is the one FindMatchingCredentialProvider
-    // picks for FilePath-format requests (e.g. the PrivateKey auth method below).
+    // picks for FilePath-format requests (e.g. the PrivateKeyFile auth method below).
     instanceBuilder.addCredentialProvider(fileCredentialProvider.getName(), fileCredentialProvider);
     instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
     auto instance = instanceBuilder.build();
@@ -51,14 +51,25 @@ int main(int argc, const char* argv[])
     // get the type to obtain default authentication settings
     auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
 
-    // PrivateKey authentication - another String-format credential payload, but instead of comparing a
+    // PrivateKeyFile authentication - another String-format credential payload, but instead of comparing a
     // fixed secret, the module verifies a signed challenge against the public key configured via the
     // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
     // to the matching private key.
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
-    auto privateKeyConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKey");
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyConfig);
+    auto privateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication. Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+
+    // PrivateKeyBlob authentication - the same private-key challenge, but via a BinaryBlob-format
+    // credential payload instead of a FilePath one: fileCredentialProvider still prompts for the file's
+    // path, but now reads the file itself and hands the module the raw key bytes directly, so the module
+    // never touches the file (or even learns its path).
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    auto privateKeyBlobConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyBlobConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via a binary blob. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
 /*

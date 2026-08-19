@@ -59,11 +59,16 @@ public:
                                                             const StringPtr& serialNumber,
                                                             const PropertyObjectPtr& additionalConfig,
                                                             bool verbose);
-    static CredentialRequestPtr CreatePrivateKeyCredentialRequest(const StringPtr& connectionString,
-                                                                   const StringPtr& manufacturer,
-                                                                   const StringPtr& serialNumber,
-                                                                   const PropertyObjectPtr& additionalConfig,
-                                                                   bool verbose);
+    static CredentialRequestPtr CreatePrivateKeyFileCredentialRequest(const StringPtr& connectionString,
+                                                                       const StringPtr& manufacturer,
+                                                                       const StringPtr& serialNumber,
+                                                                       const PropertyObjectPtr& additionalConfig,
+                                                                       bool verbose);
+    static CredentialRequestPtr CreatePrivateKeyBlobCredentialRequest(const StringPtr& connectionString,
+                                                                       const StringPtr& manufacturer,
+                                                                       const StringPtr& serialNumber,
+                                                                       const PropertyObjectPtr& additionalConfig,
+                                                                       bool verbose);
     static void ValidateConnectionString(const StringPtr& connectionString);
 
 private:

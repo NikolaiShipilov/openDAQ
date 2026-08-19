@@ -8,6 +8,7 @@
 #include <opendaq/server_capability_config.h>
 #include <opendaq/device_info_internal.h>
 #include <coretypes/dictobject_factory.h>
+#include <coretypes/binarydata_ptr.h>
 #include <coreobjects/property_factory.h>
 #include <fmt/format.h>
 #include <string_view>
@@ -23,7 +24,8 @@ BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 static constexpr std::string_view GenericDeviceAddress = "credential_demo_device";
 static const std::string UserNamePasswordPayloadId = "UserNamePassword";
 static const std::string PinPayloadId = "Pin";
-static const std::string PrivateKeyPayloadId = "PrivateKey";
+static const std::string PrivateKeyFilePayloadId = "PrivateKeyFile";
+static const std::string PrivateKeyBlobPayloadId = "PrivateKeyBlob";
 
 static CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor(bool hidePassword)
 {
@@ -35,9 +37,14 @@ static CredentialPayloadDescriptorPtr BuildPinDescriptor(bool hidePin)
     return StringPayloadDescriptor("PIN code", hidePin);
 }
 
-static CredentialPayloadDescriptorPtr BuildPrivateKeyDescriptor()
+static CredentialPayloadDescriptorPtr BuildPrivateKeyFileDescriptor()
 {
     return FilePathPayloadDescriptor("Path to the PEM-encoded private key file");
+}
+
+static CredentialPayloadDescriptorPtr BuildPrivateKeyBlobDescriptor()
+{
+    return BinaryBlobPayloadDescriptor("Raw bytes of the PEM-encoded private key file");
 }
 
 namespace
@@ -59,12 +66,24 @@ namespace
         return EvpPkeyPtr(key, &EVP_PKEY_free);
     }
 
-    // Proves that whoever supplied `privateKeyPath` holds the private key matching the module's known
-    // public key, without the private key ever leaving the file it was read from: a random challenge is
-    // signed with the claimed private key, then the signature is checked against the known public key.
-    bool VerifyPrivateKeyChallenge(const std::string& privateKeyPath, const std::string& publicKeyPath)
+    // Same as `ReadPemKeyFile`, but for a private key whose bytes were already handed over in memory
+    // (e.g. by a credential provider that reads the file on the caller's behalf) rather than read from a
+    // file path by this module.
+    EvpPkeyPtr ReadPemPrivateKeyFromMemory(const void* data, size_t size)
     {
-        auto privateKey = ReadPemKeyFile(privateKeyPath, /*isPrivateKey*/ true);
+        BioPtr bio(BIO_new_mem_buf(data, static_cast<int>(size)), &BIO_free);
+        if (!bio)
+            return EvpPkeyPtr(nullptr, &EVP_PKEY_free);
+
+        EVP_PKEY* key = PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr);
+        return EvpPkeyPtr(key, &EVP_PKEY_free);
+    }
+
+    // Proves that whoever supplied `privateKey` holds the private key matching the module's known
+    // public key: a random challenge is signed with the claimed private key, then the signature is
+    // checked against the known public key.
+    bool VerifyPrivateKeyChallenge(const EvpPkeyPtr& privateKey, const std::string& publicKeyPath)
+    {
         if (!privateKey)
             return false;
 
@@ -126,12 +145,36 @@ void CredentialDemoDeviceImpl::authenticate(const ContextPtr& ctx, const Credent
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - wrong pin-code");
         }
     }
-    else if (payloadIdStr == PrivateKeyPayloadId)
+    else if (payloadIdStr == PrivateKeyFilePayloadId || payloadIdStr == PrivateKeyBlobPayloadId)
     {
-        const StringPtr privateKeyPath = secrets.asPtrOrNull<IString>();
-        if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)
+        EvpPkeyPtr privateKey(nullptr, &EVP_PKEY_free);
+
+        if (payloadIdStr == PrivateKeyFilePayloadId)
         {
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no private key file path provided");
+            const StringPtr privateKeyPath = secrets.asPtrOrNull<IString>();
+            if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)
+            {
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no private key file path provided");
+            }
+
+            privateKey = ReadPemKeyFile(privateKeyPath.toStdString(), /*isPrivateKey*/ true);
+        }
+        else
+        {
+            // The credential provider already read the private key file on our behalf - we only ever
+            // see its raw bytes, never the file (or its path) itself.
+            const BinaryDataPtr privateKeyBlob = secrets.asPtrOrNull<IBinaryData, BinaryDataPtr>();
+            if (!privateKeyBlob.assigned() || privateKeyBlob.getSize() == 0)
+            {
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - no private key bytes provided");
+            }
+
+            privateKey = ReadPemPrivateKeyFromMemory(privateKeyBlob.getAddress(), privateKeyBlob.getSize());
+        }
+
+        if (!privateKey)
+        {
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - could not parse the supplied private key");
         }
 
         const auto moduleOptions = ctx.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID);
@@ -142,7 +185,7 @@ void CredentialDemoDeviceImpl::authenticate(const ContextPtr& ctx, const Credent
                                  "Failed to authenticate device - module has no public key configured (set the \"PublicKeyPath\" module option)");
         }
 
-        if (!VerifyPrivateKeyChallenge(privateKeyPath.toStdString(), publicKeyPath.toStdString()))
+        if (!VerifyPrivateKeyChallenge(privateKey, publicKeyPath.toStdString()))
         {
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate device - private key challenge verification failed");
         }
@@ -199,7 +242,8 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
     auto userNamePasswordDescriptor = BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
     auto pinDescriptor = BuildPinDescriptor(/*hidePin*/ true);
-    auto privateKeyDescriptor = BuildPrivateKeyDescriptor();
+    auto privateKeyDescriptor = BuildPrivateKeyFileDescriptor();
+    auto privateKeyBlobDescriptor = BuildPrivateKeyBlobDescriptor();
 
     auto userNamePasswordConfig = PropertyObject();
     userNamePasswordConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
@@ -212,6 +256,9 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
     auto privateKeyConfig = PropertyObject();
     privateKeyConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
 
+    auto privateKeyBlobConfig = PropertyObject();
+    privateKeyBlobConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
+
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
         .setName("Credential demo device")
@@ -219,7 +266,8 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
         .setConnectionStringPrefix("daq.credential_demo")
         .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor, userNamePasswordConfig)
         .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor, pinConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyPayloadId, privateKeyDescriptor, privateKeyConfig)
+        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor, privateKeyConfig)
+        .addSupportedAuthenticationConfig(PrivateKeyBlobPayloadId, privateKeyBlobDescriptor, privateKeyBlobConfig)
         .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
 }
@@ -236,8 +284,11 @@ CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const Str
     if (payloadIdStr == PinPayloadId)
         return CreatePinCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
 
-    if (payloadIdStr == PrivateKeyPayloadId)
-        return CreatePrivateKeyCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
+    if (payloadIdStr == PrivateKeyFilePayloadId)
+        return CreatePrivateKeyFileCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
+
+    if (payloadIdStr == PrivateKeyBlobPayloadId)
+        return CreatePrivateKeyBlobCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
 
     if (payloadIdStr == UserNamePasswordPayloadId)
         return CreateUserNamePasswordCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
@@ -289,19 +340,38 @@ CredentialRequestPtr CredentialDemoDeviceImpl::CreatePinCredentialRequest(const 
     return builder.build();
 }
 
-CredentialRequestPtr CredentialDemoDeviceImpl::CreatePrivateKeyCredentialRequest(const StringPtr& connectionString,
-                                                                                  const StringPtr& manufacturer,
-                                                                                  const StringPtr& serialNumber,
-                                                                                  const PropertyObjectPtr& additionalConfig,
-                                                                                  bool verbose)
+CredentialRequestPtr CredentialDemoDeviceImpl::CreatePrivateKeyFileCredentialRequest(const StringPtr& connectionString,
+                                                                                      const StringPtr& manufacturer,
+                                                                                      const StringPtr& serialNumber,
+                                                                                      const PropertyObjectPtr& additionalConfig,
+                                                                                      bool verbose)
 {
-    const auto payloadDescriptor = BuildPrivateKeyDescriptor();
+    const auto payloadDescriptor = BuildPrivateKeyFileDescriptor();
 
     auto builder = CredentialRequestBuilder();
     builder.setConnectionString(connectionString);
     builder.setManufacturer(manufacturer);
     builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PrivateKeyPayloadId);
+    builder.setPayloadId(PrivateKeyFilePayloadId);
+    builder.setPayloadDescriptor(payloadDescriptor);
+    PopulateCommonMetaData(builder, CreateType(), verbose);
+
+    return builder.build();
+}
+
+CredentialRequestPtr CredentialDemoDeviceImpl::CreatePrivateKeyBlobCredentialRequest(const StringPtr& connectionString,
+                                                                                      const StringPtr& manufacturer,
+                                                                                      const StringPtr& serialNumber,
+                                                                                      const PropertyObjectPtr& additionalConfig,
+                                                                                      bool verbose)
+{
+    const auto payloadDescriptor = BuildPrivateKeyBlobDescriptor();
+
+    auto builder = CredentialRequestBuilder();
+    builder.setConnectionString(connectionString);
+    builder.setManufacturer(manufacturer);
+    builder.setSerialNumber(serialNumber);
+    builder.setPayloadId(PrivateKeyBlobPayloadId);
     builder.setPayloadDescriptor(payloadDescriptor);
     PopulateCommonMetaData(builder, CreateType(), verbose);
 
