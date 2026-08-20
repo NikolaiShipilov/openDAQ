@@ -209,12 +209,24 @@ CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& conf
                                                    bool authenticated,
                                                    const StringPtr& payloadId,
                                                    const CredentialPayloadPtr& credentials)
-    : Device(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
+    : MirroredDevice(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
     if (authenticated)
         authenticate(ctx, credentials, payloadId);
 
     this->deviceInfo = info;
+}
+
+StringPtr CredentialDemoDeviceImpl::onGetRemoteId() const
+{
+    // No real remote counterpart exists for this in-process demo device - its own local id (the same
+    // id it's incorporated into the local component tree under) doubles as its remote id.
+    return localId;
+}
+
+bool CredentialDemoDeviceImpl::isAddedToLocalComponentTree()
+{
+    return true;
 }
 
 DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions)
