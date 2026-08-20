@@ -1,5 +1,7 @@
 #include <credential_demo_module/credential_demo_device_impl.h>
 #include <credential_demo_module/credential_demo_module_impl.h>
+#include <credential_demo_module/credential_demo_streaming_impl.h>
+#include <credential_demo_module/credential_demo_authenticator.h>
 #include <credential_demo_module/version.h>
 
 #include <coretypes/version_info_factory.h>
@@ -98,6 +100,41 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         componentPrivate.setCredentialRequest(credentialRequest);
 
     return device.detach();
+}
+
+DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTypes()
+{
+    auto streamingType = CredentialDemoStreamingImpl::CreateType();
+    return Dict<IString, IBaseObject>({{streamingType.getId(), streamingType}});
+}
+
+StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
+{
+    if (!config.assigned() || !config.hasProperty("PayloadId"))
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Streaming authentication is required but no \"PayloadId\" config property was provided");
+    }
+
+    const StringPtr payloadId = config.getPropertyValue("PayloadId");
+
+    const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
+    const StringPtr manufacturer = options.get("Manufacturer");
+    const StringPtr serialNumber = options.get("SerialNumber");
+    const bool verboseCredentialRequest = config.getPropertyValue("VerboseCredentialRequest");
+
+    const auto credentialRequest = CredentialDemoDeviceImpl::CreateCredentialRequest(
+        payloadId, connectionString, manufacturer, serialNumber, config, verboseCredentialRequest);
+
+    auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), credentialRequest.getPayloadDescriptor());
+    if (!credentialProvider.assigned())
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                             "Streaming authentication is required but no credential provider supporting a compatible payload format is registered");
+    }
+
+    const auto credentials = credentialProvider.requestCredentials(credentialRequest);
+
+    return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, payloadId, credentials);
 }
 
 CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,

@@ -16,6 +16,7 @@
 
 #pragma once
 #include <credential_demo_module/common.h>
+#include <credential_demo_module/credential_demo_authenticator.h>
 #include <opendaq/device_impl.h>
 #include <opendaq/mirrored_device_impl.h>
 #include <opendaq/credential_request_ptr.h>
@@ -76,9 +77,6 @@ public:
 protected:
     StringPtr onGetRemoteId() const override;
     bool isAddedToLocalComponentTree() override;
-
-private:
-    static void authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials, const StringPtr& payloadId);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

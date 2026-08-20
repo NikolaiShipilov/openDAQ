@@ -18,6 +18,8 @@
 #include <credential_demo_module/common.h>
 #include <opendaq/module_impl.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/streaming_type_ptr.h>
+#include <opendaq/streaming_ptr.h>
 
 /*
  * Showcase module for authentication-method integration with the credential
@@ -40,6 +42,9 @@ public:
                                           const ComponentPtr& parent,
                                           const PropertyObjectPtr& config,
                                           const AuthenticationConfigPtr& authenticationConfig) override;
+
+    DictPtr<IString, IStreamingType> onGetAvailableStreamingTypes() override;
+    StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) override;
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);
