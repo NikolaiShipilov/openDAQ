@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <opendaq/opendaq.h>
+#include <opendaq/module_manager_utils_ptr.h>
 
 static const std::string JSON_CONFIG_FILE_NAME = "credential-demo-opendaq-config.json";
 
@@ -99,6 +100,20 @@ int main(int argc, const char* argv[])
     auto pinConfig = deviceType.getSupportedAuthenticationConfigs().get("Pin");
     device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with PIN authentication." << std::endl;
+
+    // Attaching a streaming connection is authenticated independently of however the device itself got
+    // connected - here the device was authenticated via PIN, but the streaming attachment below goes
+    // through its own, separate PrivateKeyBlob credential request. `addStreaming`'s last parameter is the
+    // authentication config - passing one routes the call through the authenticated path, a null one (as
+    // used for the device connections above via plain addDevice) uses the plain, unauthenticated path.
+    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
+    auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
+    std::cout << "Attached an authenticated streaming connection. Streaming sources: "
+               << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
+    std::cout << "Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
 
     std::cout << "Press \"enter\" to save the configuration and reload it into a new instance..." << std::endl;
     std::cin.get();

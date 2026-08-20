@@ -62,6 +62,10 @@ public:
     ErrCode INTERFACE_FUNC getAvailableFunctionBlockTypes(IDict** functionBlockTypes) override;
     ErrCode INTERFACE_FUNC createFunctionBlock(IFunctionBlock** functionBlock, IString* id, IComponent* parent, IPropertyObject* config = nullptr, IString* localId = nullptr) override;
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) override;
+    ErrCode INTERFACE_FUNC createAuthenticatedStreaming(IStreaming** streaming,
+                                                        IString* connectionString,
+                                                        IPropertyObject* config,
+                                                        IAuthenticationConfig* authenticationConfig) override;
     ErrCode INTERFACE_FUNC getAvailableStreamingTypes(IDict** streamingTypes) override;
     ErrCode INTERFACE_FUNC createDefaultAddDeviceConfig(IPropertyObject** defaultConfig) override;
     ErrCode INTERFACE_FUNC createServer(IServer** server, IString* serverTypeId, IDevice* rootDevice, IPropertyObject* serverConfig = nullptr) override;
@@ -119,6 +123,9 @@ private:
     static PropertyObjectPtr PopulateGeneralConfig(PropertyObjectPtr& addDeviceConfig, const PropertyObjectPtr& inputConfig);
 
     StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) const;
+    StreamingPtr onCreateAuthenticatedStreaming(const StringPtr& connectionString,
+                                                const PropertyObjectPtr& config,
+                                                const AuthenticationConfigPtr& authenticationConfig) const;
 
     static PropertyObjectPtr CreateGeneralConfig();
     static void OverrideConfigProperties(PropertyObjectPtr& targetConfig, const PropertyObjectPtr& sourceConfig);

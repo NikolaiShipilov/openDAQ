@@ -134,6 +134,14 @@ ErrCode MockFunctionBlockModuleImpl::createStreaming(IStreaming** /*streaming*/,
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }
 
+ErrCode MockFunctionBlockModuleImpl::createAuthenticatedStreaming(IStreaming** /*streaming*/,
+                                                                  IString* /*connectionString*/,
+                                                                  IPropertyObject* /*config*/,
+                                                                  IAuthenticationConfig* /*authenticationConfig*/)
+{
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+}
+
 ErrCode MockFunctionBlockModuleImpl::completeServerCapability(daq::Bool* /*succeeded*/, daq::IServerCapability* /*source*/, daq::IServerCapabilityConfig* /*target*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);

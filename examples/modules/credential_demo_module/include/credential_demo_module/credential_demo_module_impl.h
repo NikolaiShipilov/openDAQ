@@ -44,7 +44,9 @@ public:
                                           const AuthenticationConfigPtr& authenticationConfig) override;
 
     DictPtr<IString, IStreamingType> onGetAvailableStreamingTypes() override;
-    StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) override;
+    StreamingPtr onCreateAuthenticatedStreaming(const StringPtr& connectionString,
+                                                const PropertyObjectPtr& config,
+                                                const AuthenticationConfigPtr& authenticationConfig) override;
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);

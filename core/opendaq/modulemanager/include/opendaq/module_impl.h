@@ -342,6 +342,55 @@ public:
         return errCode;
     }
 
+    /*!
+     * @brief Creates and returns a streaming object using the specified connection string and config object,
+     * authenticating the connection by obtaining credentials - as specified by the given authentication
+     * configuration - from a compatible registered credential provider.
+     * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
+     * @param config A config object that contains parameters used to configure a streaming connection.
+     * In case of a null value, implementation should use default configuration.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection.
+     * @param[out] streaming The created streaming object.
+     */
+    ErrCode INTERFACE_FUNC createAuthenticatedStreaming(IStreaming** streaming,
+                                                        IString* connectionString,
+                                                        IPropertyObject* config,
+                                                        IAuthenticationConfig* authenticationConfig) override
+    {
+        OPENDAQ_PARAM_NOT_NULL(streaming);
+        OPENDAQ_PARAM_NOT_NULL(connectionString);
+
+        DictPtr<IString, IStreamingType> types;
+        ErrCode errCode = wrapHandlerReturn(this, &Module::onGetAvailableStreamingTypes, types);
+        OPENDAQ_RETURN_IF_FAILED_EXCEPT(errCode, OPENDAQ_ERR_NOTIMPLEMENTED);
+
+        ComponentTypePtr streamingType;
+        const StringPtr prefix = getPrefixFromConnectionString(connectionString);
+        if (prefix.assigned() && prefix.getLength() != 0)
+        {
+            for (const auto& [_, type] : types)
+            {
+                if (type.getConnectionStringPrefix() == prefix)
+                {
+                    streamingType = type;
+                    break;
+                }
+            }
+        }
+
+        StreamingPtr createdStreaming;
+        errCode = wrapHandlerReturn(this,
+                                    &Module::onCreateAuthenticatedStreaming,
+                                    createdStreaming,
+                                    connectionString,
+                                    mergeConfig(config, streamingType),
+                                    authenticationConfig);
+        OPENDAQ_RETURN_IF_FAILED(errCode);
+
+        *streaming = createdStreaming.detach();
+        return errCode;
+    }
+
     ErrCode INTERFACE_FUNC completeServerCapability(Bool* succeeded, IServerCapability* source, IServerCapabilityConfig* target) override
     {
         OPENDAQ_PARAM_NOT_NULL(target);
@@ -471,6 +520,22 @@ public:
     }
 
     virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
+    {
+        return nullptr;
+    }
+
+    /*!
+     * @brief Creates and returns a streaming object using the specified connection string and config object,
+     * authenticating the connection by obtaining credentials - as specified by the given authentication
+     * configuration - from a compatible registered credential provider.
+     * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
+     * @param config A config object that contains parameters used to configure a streaming connection.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection.
+     * @returns The created streaming object.
+     */
+    virtual StreamingPtr onCreateAuthenticatedStreaming(const StringPtr& connectionString,
+                                                        const PropertyObjectPtr& config,
+                                                        const AuthenticationConfigPtr& authenticationConfig)
     {
         return nullptr;
     }

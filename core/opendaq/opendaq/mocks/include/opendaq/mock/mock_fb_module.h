@@ -45,6 +45,10 @@ public:
     daq::ErrCode INTERFACE_FUNC createServer(daq::IServer** server, daq::IString* serverType, daq::IDevice* rootDevice, daq::IPropertyObject* config) override;
 
     daq::ErrCode INTERFACE_FUNC createStreaming(daq::IStreaming** streaming, daq::IString* connectionString, daq::IPropertyObject* config) override;
+    daq::ErrCode INTERFACE_FUNC createAuthenticatedStreaming(daq::IStreaming** streaming,
+                                                             daq::IString* connectionString,
+                                                             daq::IPropertyObject* config,
+                                                             daq::IAuthenticationConfig* authenticationConfig) override;
     
     daq::ErrCode INTERFACE_FUNC completeServerCapability(daq::Bool* succeeded, daq::IServerCapability* source, daq::IServerCapabilityConfig* target) override;
     daq::ErrCode INTERFACE_FUNC getAvailableStreamingTypes(daq::IDict** streamingTypes) override;

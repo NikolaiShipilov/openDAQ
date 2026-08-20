@@ -24,29 +24,12 @@ StreamingTypePtr CredentialDemoStreamingImpl::CreateType()
     auto privateKeyDescriptor = authentication::BuildPrivateKeyFileDescriptor();
     auto privateKeyBlobDescriptor = authentication::BuildPrivateKeyBlobDescriptor();
 
-    // `IDevice::addStreaming`/`IModule::createStreaming` - unlike `addAuthenticatedDevice` - carry no
-    // separate authentication-config parameter, so the chosen payload id has nowhere to travel except
-    // inside the plain config object itself; each supported config below carries its own fixed
-    // "PayloadId" alongside the same knobs the device's equivalent config has.
     auto userNamePasswordConfig = authentication::BuildAdditionalConfig(UserNamePasswordPayloadId);
-    userNamePasswordConfig.addProperty(StringProperty("PayloadId", UserNamePasswordPayloadId));
-
     auto pinConfig = authentication::BuildAdditionalConfig(PinPayloadId);
-    pinConfig.addProperty(StringProperty("PayloadId", PinPayloadId));
-
     auto privateKeyConfig = authentication::BuildAdditionalConfig(PrivateKeyFilePayloadId);
-    privateKeyConfig.addProperty(StringProperty("PayloadId", PrivateKeyFilePayloadId));
-
     auto privateKeyBlobConfig = authentication::BuildAdditionalConfig(PrivateKeyBlobPayloadId);
-    privateKeyBlobConfig.addProperty(StringProperty("PayloadId", PrivateKeyBlobPayloadId));
 
-    // `Module::createStreaming` merges whatever config the caller passes into a copy of the type's
-    // default config (`mergeConfig`/`populateDefaultConfig` only carry over properties the default config
-    // already declares - anything else gets silently dropped). So the default config's schema has to be
-    // the union of every supported config's properties, or the caller's chosen "PayloadId"/knobs would
-    // never survive to reach `onCreateStreaming`.
     auto defaultConfig = PropertyObject();
-    defaultConfig.addProperty(StringProperty("PayloadId", PinPayloadId));
     defaultConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
     defaultConfig.addProperty(BoolProperty("HidePasswordInput", True));
     defaultConfig.addProperty(BoolProperty("HidePinInput", True));

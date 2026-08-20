@@ -283,8 +283,13 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      * @param config A config object to configure a streaming connection. This object can contain properties like
      * various connection timeouts or other streaming protocol specific settings. Can be created from its corresponding
      * Streaming type object. In case of a null value, it will use the default configuration.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection.
+     * In case of a null value, the streaming is connected to without authentication.
      */
-    virtual ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) = 0;
+    virtual ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming,
+                                                 IString* connectionString,
+                                                 IPropertyObject* config = nullptr,
+                                                 IAuthenticationConfig* authenticationConfig = nullptr) = 0;
 
     /*!
      * @brief Creates config object that can be used when adding a device. Contains Device and Streaming default configuration

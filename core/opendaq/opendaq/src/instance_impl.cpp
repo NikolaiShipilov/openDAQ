@@ -567,9 +567,12 @@ ErrCode InstanceImpl::getDevices(IList** devices, ISearchFilter* searchFilter)
     return rootDevice->getDevices(devices, searchFilter);
 }
 
-ErrCode InstanceImpl::addStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config)
+ErrCode InstanceImpl::addStreaming(IStreaming** streaming,
+                                   IString* connectionString,
+                                   IPropertyObject* config,
+                                   IAuthenticationConfig* authenticationConfig)
 {
-    return rootDevice->addStreaming(streaming, connectionString, config);
+    return rootDevice->addStreaming(streaming, connectionString, config, authenticationConfig);
 }
 
 ErrCode InstanceImpl::getSyncComponent(ISyncComponent** syncComponent)

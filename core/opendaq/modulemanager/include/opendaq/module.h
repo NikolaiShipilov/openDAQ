@@ -140,6 +140,21 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      */
     virtual ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) = 0;
 
+    /*!
+     * @brief Creates and returns a streaming object using the specified connection string and config object,
+     * authenticating the connection by obtaining credentials - as specified by the given authentication
+     * configuration - from a compatible registered credential provider.
+     * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
+     * @param config A config object that contains parameters used to configure a streaming connection.
+     * In case of a null value, implementation should use default configuration.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection.
+     * @param[out] streaming The created streaming object.
+     */
+    virtual ErrCode INTERFACE_FUNC createAuthenticatedStreaming(IStreaming** streaming,
+                                                                 IString* connectionString,
+                                                                 IPropertyObject* config,
+                                                                 IAuthenticationConfig* authenticationConfig) = 0;
+
     virtual ErrCode INTERFACE_FUNC completeServerCapability(Bool* succeeded, IServerCapability* source, IServerCapabilityConfig* target) = 0;
 
     /*!

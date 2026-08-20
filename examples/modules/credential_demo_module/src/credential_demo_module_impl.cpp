@@ -108,14 +108,24 @@ DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTy
     return Dict<IString, IBaseObject>({{streamingType.getId(), streamingType}});
 }
 
-StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
+StreamingPtr CredentialDemoModule::onCreateAuthenticatedStreaming(const StringPtr& connectionString,
+                                                                   const PropertyObjectPtr& config,
+                                                                   const AuthenticationConfigPtr& authenticationConfig)
 {
-    if (!config.assigned() || !config.hasProperty("PayloadId"))
+    if (!authenticationConfig.assigned())
     {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Streaming authentication is required but no \"PayloadId\" config property was provided");
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Streaming authentication is required but no authentication config was provided");
     }
 
-    const StringPtr payloadId = config.getPropertyValue("PayloadId");
+    const auto payloadId = authenticationConfig.getCredentialPayloadId();
+    const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
+
+    auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), payloadDescriptor);
+    if (!credentialProvider.assigned())
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                             "Streaming authentication is required but no credential provider supporting a compatible payload format is registered");
+    }
 
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
     const StringPtr manufacturer = options.get("Manufacturer");
@@ -124,13 +134,6 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
 
     const auto credentialRequest = CredentialDemoDeviceImpl::CreateCredentialRequest(
         payloadId, connectionString, manufacturer, serialNumber, config, verboseCredentialRequest);
-
-    auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), credentialRequest.getPayloadDescriptor());
-    if (!credentialProvider.assigned())
-    {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                             "Streaming authentication is required but no credential provider supporting a compatible payload format is registered");
-    }
 
     const auto credentials = credentialProvider.requestCredentials(credentialRequest);
 

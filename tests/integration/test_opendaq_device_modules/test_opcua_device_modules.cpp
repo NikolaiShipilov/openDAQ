@@ -1693,6 +1693,10 @@ public:
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }
+    daq::ErrCode INTERFACE_FUNC createAuthenticatedStreaming(daq::IStreaming**, daq::IString*, daq::IPropertyObject*, daq::IAuthenticationConfig*) override
+    {
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+    }
     daq::ErrCode INTERFACE_FUNC getAvailableStreamingTypes(daq::IDict**) override
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
