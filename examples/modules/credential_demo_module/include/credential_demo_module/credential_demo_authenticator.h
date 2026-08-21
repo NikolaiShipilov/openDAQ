@@ -19,6 +19,8 @@
 #include <opendaq/context_ptr.h>
 #include <opendaq/credential_payload_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_request_ptr.h>
+#include <opendaq/component_type_ptr.h>
 #include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -32,7 +34,7 @@ namespace authentication
 {
     /*
      * Descriptors for the four showcased auth methods - shared between the device's and the streaming
-     * type's supported authentication configs, so the descriptor shape is defined in exactly one place.
+     * type's supported authentication configs.
      */
     CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor(bool hidePassword);
     CredentialPayloadDescriptorPtr BuildPinDescriptor(bool hidePin);
@@ -43,17 +45,30 @@ namespace authentication
      * Builds the "additional config" property object for one of the four payload ids - a
      * "VerboseCredentialRequest" bool every method gets, plus a "HidePasswordInput"/"HidePinInput" bool
      * for the two methods that have something to hide on input. Shared between the device's and the
-     * streaming type's supported authentication configs (`addSupportedAuthenticationConfig`).
+     * streaming type's supported authentication configs.
      */
     PropertyObjectPtr BuildAdditionalConfig(const StringPtr& payloadId);
 
     /*
      * Verifies credentials for one of the four showcased auth methods (UserName/Password, PIN,
      * PrivateKeyFile, PrivateKeyBlob). Shared by both the device (authenticating a connection to it) and
-     * the streaming implementation (authenticating a streaming attachment), so the verification logic -
-     * including the OpenSSL-based private-key challenge - lives in exactly one place.
+     * the streaming implementation (authenticating a streaming connection).
      */
     void Authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials, const StringPtr& payloadId);
+
+    /*
+     * Builds a credential request for one of the four showcased auth methods. Shared by both the device
+     * and the streaming implementation - `componentType` (the device type or the streaming type, as
+     * returned by their respective `CreateType()`) is the one thing that has to come from the caller, so
+     * the request's "Component type" always reflects which connection is actually being authenticated.
+     */
+    CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
+                                                 const StringPtr& connectionString,
+                                                 const StringPtr& manufacturer,
+                                                 const StringPtr& serialNumber,
+                                                 const PropertyObjectPtr& additionalConfig,
+                                                 bool verbose,
+                                                 const ComponentTypePtr& componentType);
 }
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

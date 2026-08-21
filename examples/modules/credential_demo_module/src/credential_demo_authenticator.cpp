@@ -2,6 +2,7 @@
 #include <credential_demo_module/common.h>
 
 #include <opendaq/credential_payload_descriptor_factory.h>
+#include <opendaq/credential_request_factory.h>
 #include <coreobjects/exceptions.h>
 #include <coreobjects/property_factory.h>
 #include <coreobjects/property_object_factory.h>
@@ -119,6 +120,129 @@ PropertyObjectPtr BuildAdditionalConfig(const StringPtr& payloadId)
         config.addProperty(BoolProperty("HidePinInput", True));
 
     return config;
+}
+
+static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, const ComponentTypePtr& componentType, bool verbose)
+{
+    builder.setComponentType(componentType);
+    builder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeName", componentType.getName()).setDescription("The openDAQ component type name").build());
+
+    if (verbose)
+    {
+        builder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeId", componentType.getId()).setDescription("The openDAQ component type ID").build());
+        builder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeDescription", componentType.getDescription()).setDescription("The openDAQ component type description").build());
+    }
+}
+
+static CredentialRequestPtr CreateUserNamePasswordCredentialRequest(const StringPtr& connectionString,
+                                                                     const StringPtr& manufacturer,
+                                                                     const StringPtr& serialNumber,
+                                                                     const PropertyObjectPtr& additionalConfig,
+                                                                     bool verbose,
+                                                                     const ComponentTypePtr& componentType)
+{
+    const bool hidePassword = additionalConfig.assigned() && additionalConfig.hasProperty("HidePasswordInput")
+                                   ? (bool) additionalConfig.getPropertyValue("HidePasswordInput")
+                                   : true;
+    const auto payloadDescriptor = BuildUserNamePasswordDescriptor(hidePassword);
+
+    auto builder = CredentialRequestBuilder();
+    builder.setConnectionString(connectionString);
+    builder.setManufacturer(manufacturer);
+    builder.setSerialNumber(serialNumber);
+    builder.setPayloadId(UserNamePasswordPayloadId);
+    builder.setPayloadDescriptor(payloadDescriptor);
+    PopulateCommonMetaData(builder, componentType, verbose);
+
+    return builder.build();
+}
+
+static CredentialRequestPtr CreatePinCredentialRequest(const StringPtr& connectionString,
+                                                        const StringPtr& manufacturer,
+                                                        const StringPtr& serialNumber,
+                                                        const PropertyObjectPtr& additionalConfig,
+                                                        bool verbose,
+                                                        const ComponentTypePtr& componentType)
+{
+    const bool hidePin = additionalConfig.assigned() && additionalConfig.hasProperty("HidePinInput")
+                              ? (bool) additionalConfig.getPropertyValue("HidePinInput")
+                              : true;
+    const auto payloadDescriptor = BuildPinDescriptor(hidePin);
+
+    auto builder = CredentialRequestBuilder();
+    builder.setConnectionString(connectionString);
+    builder.setManufacturer(manufacturer);
+    builder.setSerialNumber(serialNumber);
+    builder.setPayloadId(PinPayloadId);
+    builder.setPayloadDescriptor(payloadDescriptor);
+    PopulateCommonMetaData(builder, componentType, verbose);
+
+    return builder.build();
+}
+
+static CredentialRequestPtr CreatePrivateKeyFileCredentialRequest(const StringPtr& connectionString,
+                                                                   const StringPtr& manufacturer,
+                                                                   const StringPtr& serialNumber,
+                                                                   const PropertyObjectPtr& /*additionalConfig*/,
+                                                                   bool verbose,
+                                                                   const ComponentTypePtr& componentType)
+{
+    const auto payloadDescriptor = BuildPrivateKeyFileDescriptor();
+
+    auto builder = CredentialRequestBuilder();
+    builder.setConnectionString(connectionString);
+    builder.setManufacturer(manufacturer);
+    builder.setSerialNumber(serialNumber);
+    builder.setPayloadId(PrivateKeyFilePayloadId);
+    builder.setPayloadDescriptor(payloadDescriptor);
+    PopulateCommonMetaData(builder, componentType, verbose);
+
+    return builder.build();
+}
+
+static CredentialRequestPtr CreatePrivateKeyBlobCredentialRequest(const StringPtr& connectionString,
+                                                                   const StringPtr& manufacturer,
+                                                                   const StringPtr& serialNumber,
+                                                                   const PropertyObjectPtr& /*additionalConfig*/,
+                                                                   bool verbose,
+                                                                   const ComponentTypePtr& componentType)
+{
+    const auto payloadDescriptor = BuildPrivateKeyBlobDescriptor();
+
+    auto builder = CredentialRequestBuilder();
+    builder.setConnectionString(connectionString);
+    builder.setManufacturer(manufacturer);
+    builder.setSerialNumber(serialNumber);
+    builder.setPayloadId(PrivateKeyBlobPayloadId);
+    builder.setPayloadDescriptor(payloadDescriptor);
+    PopulateCommonMetaData(builder, componentType, verbose);
+
+    return builder.build();
+}
+
+CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
+                                              const StringPtr& connectionString,
+                                              const StringPtr& manufacturer,
+                                              const StringPtr& serialNumber,
+                                              const PropertyObjectPtr& additionalConfig,
+                                              bool verbose,
+                                              const ComponentTypePtr& componentType)
+{
+    const std::string payloadIdStr = payloadId.toStdString();
+
+    if (payloadIdStr == PinPayloadId)
+        return CreatePinCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
+
+    if (payloadIdStr == PrivateKeyFilePayloadId)
+        return CreatePrivateKeyFileCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
+
+    if (payloadIdStr == PrivateKeyBlobPayloadId)
+        return CreatePrivateKeyBlobCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
+
+    if (payloadIdStr == UserNamePasswordPayloadId)
+        return CreateUserNamePasswordCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
+
+    DAQ_THROW_EXCEPTION(InvalidParameterException, "Unknown authentication payload id \"{}\"", payloadId);
 }
 
 void Authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials, const StringPtr& payloadId)

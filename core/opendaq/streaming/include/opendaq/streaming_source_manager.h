@@ -37,7 +37,8 @@ class StreamingSourceManager
 public:
     explicit StreamingSourceManager(const ContextPtr& context,
                                     const DevicePtr& ownerDevice,
-                                    const PropertyObjectPtr& deviceConfig);
+                                    const PropertyObjectPtr& deviceConfig,
+                                    const AuthenticationConfigPtr& authenticationConfig);
 
     ~StreamingSourceManager();
 
@@ -61,6 +62,7 @@ private:
     ContextPtr context;
     WeakRefPtr<IDevice> ownerDeviceRef;
     PropertyObjectPtr deviceConfig;
+    AuthenticationConfigPtr authenticationConfig;
     LoggerComponentPtr loggerComponent;
 
     bool minHopsStreamingHeuristicEnabled{false};
@@ -69,10 +71,14 @@ private:
     StringPtr primaryAddressType;
 };
 
-inline StreamingSourceManager::StreamingSourceManager(const ContextPtr& context, const DevicePtr& ownerDevice, const PropertyObjectPtr& deviceConfig)
+inline StreamingSourceManager::StreamingSourceManager(const ContextPtr& context,
+                                                       const DevicePtr& ownerDevice,
+                                                       const PropertyObjectPtr& deviceConfig,
+                                                       const AuthenticationConfigPtr& authenticationConfig)
     : context(context)
     , ownerDeviceRef(ownerDevice)
     , deviceConfig(deviceConfig)
+    , authenticationConfig(authenticationConfig)
     , loggerComponent(context.getLogger().getOrAddComponent(fmt::format("StreamingSourceManager({})", ownerDevice.getGlobalId())))
 {
     PropertyObjectPtr generalConfig = this->deviceConfig.getPropertyValue("General");
@@ -474,6 +480,14 @@ inline void StreamingSourceManager::attachStreamingsToDevice(const MirroredDevic
     std::map<SizeT, StreamingPtr> prioritizedStreamingSourcesMap;
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
 
+    // Streaming type id -> authentication config, nested inside the device's own authentication config
+    // (assigned only if the device itself was connected to via `addAuthenticatedDevice`). If the device
+    // was authenticated, a streaming capability with no matching entry here is never auto-attached - only
+    // explicitly authorized streaming types are. If the device was not authenticated at all (plain
+    // `addDevice`), streaming capabilities are auto-attached as before, without authentication.
+    const DictPtr<IString, IAuthenticationConfig> streamingAuthenticationConfigs =
+        authenticationConfig.assigned() ? authenticationConfig.getStreamingAuthenticationConfigs() : nullptr;
+
     // Build a map of discovered addresses by protocol ID for quick lookup
     std::unordered_map<std::string, ListPtr<IAddressInfo>> discoveredAddressesByProtocol;
     const auto deviceInfo = device.getInfo();
@@ -524,6 +538,19 @@ inline void StreamingSourceManager::attachStreamingsToDevice(const MirroredDevic
         if (protocolIt == prioritizedProtocolsMap.end())
             continue;
 
+        AuthenticationConfigPtr streamingAuthConfig;
+        if (authenticationConfig.assigned())
+        {
+            if (!streamingAuthenticationConfigs.assigned() || !streamingAuthenticationConfigs.hasKey(protocolId))
+            {
+                LOG_D("Device {} skipping streaming capability {} - no matching entry in the device's streaming authentication config",
+                      device.getGlobalId(),
+                      protocolId);
+                continue;
+            }
+            streamingAuthConfig = streamingAuthenticationConfigs.get(protocolId);
+        }
+
         StreamingPtr streaming;
 
         // Prioritize discovery addresses if available for this protocol
@@ -556,7 +583,7 @@ inline void StreamingSourceManager::attachStreamingsToDevice(const MirroredDevic
 
         auto errCode = daqTry([&]()
         {
-            streaming = managerUtils.createStreaming(connectionString, deviceConfig);
+            streaming = managerUtils.createStreaming(connectionString, deviceConfig, streamingAuthConfig, deviceManufacturer, deviceSerialNumber);
             return OPENDAQ_SUCCESS;
         });
         if (OPENDAQ_FAILED(errCode))

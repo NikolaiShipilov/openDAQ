@@ -16,6 +16,7 @@
 
 #pragma once
 #include <opendaq/authentication_config_ptr.h>
+#include <opendaq/authentication_config_builder_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 #include <opendaq/credential_request_ptr.h>
 
@@ -45,6 +46,15 @@ inline AuthenticationConfigPtr AuthenticationConfig(const StringPtr& payloadId,
 inline AuthenticationConfigPtr AuthenticationConfigFromCredentialRequest(const CredentialRequestPtr& credentialRequest)
 {
     AuthenticationConfigPtr obj(AuthenticationConfigFromCredentialRequest_Create(credentialRequest));
+    return obj;
+}
+
+/*!
+ * @brief Creates an `AuthenticationConfigBuilder` with no values set.
+ */
+inline AuthenticationConfigBuilderPtr AuthenticationConfigBuilder()
+{
+    AuthenticationConfigBuilderPtr obj(AuthenticationConfigBuilder_Create());
     return obj;
 }
 

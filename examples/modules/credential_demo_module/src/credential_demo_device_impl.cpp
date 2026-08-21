@@ -16,30 +16,20 @@ BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
 static constexpr std::string_view GenericDeviceAddress = "credential_demo_device";
 
-static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, const DeviceTypePtr& deviceType, bool verbose)
-{
-    builder.setComponentType(deviceType);
-    builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeName", deviceType.getName()).setDescription("The openDAQ device type name").build());
-
-    if (verbose)
-    {
-        builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeId", deviceType.getId()).setDescription("The openDAQ device type ID").build());
-        builder.addMetaDataProperty(StringPropertyBuilder("DeviceTypeDescription", deviceType.getDescription()).setDescription("The openDAQ device type description").build());
-    }
-}
-
 CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& config,
                                                    const ContextPtr& ctx,
                                                    const ComponentPtr& parent,
                                                    const DeviceInfoPtr& info,
                                                    bool authenticated,
                                                    const StringPtr& payloadId,
-                                                   const CredentialPayloadPtr& credentials)
+                                                   const CredentialPayloadPtr& credentials,
+                                                   const AuthenticationConfigPtr& authenticationConfig)
     : MirroredDevice(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
     if (authenticated)
     {
         authentication::Authenticate(ctx, credentials, payloadId);
+        this->setAuthenticationConfig(authenticationConfig);
     }
 
     this->deviceInfo = info;
@@ -110,112 +100,6 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
         .addSupportedAuthenticationConfig(PrivateKeyBlobPayloadId, privateKeyBlobDescriptor, privateKeyBlobConfig)
         .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
-}
-
-CredentialRequestPtr CredentialDemoDeviceImpl::CreateCredentialRequest(const StringPtr& payloadId,
-                                                                        const StringPtr& connectionString,
-                                                                        const StringPtr& manufacturer,
-                                                                        const StringPtr& serialNumber,
-                                                                        const PropertyObjectPtr& additionalConfig,
-                                                                        bool verbose)
-{
-    const std::string payloadIdStr = payloadId.toStdString();
-
-    if (payloadIdStr == PinPayloadId)
-        return CreatePinCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
-
-    if (payloadIdStr == PrivateKeyFilePayloadId)
-        return CreatePrivateKeyFileCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
-
-    if (payloadIdStr == PrivateKeyBlobPayloadId)
-        return CreatePrivateKeyBlobCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
-
-    if (payloadIdStr == UserNamePasswordPayloadId)
-        return CreateUserNamePasswordCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose);
-
-    DAQ_THROW_EXCEPTION(InvalidParameterException, "Unknown authentication payload id \"{}\"", payloadId);
-}
-
-CredentialRequestPtr CredentialDemoDeviceImpl::CreateUserNamePasswordCredentialRequest(const StringPtr& connectionString,
-                                                                                       const StringPtr& manufacturer,
-                                                                                       const StringPtr& serialNumber,
-                                                                                       const PropertyObjectPtr& additionalConfig,
-                                                                                       bool verbose)
-{
-    const bool hidePassword = additionalConfig.assigned() && additionalConfig.hasProperty("HidePasswordInput")
-                                   ? (bool) additionalConfig.getPropertyValue("HidePasswordInput")
-                                   : true;
-    const auto payloadDescriptor = authentication::BuildUserNamePasswordDescriptor(hidePassword);
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(UserNamePasswordPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, CreateType(), verbose);
-
-    return builder.build();
-}
-
-CredentialRequestPtr CredentialDemoDeviceImpl::CreatePinCredentialRequest(const StringPtr& connectionString,
-                                                                          const StringPtr& manufacturer,
-                                                                          const StringPtr& serialNumber,
-                                                                          const PropertyObjectPtr& additionalConfig,
-                                                                          bool verbose)
-{
-    const bool hidePin = additionalConfig.assigned() && additionalConfig.hasProperty("HidePinInput")
-                              ? (bool) additionalConfig.getPropertyValue("HidePinInput")
-                              : true;
-    const auto payloadDescriptor = authentication::BuildPinDescriptor(hidePin);
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PinPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, CreateType(), verbose);
-
-    return builder.build();
-}
-
-CredentialRequestPtr CredentialDemoDeviceImpl::CreatePrivateKeyFileCredentialRequest(const StringPtr& connectionString,
-                                                                                      const StringPtr& manufacturer,
-                                                                                      const StringPtr& serialNumber,
-                                                                                      const PropertyObjectPtr& additionalConfig,
-                                                                                      bool verbose)
-{
-    const auto payloadDescriptor = authentication::BuildPrivateKeyFileDescriptor();
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PrivateKeyFilePayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, CreateType(), verbose);
-
-    return builder.build();
-}
-
-CredentialRequestPtr CredentialDemoDeviceImpl::CreatePrivateKeyBlobCredentialRequest(const StringPtr& connectionString,
-                                                                                      const StringPtr& manufacturer,
-                                                                                      const StringPtr& serialNumber,
-                                                                                      const PropertyObjectPtr& additionalConfig,
-                                                                                      bool verbose)
-{
-    const auto payloadDescriptor = authentication::BuildPrivateKeyBlobDescriptor();
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PrivateKeyBlobPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, CreateType(), verbose);
-
-    return builder.build();
 }
 
 void CredentialDemoDeviceImpl::ValidateConnectionString(const StringPtr& connectionString)

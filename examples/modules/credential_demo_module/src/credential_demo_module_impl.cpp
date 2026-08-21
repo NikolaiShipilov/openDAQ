@@ -81,8 +81,8 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         const auto additionalConfig = authenticationConfig.getConfig();
         const bool verboseCredentialRequest = additionalConfig.getPropertyValue("VerboseCredentialRequest");
 
-        credentialRequest = CredentialDemoDeviceImpl::CreateCredentialRequest(
-            payloadId, connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest);
+        credentialRequest = authentication::CreateCredentialRequest(
+            payloadId, connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest, CredentialDemoDeviceImpl::CreateType());
     }
 
     auto device = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
@@ -92,7 +92,8 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         info,
         /*authenticated*/true,
         payloadId,
-        credentialProvider.requestCredentials(credentialRequest));
+        credentialProvider.requestCredentials(credentialRequest),
+        authenticationConfig);
 
     // Persisted alongside the device, so a reload can re-request credentials for it without ever having
     // saved the authentication config or its secrets.
@@ -114,13 +115,15 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
                                                      const StringPtr& manufacturer,
                                                      const StringPtr& serialNumber)
 {
-    if (!authenticationConfig.assigned())
-    {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Streaming authentication is required but no authentication config was provided");
-    }
+    // The automatic streaming-attach path (`addDevice`'s "PrioritizedStreamingProtocols" config) has no way
+    // to supply an authentication config - it always calls through with a null one. Rather than failing, fall
+    // back to the streaming type's own default authentication method instead of requiring an explicit one.
+    auto resolvedAuthenticationConfig = authenticationConfig;
+    if (!resolvedAuthenticationConfig.assigned())
+        resolvedAuthenticationConfig = CredentialDemoStreamingImpl::CreateType().createDefaultAuthenticationConfig();
 
-    const auto payloadId = authenticationConfig.getCredentialPayloadId();
-    const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
+    const auto payloadId = resolvedAuthenticationConfig.getCredentialPayloadId();
+    const auto payloadDescriptor = resolvedAuthenticationConfig.getCredentialPayloadDescriptor();
 
     auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), payloadDescriptor);
     if (!credentialProvider.assigned())
@@ -131,8 +134,8 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
 
     const bool verboseCredentialRequest = config.getPropertyValue("VerboseCredentialRequest");
 
-    const auto credentialRequest = CredentialDemoDeviceImpl::CreateCredentialRequest(
-        payloadId, connectionString, manufacturer, serialNumber, config, verboseCredentialRequest);
+    const auto credentialRequest = authentication::CreateCredentialRequest(
+        payloadId, connectionString, manufacturer, serialNumber, config, verboseCredentialRequest, CredentialDemoStreamingImpl::CreateType());
 
     const auto credentials = credentialProvider.requestCredentials(credentialRequest);
 

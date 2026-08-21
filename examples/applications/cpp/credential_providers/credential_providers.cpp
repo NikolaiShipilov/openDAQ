@@ -51,7 +51,7 @@ int main(int argc, const char* argv[])
 
     // get the type to obtain default authentication settings
     auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
-
+/*
     // PrivateKeyFile authentication - another String-format credential payload, but instead of comparing a
     // fixed secret, the module verifies a signed challenge against the public key configured via the
     // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
@@ -95,7 +95,43 @@ int main(int argc, const char* argv[])
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, verbose credential request. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
+*/
+    // A single authentication config can carry settings for more than one connection at once: the device's
+    // own (here its default, UserName/Password), plus one nested per streaming type for anything else
+    // that's part of the same overall connection - here the demo streaming type, authenticated via a
+    // different method (PrivateKeyBlob) than the device. The nested config is keyed internally by the
+    // streaming type's own id - passing the type itself (rather than a bare id string) means only a real,
+    // registered streaming type can ever be used as the key. The nested config is an ordinary
+    // `AuthenticationConfig` in its own right - once pulled back out of the dictionary returned by
+    // `getStreamingAuthenticationConfigs`, it's usable anywhere a standalone one would be, e.g. handed
+    // directly to a manual `addStreaming` call below.
+    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
+    auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
+    auto deviceDefaultAuthConfig = deviceType.createDefaultAuthenticationConfig();
+    auto deviceAuthConfig = AuthenticationConfigBuilder()
+                                 .setPayloadId(deviceDefaultAuthConfig.getCredentialPayloadId())
+                                 .setPayloadDescriptor(deviceDefaultAuthConfig.getCredentialPayloadDescriptor())
+                                 .setConfig(deviceDefaultAuthConfig.getConfig())
+                                 .addStreamingAuthenticationConfig(streamingType, streamingAuthConfig)
+                                 .build();
 
+    std::cout << "Device authentication (default method - UserName/Password):" << std::endl;
+    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication." << std::endl;
+
+    // Pulling the nested config back out of the very same object used to authenticate the device above,
+    // and using it to manually attach the streaming source - the auto-attach path (`PrioritizedStreamingProtocols`)
+    // doesn't consult nested streaming configs yet, so this manual step is still how the nested piece gets used for now.
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    auto streamingAuthConfigFromDevice = deviceAuthConfig.getStreamingAuthenticationConfigs().get(streamingType.getId());
+    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfigFromDevice);
+    std::cout << "Attached a streaming connection authenticated via the config nested inside the device's own. "
+                 "Streaming sources: "
+              << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
+    std::cout << "Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+/*
     // PIN authentication - an alternative, String-format credential payload.
     auto pinConfig = deviceType.getSupportedAuthenticationConfigs().get("Pin");
     device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
@@ -117,7 +153,7 @@ int main(int argc, const char* argv[])
 
     std::cout << "Press \"enter\" to save the configuration and reload it into a new instance..." << std::endl;
     std::cin.get();
-
+/*
     // Saving the instance carries the connected device's credential request along with it - its payload id,
     // descriptor and non-secret metadata - but never the authentication config or the credentials themselves.
     auto savedConfiguration = instance.saveConfiguration();
@@ -143,7 +179,7 @@ int main(int argc, const char* argv[])
 
     auto reloadedDevice = reloadedDevices[0];
     std::cout << "Reloaded instance re-authenticated and reconnected to \"" << reloadedDevice.getInfo().getName() << std::endl;
-
+*/
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
     std::cin.get();
     return 0;

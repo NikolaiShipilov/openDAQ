@@ -42,36 +42,11 @@ public:
                                       const DeviceInfoPtr& info,
                                       bool authenticated,
                                       const StringPtr& payloadId = nullptr,
-                                      const CredentialPayloadPtr& credentials = nullptr);
+                                      const CredentialPayloadPtr& credentials = nullptr,
+                                      const AuthenticationConfigPtr& authenticationConfig = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();
-    static CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
-                                                         const StringPtr& connectionString,
-                                                         const StringPtr& manufacturer,
-                                                         const StringPtr& serialNumber,
-                                                         const PropertyObjectPtr& additionalConfig,
-                                                         bool verbose);
-    static CredentialRequestPtr CreateUserNamePasswordCredentialRequest(const StringPtr& connectionString,
-                                                                         const StringPtr& manufacturer,
-                                                                         const StringPtr& serialNumber,
-                                                                         const PropertyObjectPtr& additionalConfig,
-                                                                         bool verbose);
-    static CredentialRequestPtr CreatePinCredentialRequest(const StringPtr& connectionString,
-                                                            const StringPtr& manufacturer,
-                                                            const StringPtr& serialNumber,
-                                                            const PropertyObjectPtr& additionalConfig,
-                                                            bool verbose);
-    static CredentialRequestPtr CreatePrivateKeyFileCredentialRequest(const StringPtr& connectionString,
-                                                                       const StringPtr& manufacturer,
-                                                                       const StringPtr& serialNumber,
-                                                                       const PropertyObjectPtr& additionalConfig,
-                                                                       bool verbose);
-    static CredentialRequestPtr CreatePrivateKeyBlobCredentialRequest(const StringPtr& connectionString,
-                                                                       const StringPtr& manufacturer,
-                                                                       const StringPtr& serialNumber,
-                                                                       const PropertyObjectPtr& additionalConfig,
-                                                                       bool verbose);
     static void ValidateConnectionString(const StringPtr& connectionString);
 
 protected:
