@@ -1,4 +1,5 @@
 #include <credential_demo_module/credential_demo_device_impl.h>
+#include <credential_demo_module/credential_demo_streaming_impl.h>
 
 #include <opendaq/device_info_factory.h>
 #include <opendaq/device_type_factory.h>
@@ -73,6 +74,15 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
                            .setPrefix(CreateType().getConnectionStringPrefix())
                            .setConnectionString(connectionString);
     devInfo.asPtr<IDeviceInfoInternal>(true).addServerCapability(capability);
+
+    // The`addDevice`'s automatic streaming attach (`PrioritizedStreamingProtocols`)
+    // can pick "CredentialDemoStreaming" up for this device without any manual `addStreaming` call.
+    auto streamingConnectionString =
+        fmt::format("{}://{}", CredentialDemoStreamingImpl::CreateType().getConnectionStringPrefix(), GenericDeviceAddress);
+    auto streamingCapability = ServerCapability("CredentialDemoStreaming", "Credential Demo Streaming", ProtocolType::Streaming)
+                                    .setPrefix(CredentialDemoStreamingImpl::CreateType().getConnectionStringPrefix())
+                                    .setConnectionString(streamingConnectionString);
+    devInfo.asPtr<IDeviceInfoInternal>(true).addServerCapability(streamingCapability);
 
     return devInfo;
 }
