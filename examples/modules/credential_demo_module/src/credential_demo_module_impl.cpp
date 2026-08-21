@@ -108,9 +108,11 @@ DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTy
     return Dict<IString, IBaseObject>({{streamingType.getId(), streamingType}});
 }
 
-StreamingPtr CredentialDemoModule::onCreateAuthenticatedStreaming(const StringPtr& connectionString,
-                                                                   const PropertyObjectPtr& config,
-                                                                   const AuthenticationConfigPtr& authenticationConfig)
+StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connectionString,
+                                                     const PropertyObjectPtr& config,
+                                                     const AuthenticationConfigPtr& authenticationConfig,
+                                                     const StringPtr& manufacturer,
+                                                     const StringPtr& serialNumber)
 {
     if (!authenticationConfig.assigned())
     {
@@ -127,9 +129,6 @@ StreamingPtr CredentialDemoModule::onCreateAuthenticatedStreaming(const StringPt
                              "Streaming authentication is required but no credential provider supporting a compatible payload format is registered");
     }
 
-    const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
-    const StringPtr manufacturer = options.get("Manufacturer");
-    const StringPtr serialNumber = options.get("SerialNumber");
     const bool verboseCredentialRequest = config.getPropertyValue("VerboseCredentialRequest");
 
     const auto credentialRequest = CredentialDemoDeviceImpl::CreateCredentialRequest(

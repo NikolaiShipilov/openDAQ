@@ -88,15 +88,10 @@ ErrCode MockModuleImpl::getModuleInfo(IModuleInfo** info)
 
 ErrCode MockModuleImpl::createStreaming(IStreaming** /*streaming*/,
                                         IString* /*connectionString*/,
-                                        IPropertyObject* /*config*/)
-{
-    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
-}
-
-ErrCode MockModuleImpl::createAuthenticatedStreaming(IStreaming** /*streaming*/,
-                                                     IString* /*connectionString*/,
-                                                     IPropertyObject* /*config*/,
-                                                     IAuthenticationConfig* /*authenticationConfig*/)
+                                        IPropertyObject* /*config*/,
+                                        IAuthenticationConfig* /*authenticationConfig*/,
+                                        IString* /*manufacturer*/,
+                                        IString* /*serialNumber*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }

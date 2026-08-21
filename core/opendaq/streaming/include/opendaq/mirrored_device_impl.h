@@ -309,13 +309,7 @@ StreamingPtr MirroredDeviceBase<Interfaces...>::onAddStreaming(const StringPtr& 
     checkDuplicateStreamingSource(connectionString);
 
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
-
-    // The module/module-manager layer keeps the authenticated and plain paths separate - which one gets
-    // called here is decided solely by whether the caller passed an authenticationConfig.
-    if (authenticationConfig.assigned())
-        return registerStreamingSource(managerUtils.createAuthenticatedStreaming(connectionString, config, authenticationConfig));
-
-    return registerStreamingSource(managerUtils.createStreaming(connectionString, config));
+    return registerStreamingSource(managerUtils.createStreaming(connectionString, config, authenticationConfig));
 }
 
 template <typename... Interfaces>

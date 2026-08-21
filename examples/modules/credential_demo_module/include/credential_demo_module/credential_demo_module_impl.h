@@ -44,9 +44,11 @@ public:
                                           const AuthenticationConfigPtr& authenticationConfig) override;
 
     DictPtr<IString, IStreamingType> onGetAvailableStreamingTypes() override;
-    StreamingPtr onCreateAuthenticatedStreaming(const StringPtr& connectionString,
-                                                const PropertyObjectPtr& config,
-                                                const AuthenticationConfigPtr& authenticationConfig) override;
+    StreamingPtr onCreateStreaming(const StringPtr& connectionString,
+                                   const PropertyObjectPtr& config,
+                                   const AuthenticationConfigPtr& authenticationConfig,
+                                   const StringPtr& manufacturer,
+                                   const StringPtr& serialNumber) override;
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);

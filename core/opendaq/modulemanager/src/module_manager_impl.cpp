@@ -1198,30 +1198,19 @@ ErrCode ModuleManagerImpl::createFunctionBlock(IFunctionBlock** functionBlock, I
     );
 }
 
-ErrCode ModuleManagerImpl::createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config)
-{
-    OPENDAQ_PARAM_NOT_NULL(connectionString);
-    OPENDAQ_PARAM_NOT_NULL(streaming);
-
-    StreamingPtr streamingPtr;
-    const ErrCode errCode = wrapHandlerReturn(this, &ModuleManagerImpl::onCreateStreaming, streamingPtr, connectionString, config);
-    OPENDAQ_RETURN_IF_FAILED(errCode);
-
-    *streaming = streamingPtr.detach();
-    return errCode;
-}
-
-ErrCode ModuleManagerImpl::createAuthenticatedStreaming(IStreaming** streaming,
-                                                        IString* connectionString,
-                                                        IPropertyObject* config,
-                                                        IAuthenticationConfig* authenticationConfig)
+ErrCode ModuleManagerImpl::createStreaming(IStreaming** streaming,
+                                           IString* connectionString,
+                                           IPropertyObject* config,
+                                           IAuthenticationConfig* authenticationConfig,
+                                           IString* manufacturer,
+                                           IString* serialNumber)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
     OPENDAQ_PARAM_NOT_NULL(streaming);
 
     StreamingPtr streamingPtr;
     const ErrCode errCode = wrapHandlerReturn(
-        this, &ModuleManagerImpl::onCreateAuthenticatedStreaming, streamingPtr, connectionString, config, authenticationConfig);
+        this, &ModuleManagerImpl::onCreateStreaming, streamingPtr, connectionString, config, authenticationConfig, manufacturer, serialNumber);
     OPENDAQ_RETURN_IF_FAILED(errCode);
 
     *streaming = streamingPtr.detach();
@@ -1574,7 +1563,11 @@ PropertyObjectPtr ModuleManagerImpl::PopulateGeneralConfig(PropertyObjectPtr& ad
     return generalConfig;
 }
 
-StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) const
+StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionString,
+                                                  const PropertyObjectPtr& config,
+                                                  const AuthenticationConfigPtr& authenticationConfig,
+                                                  const StringPtr& manufacturer,
+                                                  const StringPtr& serialNumber) const
 {
     StreamingPtr streaming = nullptr;
     PropertyObjectPtr inputConfig;
@@ -1623,74 +1616,11 @@ StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionStr
 
         try
         {
-            streaming = module.createStreaming(connectionString, streamingTypeConfig);
+            streaming = module.createStreaming(connectionString, streamingTypeConfig, authenticationConfig, manufacturer, serialNumber);
         }
         catch ([[maybe_unused]] const std::exception& e)
         {
             LOG_E("{}: createStreaming failed: {}", module.getModuleInfo().getName(), e.what())
-            throw;
-        }
-    }
-
-    return streaming;
-}
-
-StreamingPtr ModuleManagerImpl::onCreateAuthenticatedStreaming(const StringPtr& connectionString,
-                                                                const PropertyObjectPtr& config,
-                                                                const AuthenticationConfigPtr& authenticationConfig) const
-{
-    StreamingPtr streaming = nullptr;
-    PropertyObjectPtr inputConfig;
-    if (config.assigned())
-        checkErrorInfo(config.asPtr<IPropertyObjectInternal>()->clone(&inputConfig));
-
-    for (const auto& library : libraries)
-    {
-        const auto module = library.module;
-
-        const std::string prefix = getPrefixFromConnectionString(connectionString);
-        DictPtr<IString, IStreamingType> types;
-        const ErrCode errCode = module->getAvailableStreamingTypes(&types);
-        if (OPENDAQ_FAILED(errCode))
-            daqClearErrorInfo();
-        if (!types.assigned())
-            continue;
-
-        StringPtr streamingTypeId;
-        for (auto const& [typeId, type] : types)
-        {
-            if (type.getConnectionStringPrefix() == prefix)
-            {
-                streamingTypeId = typeId;
-                break;
-            }
-        }
-
-        if (!streamingTypeId.assigned())
-            continue;
-
-        PropertyObjectPtr streamingTypeConfig;
-        if (IsDefaultAddDeviceConfig(inputConfig))
-        {
-            CopyCommonGeneralPropValues(inputConfig);
-            PropertyObjectPtr streamingTypesConfig = inputConfig.getPropertyValue("Streaming");
-            if (streamingTypesConfig.hasProperty(streamingTypeId))
-                streamingTypeConfig = streamingTypesConfig.getPropertyValue(streamingTypeId);
-            else
-                streamingTypeConfig = nullptr;
-        }
-        else
-        {
-            streamingTypeConfig = inputConfig;
-        }
-
-        try
-        {
-            streaming = module.createAuthenticatedStreaming(connectionString, streamingTypeConfig, authenticationConfig);
-        }
-        catch ([[maybe_unused]] const std::exception& e)
-        {
-            LOG_E("{}: createAuthenticatedStreaming failed: {}", module.getModuleInfo().getName(), e.what())
             throw;
         }
     }

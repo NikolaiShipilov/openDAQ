@@ -305,57 +305,24 @@ public:
     }
 
     /*!
-     * @brief Creates and returns a streaming object using the specified connection string and config object.
-     * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
-     * @param config A config object that contains parameters used to configure a streaming connection.
-     * In case of a null value, implementation should use default configuration.
-     * @param[out] streaming The created streaming object.
-     */
-    ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) override
-    {
-        OPENDAQ_PARAM_NOT_NULL(streaming);
-        OPENDAQ_PARAM_NOT_NULL(connectionString);
-        
-        DictPtr<IString, IStreamingType> types;
-        ErrCode errCode = wrapHandlerReturn(this, &Module::onGetAvailableStreamingTypes, types);
-        OPENDAQ_RETURN_IF_FAILED_EXCEPT(errCode, OPENDAQ_ERR_NOTIMPLEMENTED);
-
-        ComponentTypePtr streamingType;
-        const StringPtr prefix = getPrefixFromConnectionString(connectionString);
-        if (prefix.assigned() && prefix.getLength() != 0)
-        {
-            for (const auto& [_, type] : types)
-            {
-                if (type.getConnectionStringPrefix() == prefix)
-                {
-                    streamingType = type;
-                    break;
-                }
-            }
-        }
-
-        StreamingPtr createdStreaming;
-        errCode = wrapHandlerReturn(this, &Module::onCreateStreaming, createdStreaming, connectionString, mergeConfig(config, streamingType));
-        OPENDAQ_RETURN_IF_FAILED(errCode);
-
-        *streaming = createdStreaming.detach();
-        return errCode;
-    }
-
-    /*!
      * @brief Creates and returns a streaming object using the specified connection string and config object,
-     * authenticating the connection by obtaining credentials - as specified by the given authentication
+     * optionally authenticating the connection by obtaining credentials - as specified by the given authentication
      * configuration - from a compatible registered credential provider.
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
-     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case
+     * of a null value, the streaming is connected to without authentication.
+     * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
+     * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @param[out] streaming The created streaming object.
      */
-    ErrCode INTERFACE_FUNC createAuthenticatedStreaming(IStreaming** streaming,
-                                                        IString* connectionString,
-                                                        IPropertyObject* config,
-                                                        IAuthenticationConfig* authenticationConfig) override
+    ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
+                                           IString* connectionString,
+                                           IPropertyObject* config = nullptr,
+                                           IAuthenticationConfig* authenticationConfig = nullptr,
+                                           IString* manufacturer = nullptr,
+                                           IString* serialNumber = nullptr) override
     {
         OPENDAQ_PARAM_NOT_NULL(streaming);
         OPENDAQ_PARAM_NOT_NULL(connectionString);
@@ -380,11 +347,13 @@ public:
 
         StreamingPtr createdStreaming;
         errCode = wrapHandlerReturn(this,
-                                    &Module::onCreateAuthenticatedStreaming,
+                                    &Module::onCreateStreaming,
                                     createdStreaming,
                                     connectionString,
                                     mergeConfig(config, streamingType),
-                                    authenticationConfig);
+                                    authenticationConfig,
+                                    manufacturer,
+                                    serialNumber);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         *streaming = createdStreaming.detach();
@@ -519,23 +488,23 @@ public:
         return nullptr;
     }
 
-    virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
-    {
-        return nullptr;
-    }
-
     /*!
      * @brief Creates and returns a streaming object using the specified connection string and config object,
-     * authenticating the connection by obtaining credentials - as specified by the given authentication
+     * optionally authenticating the connection by obtaining credentials - as specified by the given authentication
      * configuration - from a compatible registered credential provider.
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
-     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case
+     * of a null value, the streaming is connected to without authentication.
+     * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
+     * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @returns The created streaming object.
      */
-    virtual StreamingPtr onCreateAuthenticatedStreaming(const StringPtr& connectionString,
-                                                        const PropertyObjectPtr& config,
-                                                        const AuthenticationConfigPtr& authenticationConfig)
+    virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString,
+                                           const PropertyObjectPtr& config,
+                                           const AuthenticationConfigPtr& authenticationConfig,
+                                           const StringPtr& manufacturer,
+                                           const StringPtr& serialNumber)
     {
         return nullptr;
     }
