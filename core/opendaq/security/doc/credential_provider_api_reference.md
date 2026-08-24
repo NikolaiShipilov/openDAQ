@@ -218,7 +218,7 @@ auto device = instance.addDevice("daq://openDAQ_1234");
 
 At the application level, this is a single call — no credential provider needs to be registered, and no authentication config is involved at all.
 
-At the module level, this resolves to `Module::createDevice` (unchanged from before the credential framework existed). The device is constructed with `authenticated = false`, and the module's `authenticate(...)` step is skipped entirely — no payload, no provider lookup, no challenge or comparison of any kind.
+At the module level, this resolves to `Module::createDevice` (unchanged from before the credential framework existed). The device is constructed with `authenticated = false`, and the module's own secret-verification step is skipped entirely — no payload, no provider lookup, no challenge or comparison of any kind.
 
 ### The authenticated path
 
@@ -278,6 +278,9 @@ The nested config is keyed internally by the streaming type's own id — passing
 - A capability whose protocol id **does** have a matching entry is auto-attached using that nested config as its authentication config.
 
 If the device itself was **not** authenticated (plain `addDevice`), auto-attach behaves exactly as it did before nested configs existed — no gating, no authentication, for every discovered capability.
+
+![Streaming authentication — manual attach (three variants), and auto-attach gated by nested configs](credential_flow_diagram_streaming.png)
+*Diagram 2 — manual `addStreaming` (unauthenticated, independently authenticated, or via a config nested inside the device's own), and `StreamingSourceManager`'s auto-attach gating. Both authenticated paths hand off to the same credential resolution shown in Diagram 1 ([§6](#6-authentication-flow)).*
 
 ---
 
@@ -352,7 +355,8 @@ Without one, the call resolves straight down to the module's plain device-constr
 
 With one, the module manager first confirms the target device type actually supports authentication, then hands off to the module together with the authentication config. From there, the module works out which payload it needs, resolves the credentials for it — a provider (auto-selected or explicitly chosen by id) obtaining them interactively, or a directly-supplied secret used instead (see [§5](#5-credential-provider-selection--supplied-secrets)) — and obtains a credential request, either reusing one carried over from a previous save (on reload) or building a fresh one. The module then verifies the obtained credentials and constructs the device. Whether the request was fresh or reused, the resulting credential request is stored on the device afterward, so a future reload can repeat this same process rather than needing the original secrets to be saved anywhere.
 
-![Adding a device — with vs without authentication (API-level flow)](credential_flow_diagram.png)
+![Adding a device — with vs without authentication, and credential resolution (API-level flow)](credential_flow_diagram_device.png)
+*Diagram 1 — the plain vs. authenticated add-device paths, and the credential-resolution branching (provider auto-selection vs. explicit id, interactive `requestCredentials` vs. a directly-supplied secret). The same resolution applies verbatim to authenticating a streaming connection (Diagram 2, [§4](#4-streaming-authentication)) — only the surrounding API call differs. The pink steps (provider selection policy, secret-wrapping) are how one module (the credential-demo prototype) chose to implement this — not something the core interfaces prescribe; see the note at the top of [§8](#8-module-level-implementation).*
 
 ---
 
@@ -434,3 +438,6 @@ This section describes what a module does internally when `Module::createAuthent
 4. **Construct the device (or streaming) and authenticate.** The component is constructed and its authentication step runs — extracting the secrets (`getSecrets()`) and verifying them against whatever the specific method requires (a fixed value, a signed challenge, etc.). A mismatch throws `AuthenticationFailedException`, and construction fails.
 
 5. **Persist the credential request for later reload (devices only).** On success, the module stores the credential request on the newly created device (`IComponentPrivate::setCredentialRequest`) — this is what step 2 reads back on a future reload, without ever needing to persist the secrets, provider id, or supplied secret themselves.
+
+![Application / Module / Credential Provider — sequence view of the same steps](credential_flow_diagram_sequence.png)
+*Diagram 3 — the same steps as above, as a sequence diagram across the three parties involved: the Application first discovers which authentication methods a type supports (`getSupportedAuthenticationConfigs`) before building its `authConfig`; the Module then either resolves credentials through a Credential Provider (querying `getSupportedPayloadFormats()` to find or validate one, then `requestCredentials`/`cacheCredentials`) or wraps a supplied secret itself — matching the branching in Diagram 1. As there, the pink notes are prototype-specific policy, not core-mandated behavior.*
