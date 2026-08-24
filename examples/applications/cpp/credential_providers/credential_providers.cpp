@@ -84,7 +84,7 @@ void demoUserNamePasswordAuthenticationVerbose(const InstancePtr& instance, cons
 {
     auto userNamePasswordConfig = deviceType.createDefaultAuthenticationConfig();
     userNamePasswordConfig.getConfig().setPropertyValue("VerboseCredentialRequest", True);
-    userNamePasswordConfig.getConfig().setPropertyValue("HidePasswordInput", False);
+    userNamePasswordConfig.getConfig().setPropertyValue("HidePasswordInput", True);
     auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, verbose credential request. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
@@ -125,6 +125,15 @@ void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const 
 // it (see `ICredentialProvider::cacheCredentials`), so no user prompt is needed anywhere in this demo.
 void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
+    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
+    auto streamingPrivateKeyFileConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
+    auto streamingAuthConfig = AuthenticationConfigBuilder()
+                                   .setPayloadId(streamingPrivateKeyFileConfig.getCredentialPayloadId())
+                                   .setPayloadDescriptor(streamingPrivateKeyFileConfig.getCredentialPayloadDescriptor())
+                                   .setConfig(streamingPrivateKeyFileConfig.getConfig())
+                                   .setCredentialProviderId(credentialProviderId)
+                                   .build();
+
     auto devicePrivateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
     auto deviceAuthConfig = AuthenticationConfigBuilder()
                                  .setPayloadId(devicePrivateKeyFileConfig.getCredentialPayloadId())
@@ -132,20 +141,12 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
                                  .setConfig(devicePrivateKeyFileConfig.getConfig())
                                  .setCredentialProviderId(credentialProviderId)
                                  .setSuppliedSecret(String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"))
+                                 .addStreamingAuthenticationConfig(streamingType, streamingAuthConfig)
                                  .build();
 
     auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via the \""
               << credentialProviderId << "\" credential provider, using a secret supplied directly - no prompt." << std::endl;
-
-    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-    auto streamingPrivateKeyFileConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
-    auto streamingAuthConfig = AuthenticationConfigBuilder()
-                                    .setPayloadId(streamingPrivateKeyFileConfig.getCredentialPayloadId())
-                                    .setPayloadDescriptor(streamingPrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                                    .setConfig(streamingPrivateKeyFileConfig.getConfig())
-                                    .setCredentialProviderId(credentialProviderId)
-                                    .build();
 
     std::cout << "Attaching a streaming connection authenticated the same way - same device, same FilePath-format "
                  "method, same credential provider - so no path prompt should appear this time; the provider serves "
@@ -167,28 +168,24 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
 // `AuthenticationConfig` in its own right - once pulled back out of the dictionary returned by
 // `getStreamingAuthenticationConfigs`, it's usable anywhere a standalone one would be, e.g. handed
 // directly to a manual `addStreaming` call below.
-void demoDeviceAndNestedStreamingAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
+void demoDeviceAndStreamingAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
-    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-    auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
+
     auto deviceDefaultAuthConfig = deviceType.createDefaultAuthenticationConfig();
     auto deviceAuthConfig = AuthenticationConfigBuilder()
                                  .setPayloadId(deviceDefaultAuthConfig.getCredentialPayloadId())
                                  .setPayloadDescriptor(deviceDefaultAuthConfig.getCredentialPayloadDescriptor())
                                  .setConfig(deviceDefaultAuthConfig.getConfig())
-                                 .addStreamingAuthenticationConfig(streamingType, streamingAuthConfig)
                                  .build();
 
     std::cout << "Device authentication (default method - UserName/Password):" << std::endl;
     auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication." << std::endl;
 
-    // Pulling the nested config back out of the very same object used to authenticate the device above,
-    // and using it to manually attach the streaming source - the auto-attach path (`PrioritizedStreamingProtocols`)
-    // doesn't consult nested streaming configs yet, so this manual step is still how the nested piece gets used for now.
+    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
+    auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
-    auto streamingAuthConfigFromDevice = deviceAuthConfig.getStreamingAuthenticationConfigs().get(streamingType.getId());
-    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfigFromDevice);
+    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
     std::cout << "Attached a streaming connection authenticated via the config nested inside the device's own. "
                  "Streaming sources: "
               << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
@@ -207,18 +204,6 @@ void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTyp
     auto pinConfig = deviceType.getSupportedAuthenticationConfigs().get("Pin");
     auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with PIN authentication." << std::endl;
-
-    // `addStreaming`'s last parameter is the authentication config - passing one routes the call through
-    // the authenticated path, a null one (as used for the device connections above via plain addDevice)
-    // uses the plain, unauthenticated path.
-    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-    auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
-    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
-    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
-    std::cout << "Attached an authenticated streaming connection. Streaming sources: "
-               << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
-    std::cout << "Press \"enter\" to continue..." << std::endl;
-    std::cin.get();
 
     std::cout << "Press \"enter\" to save the configuration and reload it into a new instance..." << std::endl;
     std::cin.get();
@@ -273,11 +258,11 @@ int main(int argc, const char* argv[])
     // demoPrivateKeyBlobAuthentication(instance, deviceType);
     // demoNoAuthentication(instance);
     // demoUserNamePasswordAuthenticationNonVerbose(instance, deviceType);
-    // demoUserNamePasswordAuthenticationVerbose(instance, deviceType);
+    demoUserNamePasswordAuthenticationVerbose(instance, deviceType);
+    demoDeviceAndStreamingAuthentication(instance, deviceType);
     // demoExplicitCredentialProviderSelection(instance, deviceType, credentialProvider.getName());
     demoCachedFilePathCredentialAcrossDeviceAndStreaming(instance, deviceType, credentialProvider.getName());
-    // demoDeviceAndNestedStreamingAuthentication(instance, deviceType);
-    // demoPinAuthenticationAndReload(instance, deviceType);
+    demoPinAuthenticationAndReload(instance, deviceType);
 
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
     std::cin.get();
