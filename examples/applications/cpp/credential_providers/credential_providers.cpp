@@ -3,6 +3,8 @@
 #include <opendaq/opendaq.h>
 #include <opendaq/module_manager_utils_ptr.h>
 
+using namespace daq;
+
 static const std::string JSON_CONFIG_FILE_NAME = "credential-demo-opendaq-config.json";
 
 void createJsonConfigFile()
@@ -29,82 +31,77 @@ void createJsonConfigFile()
     file.close();
 }
 
-int main(int argc, const char* argv[])
+// PrivateKeyFile authentication - another String-format credential payload, but instead of comparing a
+// fixed secret, the module verifies a signed challenge against the public key configured via the
+// "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
+// to the matching private key.
+void demoPrivateKeyFileAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
-    using namespace daq;
-
-    createJsonConfigFile();
-
-    auto credentialProvider = CmdLineCredentialProvider();
-    auto fileCredentialProvider = FileCredentialProvider();
-
-    auto instanceBuilder = InstanceBuilder();
-    instanceBuilder.addModulePath(MODULE_PATH);
-    instanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
-    // Registered first, so it - not CmdLineCredentialProvider - is the one FindMatchingCredentialProvider
-    // picks for FilePath-format requests (e.g. the PrivateKeyFile auth method below).
-    instanceBuilder.addCredentialProvider(fileCredentialProvider.getName(), fileCredentialProvider);
-    instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
-    auto instance = instanceBuilder.build();
-
-    DevicePtr device;
-
-    // get the type to obtain default authentication settings
-    auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
-/*
-    // PrivateKeyFile authentication - another String-format credential payload, but instead of comparing a
-    // fixed secret, the module verifies a signed challenge against the public key configured via the
-    // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
-    // to the matching private key.
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
     auto privateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
+}
 
-    // PrivateKeyBlob authentication - the same private-key challenge, but via a BinaryBlob-format
-    // credential payload instead of a FilePath one: fileCredentialProvider still prompts for the file's
-    // path, but now reads the file itself and hands the module the raw key bytes directly, so the module
-    // never touches the file (or even learns its path).
+// PrivateKeyBlob authentication - the same private-key challenge, but via a BinaryBlob-format
+// credential payload instead of a FilePath one: fileCredentialProvider still prompts for the file's
+// path, but now reads the file itself and hands the module the raw key bytes directly, so the module
+// never touches the file (or even learns its path).
+void demoPrivateKeyBlobAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
+{
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
     auto privateKeyBlobConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyBlobConfig);
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyBlobConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via a binary blob. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
+}
 
-    // add without authentication
-    device = instance.addDevice("daq://openDAQ_1234");
+// add without authentication
+void demoNoAuthentication(const InstancePtr& instance)
+{
+    auto device = instance.addDevice("daq://openDAQ_1234");
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" without authentication. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
+}
 
-    // authenticate with username and password
-    // UserName/Password authentication - a KeyValuePairs-format credential payload.
+// authenticate with username and password
+// UserName/Password authentication - a KeyValuePairs-format credential payload.
+void demoUserNamePasswordAuthenticationNonVerbose(const InstancePtr& instance, const DeviceTypePtr& deviceType)
+{
     auto userNamePasswordConfig = deviceType.createDefaultAuthenticationConfig();
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, non-verbose credential request. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
+}
 
-    // authenticate with username and password but not hide the password
+// authenticate with username and password but not hide the password
+void demoUserNamePasswordAuthenticationVerbose(const InstancePtr& instance, const DeviceTypePtr& deviceType)
+{
+    auto userNamePasswordConfig = deviceType.createDefaultAuthenticationConfig();
     userNamePasswordConfig.getConfig().setPropertyValue("VerboseCredentialRequest", True);
     userNamePasswordConfig.getConfig().setPropertyValue("HidePasswordInput", False);
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, verbose credential request. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
-*/
-    // A single authentication config can carry settings for more than one connection at once: the device's
-    // own (here its default, UserName/Password), plus one nested per streaming type for anything else
-    // that's part of the same overall connection - here the demo streaming type, authenticated via a
-    // different method (PrivateKeyBlob) than the device. The nested config is keyed internally by the
-    // streaming type's own id - passing the type itself (rather than a bare id string) means only a real,
-    // registered streaming type can ever be used as the key. The nested config is an ordinary
-    // `AuthenticationConfig` in its own right - once pulled back out of the dictionary returned by
-    // `getStreamingAuthenticationConfigs`, it's usable anywhere a standalone one would be, e.g. handed
-    // directly to a manual `addStreaming` call below.
+}
+
+// A single authentication config can carry settings for more than one connection at once: the device's
+// own (here its default, UserName/Password), plus one nested per streaming type for anything else
+// that's part of the same overall connection - here the demo streaming type, authenticated via a
+// different method (PrivateKeyBlob) than the device. The nested config is keyed internally by the
+// streaming type's own id - passing the type itself (rather than a bare id string) means only a real,
+// registered streaming type can ever be used as the key. The nested config is an ordinary
+// `AuthenticationConfig` in its own right - once pulled back out of the dictionary returned by
+// `getStreamingAuthenticationConfigs`, it's usable anywhere a standalone one would be, e.g. handed
+// directly to a manual `addStreaming` call below.
+void demoDeviceAndNestedStreamingAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
+{
     auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
     auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
     auto deviceDefaultAuthConfig = deviceType.createDefaultAuthenticationConfig();
@@ -116,7 +113,7 @@ int main(int argc, const char* argv[])
                                  .build();
 
     std::cout << "Device authentication (default method - UserName/Password):" << std::endl;
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication." << std::endl;
 
     // Pulling the nested config back out of the very same object used to authenticate the device above,
@@ -131,17 +128,22 @@ int main(int argc, const char* argv[])
     std::cout << "Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
-/*
-    // PIN authentication - an alternative, String-format credential payload.
+}
+
+// PIN authentication - an alternative, String-format credential payload. The device is authenticated via
+// PIN, then a streaming connection is attached manually with its own, separate PrivateKeyBlob credential
+// request - attaching a streaming connection is authenticated independently of however the device itself
+// got connected. Finally, the instance is saved and reloaded into a completely separate instance to show
+// that a previously authenticated device is re-authenticated (not silently reconnected) on load.
+void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTypePtr& deviceType)
+{
     auto pinConfig = deviceType.getSupportedAuthenticationConfigs().get("Pin");
-    device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with PIN authentication." << std::endl;
 
-    // Attaching a streaming connection is authenticated independently of however the device itself got
-    // connected - here the device was authenticated via PIN, but the streaming attachment below goes
-    // through its own, separate PrivateKeyBlob credential request. `addStreaming`'s last parameter is the
-    // authentication config - passing one routes the call through the authenticated path, a null one (as
-    // used for the device connections above via plain addDevice) uses the plain, unauthenticated path.
+    // `addStreaming`'s last parameter is the authentication config - passing one routes the call through
+    // the authenticated path, a null one (as used for the device connections above via plain addDevice)
+    // uses the plain, unauthenticated path.
     auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
     auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
@@ -153,7 +155,7 @@ int main(int argc, const char* argv[])
 
     std::cout << "Press \"enter\" to save the configuration and reload it into a new instance..." << std::endl;
     std::cin.get();
-/*
+
     // Saving the instance carries the connected device's credential request along with it - its payload id,
     // descriptor and non-secret metadata - but never the authentication config or the credentials themselves.
     auto savedConfiguration = instance.saveConfiguration();
@@ -179,7 +181,35 @@ int main(int argc, const char* argv[])
 
     auto reloadedDevice = reloadedDevices[0];
     std::cout << "Reloaded instance re-authenticated and reconnected to \"" << reloadedDevice.getInfo().getName() << std::endl;
-*/
+}
+
+int main(int argc, const char* argv[])
+{
+    createJsonConfigFile();
+
+    auto credentialProvider = CmdLineCredentialProvider();
+    auto fileCredentialProvider = FileCredentialProvider();
+
+    auto instanceBuilder = InstanceBuilder();
+    instanceBuilder.addModulePath(MODULE_PATH);
+    instanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
+    // Registered first, so it - not CmdLineCredentialProvider - is the one FindMatchingCredentialProvider
+    // picks for FilePath-format requests (e.g. the PrivateKeyFile auth method below).
+    instanceBuilder.addCredentialProvider(fileCredentialProvider.getName(), fileCredentialProvider);
+    instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
+    auto instance = instanceBuilder.build();
+
+    // get the type to obtain default authentication settings
+    auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
+
+    // demoPrivateKeyFileAuthentication(instance, deviceType);
+    // demoPrivateKeyBlobAuthentication(instance, deviceType);
+    // demoNoAuthentication(instance);
+    // demoUserNamePasswordAuthenticationNonVerbose(instance, deviceType);
+    // demoUserNamePasswordAuthenticationVerbose(instance, deviceType);
+    demoDeviceAndNestedStreamingAuthentication(instance, deviceType);
+    // demoPinAuthenticationAndReload(instance, deviceType);
+
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
     std::cin.get();
     return 0;
