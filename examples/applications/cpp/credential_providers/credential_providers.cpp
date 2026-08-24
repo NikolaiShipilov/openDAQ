@@ -273,8 +273,8 @@ int main(int argc, const char* argv[])
     // demoUserNamePasswordAuthenticationNonVerbose(instance, deviceType);
     // demoUserNamePasswordAuthenticationVerbose(instance, deviceType);
     // demoExplicitCredentialProviderSelection(instance, deviceType, credentialProvider.getName());
-    // demoCachedFilePathCredentialAcrossDeviceAndStreaming(instance, deviceType, credentialProvider.getName());
-    demoDeviceAndNestedStreamingAuthentication(instance, deviceType);
+    demoCachedFilePathCredentialAcrossDeviceAndStreaming(instance, deviceType, credentialProvider.getName());
+    // demoDeviceAndNestedStreamingAuthentication(instance, deviceType);
     // demoPinAuthenticationAndReload(instance, deviceType);
 
     std::cout << "Press \"enter\" to exit the application..." << std::endl;

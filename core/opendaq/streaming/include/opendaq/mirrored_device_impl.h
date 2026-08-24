@@ -318,8 +318,12 @@ StreamingPtr MirroredDeviceBase<Interfaces...>::onAddStreaming(const StringPtr& 
     auto lock = this->getRecursiveConfigLock2();
     checkDuplicateStreamingSource(connectionString);
 
+    const auto deviceInfo = this->deviceInfo;
+    const StringPtr manufacturer = deviceInfo.assigned() ? deviceInfo.getManufacturer() : nullptr;
+    const StringPtr serialNumber = deviceInfo.assigned() ? deviceInfo.getSerialNumber() : nullptr;
+
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
-    return registerStreamingSource(managerUtils.createStreaming(connectionString, config, authenticationConfig));
+    return registerStreamingSource(managerUtils.createStreaming(connectionString, config, authenticationConfig, manufacturer, serialNumber));
 }
 
 template <typename... Interfaces>
