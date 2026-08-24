@@ -91,6 +91,30 @@ void demoUserNamePasswordAuthenticationVerbose(const InstancePtr& instance, cons
     instance.removeDevice(device);
 }
 
+// Normally, the module auto-selects a registered credential provider supporting the payload's format - but
+// an authentication config can instead name a specific provider explicitly via `setCredentialProviderId`,
+// bypassing auto-selection. This only makes an observable difference for a payload format more than one
+// registered provider supports - FilePath is one (both fileCredentialProvider and credentialProvider
+// support it), and fileCredentialProvider - registered first - is the one auto-selection would otherwise
+// pick (see the comment where it's registered, below). Left unset (as in the other demos above),
+// auto-selection is used, same as before this was added.
+void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
+{
+    auto privateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
+    auto explicitProviderConfig = AuthenticationConfigBuilder()
+                                       .setPayloadId(privateKeyFileConfig.getCredentialPayloadId())
+                                       .setPayloadDescriptor(privateKeyFileConfig.getCredentialPayloadDescriptor())
+                                       .setConfig(privateKeyFileConfig.getConfig())
+                                       .setCredentialProviderId(credentialProviderId)
+                                       .build();
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, explicitProviderConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via the explicitly selected \""
+              << credentialProviderId << "\" credential provider. Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+}
+
 // A single authentication config can carry settings for more than one connection at once: the device's
 // own (here its default, UserName/Password), plus one nested per streaming type for anything else
 // that's part of the same overall connection - here the demo streaming type, authenticated via a
@@ -207,6 +231,7 @@ int main(int argc, const char* argv[])
     // demoNoAuthentication(instance);
     // demoUserNamePasswordAuthenticationNonVerbose(instance, deviceType);
     // demoUserNamePasswordAuthenticationVerbose(instance, deviceType);
+    // demoExplicitCredentialProviderSelection(instance, deviceType, credentialProvider.getName());
     demoDeviceAndNestedStreamingAuthentication(instance, deviceType);
     // demoPinAuthenticationAndReload(instance, deviceType);
 

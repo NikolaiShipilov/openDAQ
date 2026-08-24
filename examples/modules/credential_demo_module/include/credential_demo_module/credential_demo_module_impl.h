@@ -52,7 +52,9 @@ public:
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);
-    static CredentialProviderPtr FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers, const CredentialPayloadDescriptorPtr& payloadDescriptor);
+    static CredentialProviderPtr FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
+                                                                 const CredentialPayloadDescriptorPtr& payloadDescriptor,
+                                                                 const StringPtr& providerId = nullptr);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

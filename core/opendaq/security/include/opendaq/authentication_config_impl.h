@@ -30,12 +30,14 @@ public:
     AuthenticationConfigImpl(const StringPtr& payloadId,
                              const CredentialPayloadDescriptorPtr& payloadDescriptor,
                              const PropertyObjectPtr& config = nullptr,
-                             const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs = nullptr);
+                             const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs = nullptr,
+                             const StringPtr& credentialProviderId = nullptr);
     explicit AuthenticationConfigImpl(const CredentialRequestPtr& credentialRequest);
 
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
     ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) override;
+    ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
     ErrCode INTERFACE_FUNC getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs) override;
 
     // IAuthenticationConfigPrivate
@@ -47,6 +49,7 @@ private:
     PropertyObjectPtr config;
     CredentialRequestPtr credentialRequest;
     DictPtr<IString, IAuthenticationConfig> streamingAuthenticationConfigs;
+    StringPtr credentialProviderId;
 };
 
 END_NAMESPACE_OPENDAQ

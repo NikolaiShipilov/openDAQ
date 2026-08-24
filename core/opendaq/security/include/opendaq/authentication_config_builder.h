@@ -89,6 +89,20 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfigBuilder, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) = 0;
 
     /*!
+     * @brief Sets the id of the credential provider to request credentials from.
+     * @param providerId The credential provider id, or `nullptr` to let the module auto-select a
+     * registered provider supporting the payload descriptor's format - the default when left unset.
+     */
+    // [returnSelf]
+    virtual ErrCode INTERFACE_FUNC setCredentialProviderId(IString* providerId) = 0;
+
+    /*!
+     * @brief Gets the id of the credential provider to request credentials from.
+     * @param[out] providerId The credential provider id.
+     */
+    virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
+
+    /*!
      * @brief Adds (or replaces) the authentication config nested under the given streaming type - keyed
      * internally by the type's own id (`IComponentType::getId`), so only an id a real, registered streaming
      * type actually has can ever be used as the key, rather than an arbitrary caller-supplied string.

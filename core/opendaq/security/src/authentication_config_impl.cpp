@@ -6,11 +6,13 @@ BEGIN_NAMESPACE_OPENDAQ
 AuthenticationConfigImpl::AuthenticationConfigImpl(const StringPtr& payloadId,
                                                    const CredentialPayloadDescriptorPtr& payloadDescriptor,
                                                    const PropertyObjectPtr& config,
-                                                   const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs)
+                                                   const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs,
+                                                   const StringPtr& credentialProviderId)
     : payloadId(payloadId)
     , payloadDescriptor(payloadDescriptor)
     , config(config.assigned() ? config : PropertyObject())
     , streamingAuthenticationConfigs(streamingAuthenticationConfigs.assigned() ? streamingAuthenticationConfigs : Dict<IString, IAuthenticationConfig>())
+    , credentialProviderId(credentialProviderId)
 {
 }
 
@@ -47,6 +49,14 @@ ErrCode AuthenticationConfigImpl::getConfig(IPropertyObject** config)
     OPENDAQ_PARAM_NOT_NULL(config);
 
     *config = this->config.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
+{
+    OPENDAQ_PARAM_NOT_NULL(providerId);
+
+    *providerId = this->credentialProviderId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

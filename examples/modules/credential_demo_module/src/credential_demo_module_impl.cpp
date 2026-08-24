@@ -66,7 +66,8 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
     const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
 
     // The authenticated path always requests credentials - the device is never connected to anonymously.
-    auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), payloadDescriptor);
+    auto credentialProvider =
+        FindMatchingCredentialProvider(context.getCredentialProviders(), payloadDescriptor, authenticationConfig.getCredentialProviderId());
     if (!credentialProvider.assigned())
     {
         DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no credential provider supporting a compatible payload format is registered");
@@ -125,7 +126,8 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
     const auto payloadId = resolvedAuthenticationConfig.getCredentialPayloadId();
     const auto payloadDescriptor = resolvedAuthenticationConfig.getCredentialPayloadDescriptor();
 
-    auto credentialProvider = FindMatchingCredentialProvider(context.getCredentialProviders(), payloadDescriptor);
+    auto credentialProvider = FindMatchingCredentialProvider(
+        context.getCredentialProviders(), payloadDescriptor, resolvedAuthenticationConfig.getCredentialProviderId());
     if (!credentialProvider.assigned())
     {
         DAQ_THROW_EXCEPTION(AuthenticationFailedException,
@@ -142,16 +144,51 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
     return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, payloadId, credentials);
 }
 
-CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
-                                                                           const CredentialPayloadDescriptorPtr& payloadDescriptor)
+static bool SupportsPayloadFormat(const CredentialProviderPtr& provider, const CredentialPayloadDescriptorPtr& payloadDescriptor)
 {
+    for (const auto& format : provider.getSupportedPayloadFormats())
+    {
+        if (static_cast<CredentialPayloadFormat>(static_cast<Int>(format)) == payloadDescriptor.getFormat())
+            return true;
+    }
+
+    return false;
+}
+
+CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
+                                                                           const CredentialPayloadDescriptorPtr& payloadDescriptor,
+                                                                           const StringPtr& providerId)
+{
+    // An explicitly selected provider id still has to support the required payload format - it is not used
+    // blindly just because it was named explicitly. An id that names no registered provider at all, or one
+    // that doesn't support the required format, is failed here directly with a message naming the problem,
+    // instead of falling through to the generic "no compatible provider" error below (which only applies to
+    // auto-selection).
+    if (providerId.assigned())
+    {
+        if (!providers.assigned() || !providers.hasKey(providerId))
+        {
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                 "Authentication is required but the explicitly selected credential provider \"{}\" is not registered",
+                                 providerId);
+        }
+
+        auto provider = providers.get(providerId);
+        if (!SupportsPayloadFormat(provider, payloadDescriptor))
+        {
+            DAQ_THROW_EXCEPTION(
+                AuthenticationFailedException,
+                "Authentication is required but the explicitly selected credential provider \"{}\" does not support the required payload format",
+                providerId);
+        }
+
+        return provider;
+    }
+
     for (const auto& [_, provider] : providers)
     {
-        for (const auto& format : provider.getSupportedPayloadFormats())
-        {
-            if (static_cast<CredentialPayloadFormat>(static_cast<Int>(format)) == payloadDescriptor.getFormat())
-                return provider;
-        }
+        if (SupportsPayloadFormat(provider, payloadDescriptor))
+            return provider;
     }
 
     return nullptr;
