@@ -20,6 +20,8 @@
 #include <opendaq/credential_provider.h>
 #include <opendaq/credential_request_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <map>
+#include <utility>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -37,6 +39,14 @@ private:
     static DictPtr<IString, IBaseObject> readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor);
     static StringPtr readStringSecret(const CredentialPayloadDescriptorPtr& descriptor);
     static std::string readLine(const std::string& prompt, bool hide);
+
+    // FilePath secrets only, cached in-memory for the lifetime of this provider (i.e. for the active
+    // session) - keyed by (manufacturer, serialNumber), so re-authenticating a second connection to the
+    // same device (e.g. attaching streaming after the device itself) reuses the path already entered
+    // instead of prompting again.
+    StringPtr readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialPayloadDescriptorPtr& descriptor);
+
+    std::map<std::pair<std::string, std::string>, std::string> filePathSecretCache;
 };
 
 END_NAMESPACE_OPENDAQ

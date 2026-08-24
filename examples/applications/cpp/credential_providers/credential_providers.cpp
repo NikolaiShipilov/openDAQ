@@ -115,6 +115,47 @@ void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const 
     instance.removeDevice(device);
 }
 
+// CmdLineCredentialProvider caches FilePath secrets in-memory for the active session, keyed by
+// (manufacturer, serialNumber) - so authenticating a second connection to the very same device via the
+// same FilePath-format method reuses the path already entered instead of prompting again. Demonstrated
+// here across two different connections to the same device - first the device itself, then a streaming
+// connection attached to it - both explicitly using the caching provider (FilePath is otherwise
+// auto-selected to fileCredentialProvider, which does not cache).
+void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
+{
+    auto devicePrivateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
+    auto deviceAuthConfig = AuthenticationConfigBuilder()
+                                 .setPayloadId(devicePrivateKeyFileConfig.getCredentialPayloadId())
+                                 .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
+                                 .setConfig(devicePrivateKeyFileConfig.getConfig())
+                                 .setCredentialProviderId(credentialProviderId)
+                                 .build();
+
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via the \""
+              << credentialProviderId << "\" credential provider." << std::endl;
+
+    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
+    auto streamingPrivateKeyFileConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
+    auto streamingAuthConfig = AuthenticationConfigBuilder()
+                                    .setPayloadId(streamingPrivateKeyFileConfig.getCredentialPayloadId())
+                                    .setPayloadDescriptor(streamingPrivateKeyFileConfig.getCredentialPayloadDescriptor())
+                                    .setConfig(streamingPrivateKeyFileConfig.getConfig())
+                                    .setCredentialProviderId(credentialProviderId)
+                                    .build();
+
+    std::cout << "Attaching a streaming connection authenticated the same way - same device, same FilePath-format "
+                 "method, same credential provider - so no path prompt should appear this time; the provider serves "
+                 "it from its cache instead."
+              << std::endl;
+    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
+    std::cout << "Attached. Streaming sources: " << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
+    std::cout << "Press \"enter\" to continue..." << std::endl;
+    std::cin.get();
+    instance.removeDevice(device);
+}
+
 // A single authentication config can carry settings for more than one connection at once: the device's
 // own (here its default, UserName/Password), plus one nested per streaming type for anything else
 // that's part of the same overall connection - here the demo streaming type, authenticated via a
@@ -232,6 +273,7 @@ int main(int argc, const char* argv[])
     // demoUserNamePasswordAuthenticationNonVerbose(instance, deviceType);
     // demoUserNamePasswordAuthenticationVerbose(instance, deviceType);
     // demoExplicitCredentialProviderSelection(instance, deviceType, credentialProvider.getName());
+    // demoCachedFilePathCredentialAcrossDeviceAndStreaming(instance, deviceType, credentialProvider.getName());
     demoDeviceAndNestedStreamingAuthentication(instance, deviceType);
     // demoPinAuthenticationAndReload(instance, deviceType);
 

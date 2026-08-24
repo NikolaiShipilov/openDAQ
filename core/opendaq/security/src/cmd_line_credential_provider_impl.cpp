@@ -66,7 +66,6 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
             return OPENDAQ_SUCCESS;
         }
         case CredentialPayloadFormat::String:
-        case CredentialPayloadFormat::FilePath:
         {
             auto callback = Function(
                 [requestPtr, descriptor]()
@@ -74,6 +73,14 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
                     printRequestDetails(requestPtr);
                     return readStringSecret(descriptor);
                 });
+
+            *credentials = StringCredentialPayload(callback).detach();
+            return OPENDAQ_SUCCESS;
+        }
+        case CredentialPayloadFormat::FilePath:
+        {
+            auto callback = Function(
+                [this, requestPtr, descriptor]() { return readFilePathSecretCached(requestPtr, descriptor); });
 
             *credentials = StringCredentialPayload(callback).detach();
             return OPENDAQ_SUCCESS;
@@ -102,6 +109,22 @@ StringPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialPayloa
 
     auto secret = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
     return String(secret);
+}
+
+StringPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialPayloadDescriptorPtr& descriptor)
+{
+    const StringPtr manufacturer = request.getManufacturer();
+    const StringPtr serialNumber = request.getSerialNumber();
+    const auto cacheKey = std::make_pair(manufacturer.assigned() ? manufacturer.toStdString() : std::string(),
+                                         serialNumber.assigned() ? serialNumber.toStdString() : std::string());
+
+    if (const auto it = filePathSecretCache.find(cacheKey); it != filePathSecretCache.end())
+        return String(it->second);
+
+    printRequestDetails(request);
+    const StringPtr secret = readStringSecret(descriptor);
+    filePathSecretCache[cacheKey] = secret.toStdString();
+    return secret;
 }
 
 void CmdLineCredentialProviderImpl::printRequestDetails(const CredentialRequestPtr& request)
