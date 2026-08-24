@@ -103,6 +103,22 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfigBuilder, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
 
     /*!
+     * @brief Sets a secret to use directly instead of a credential provider obtaining it (e.g. by
+     * prompting the user).
+     * @param suppliedSecret The secret, in the format described by `setPayloadDescriptor` (see
+     * `ICredentialPayload::getSecrets` for the expected concrete type per format). `nullptr` (the default)
+     * leaves the module to obtain the secret from a credential provider as usual.
+     */
+    // [returnSelf]
+    virtual ErrCode INTERFACE_FUNC setSuppliedSecret(IBaseObject* suppliedSecret) = 0;
+
+    /*!
+     * @brief Gets the secret to use directly instead of a credential provider obtaining it.
+     * @param[out] suppliedSecret The supplied secret.
+     */
+    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IBaseObject** suppliedSecret) = 0;
+
+    /*!
      * @brief Adds (or replaces) the authentication config nested under the given streaming type - keyed
      * internally by the type's own id (`IComponentType::getId`), so only an id a real, registered streaming
      * type actually has can ever be used as the key, rather than an arbitrary caller-supplied string.

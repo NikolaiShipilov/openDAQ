@@ -120,7 +120,9 @@ void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const 
 // same FilePath-format method reuses the path already entered instead of prompting again. Demonstrated
 // here across two different connections to the same device - first the device itself, then a streaming
 // connection attached to it - both explicitly using the caching provider (FilePath is otherwise
-// auto-selected to fileCredentialProvider, which does not cache).
+// auto-selected to fileCredentialProvider, which does not cache). The device's own path is supplied
+// directly via `setSuppliedSecret` rather than typed interactively - the specified provider still caches
+// it (see `ICredentialProvider::cacheCredentials`), so no user prompt is needed anywhere in this demo.
 void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
     auto devicePrivateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
@@ -129,12 +131,12 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
                                  .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
                                  .setConfig(devicePrivateKeyFileConfig.getConfig())
                                  .setCredentialProviderId(credentialProviderId)
+                                 .setSuppliedSecret(String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"))
                                  .build();
 
-    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
     auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via the \""
-              << credentialProviderId << "\" credential provider." << std::endl;
+              << credentialProviderId << "\" credential provider, using a secret supplied directly - no prompt." << std::endl;
 
     auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
     auto streamingPrivateKeyFileConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");

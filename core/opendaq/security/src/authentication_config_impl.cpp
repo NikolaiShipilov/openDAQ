@@ -7,12 +7,14 @@ AuthenticationConfigImpl::AuthenticationConfigImpl(const StringPtr& payloadId,
                                                    const CredentialPayloadDescriptorPtr& payloadDescriptor,
                                                    const PropertyObjectPtr& config,
                                                    const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs,
-                                                   const StringPtr& credentialProviderId)
+                                                   const StringPtr& credentialProviderId,
+                                                   const BaseObjectPtr& suppliedSecret)
     : payloadId(payloadId)
     , payloadDescriptor(payloadDescriptor)
     , config(config.assigned() ? config : PropertyObject())
     , streamingAuthenticationConfigs(streamingAuthenticationConfigs.assigned() ? streamingAuthenticationConfigs : Dict<IString, IAuthenticationConfig>())
     , credentialProviderId(credentialProviderId)
+    , suppliedSecret(suppliedSecret)
 {
 }
 
@@ -57,6 +59,14 @@ ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
     OPENDAQ_PARAM_NOT_NULL(providerId);
 
     *providerId = this->credentialProviderId.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode AuthenticationConfigImpl::getSuppliedSecret(IBaseObject** suppliedSecret)
+{
+    OPENDAQ_PARAM_NOT_NULL(suppliedSecret);
+
+    *suppliedSecret = this->suppliedSecret.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

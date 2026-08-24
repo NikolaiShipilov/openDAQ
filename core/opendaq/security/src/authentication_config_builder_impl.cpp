@@ -19,7 +19,7 @@ ErrCode AuthenticationConfigBuilderImpl::build(IAuthenticationConfig** authentic
         {
             *authenticationConfig =
                 createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>(
-                    payloadId, payloadDescriptor, config, streamingAuthenticationConfigs, credentialProviderId)
+                    payloadId, payloadDescriptor, config, streamingAuthenticationConfigs, credentialProviderId, suppliedSecret)
                     .detach();
             return OPENDAQ_SUCCESS;
         });
@@ -78,6 +78,20 @@ ErrCode AuthenticationConfigBuilderImpl::getCredentialProviderId(IString** provi
     OPENDAQ_PARAM_NOT_NULL(providerId);
 
     *providerId = this->credentialProviderId.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode AuthenticationConfigBuilderImpl::setSuppliedSecret(IBaseObject* suppliedSecret)
+{
+    this->suppliedSecret = suppliedSecret;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode AuthenticationConfigBuilderImpl::getSuppliedSecret(IBaseObject** suppliedSecret)
+{
+    OPENDAQ_PARAM_NOT_NULL(suppliedSecret);
+
+    *suppliedSecret = this->suppliedSecret.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

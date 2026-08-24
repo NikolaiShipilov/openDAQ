@@ -31,6 +31,7 @@ public:
 
     ErrCode INTERFACE_FUNC getName(IString** name) override;
     ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials) override;
+    ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IBaseObject* secret) override;
     ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) override;
 
 private:

@@ -6,11 +6,46 @@
 
 #include <coretypes/version_info_factory.h>
 #include <opendaq/credential_payload_descriptor_factory.h>
+#include <opendaq/credential_payload_factory.h>
 #include <opendaq/authentication_config_factory.h>
 #include <opendaq/authentication_config_private_ptr.h>
 #include <opendaq/component_private_ptr.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
+
+// Wraps a secret already known in advance (rather than obtained interactively from a provider) into the
+// credential payload shape matching its format - the same shapes `ICredentialProvider::requestCredentials`
+// implementations produce.
+static CredentialPayloadPtr WrapProvidedSecret(const BaseObjectPtr& suppliedSecret, const CredentialPayloadDescriptorPtr& payloadDescriptor)
+{
+    switch (payloadDescriptor.getFormat())
+    {
+        case CredentialPayloadFormat::KeyValuePairs:
+        {
+            const auto secret = suppliedSecret.asPtrOrNull<IDict, DictPtr<IString, IString>>(true);
+            if (!secret.assigned())
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret is not a KeyValuePairs-format secret");
+            return KeyValueCredentialPayload(Function([secret]() { return secret; }));
+        }
+        case CredentialPayloadFormat::String:
+        case CredentialPayloadFormat::FilePath:
+        {
+            const auto secret = suppliedSecret.asPtrOrNull<IString, StringPtr>(true);
+            if (!secret.assigned())
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret is not a String/FilePath-format secret");
+            return StringCredentialPayload(Function([secret]() { return secret; }));
+        }
+        case CredentialPayloadFormat::BinaryBlob:
+        {
+            const auto secret = suppliedSecret.asPtrOrNull<IBinaryData, BinaryDataPtr>(true);
+            if (!secret.assigned())
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret is not a BinaryBlob-format secret");
+            return BinaryBlobCredentialPayload(Function([secret]() { return secret; }));
+        }
+        default:
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Unsupported credential payload format");
+    }
+}
 
 CredentialDemoModule::CredentialDemoModule(const ContextPtr& context)
     : Module(CREDENTIAL_DEMO_MODULE_NAME,
@@ -65,14 +100,6 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
     const auto payloadId = authenticationConfig.getCredentialPayloadId();
     const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
 
-    // The authenticated path always requests credentials - the device is never connected to anonymously.
-    auto credentialProvider =
-        FindMatchingCredentialProvider(context.getCredentialProviders(), payloadDescriptor, authenticationConfig.getCredentialProviderId());
-    if (!credentialProvider.assigned())
-    {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no credential provider supporting a compatible payload format is registered");
-    }
-
     // A config reconstructed while reloading a saved device already carries the request formed the first
     // time around - reuse it as-is instead of forming a new one from the payload descriptor and additional
     // config.
@@ -86,6 +113,9 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
             payloadId, connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest, CredentialDemoDeviceImpl::CreateType());
     }
 
+    // The authenticated path always obtains credentials - the device is never connected to anonymously.
+    const auto credentials = ObtainCredentials(authenticationConfig, credentialRequest, context.getCredentialProviders(), payloadDescriptor);
+
     auto device = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
         config,
         context,
@@ -93,7 +123,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         info,
         /*authenticated*/true,
         payloadId,
-        credentialProvider.requestCredentials(credentialRequest),
+        credentials,
         authenticationConfig);
 
     // Persisted alongside the device, so a reload can re-request credentials for it without ever having
@@ -126,20 +156,12 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
     const auto payloadId = resolvedAuthenticationConfig.getCredentialPayloadId();
     const auto payloadDescriptor = resolvedAuthenticationConfig.getCredentialPayloadDescriptor();
 
-    auto credentialProvider = FindMatchingCredentialProvider(
-        context.getCredentialProviders(), payloadDescriptor, resolvedAuthenticationConfig.getCredentialProviderId());
-    if (!credentialProvider.assigned())
-    {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                             "Streaming authentication is required but no credential provider supporting a compatible payload format is registered");
-    }
-
     const bool verboseCredentialRequest = config.getPropertyValue("VerboseCredentialRequest");
 
     const auto credentialRequest = authentication::CreateCredentialRequest(
         payloadId, connectionString, manufacturer, serialNumber, config, verboseCredentialRequest, CredentialDemoStreamingImpl::CreateType());
 
-    const auto credentials = credentialProvider.requestCredentials(credentialRequest);
+    const auto credentials = ObtainCredentials(resolvedAuthenticationConfig, credentialRequest, context.getCredentialProviders(), payloadDescriptor);
 
     return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, payloadId, credentials);
 }
@@ -192,6 +214,45 @@ CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const
     }
 
     return nullptr;
+}
+
+CredentialPayloadPtr CredentialDemoModule::ObtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
+                                                              const CredentialRequestPtr& credentialRequest,
+                                                              const DictPtr<IString, ICredentialProvider>& providers,
+                                                              const CredentialPayloadDescriptorPtr& payloadDescriptor)
+{
+    const auto providerId = authenticationConfig.getCredentialProviderId();
+    const auto suppliedSecret = authenticationConfig.getSuppliedSecret();
+
+    if (suppliedSecret.assigned())
+    {
+        // A secret was already supplied - it is used directly rather than obtained from a provider, either
+        // way. If a specific provider was also named, it still gets a chance to cache the secret (e.g.
+        // CmdLineCredentialProvider caching a FilePath one), so a later interactive request for the same
+        // context reuses it - but the wrapping into a credential payload is done here regardless.
+        if (providerId.assigned())
+        {
+            auto credentialProvider = FindMatchingCredentialProvider(providers, payloadDescriptor, providerId);
+            if (!credentialProvider.assigned())
+            {
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                     "Authentication is required but no credential provider supporting a compatible payload format is registered");
+            }
+
+            credentialProvider.cacheCredentials(credentialRequest, suppliedSecret);
+        }
+
+        return WrapProvidedSecret(suppliedSecret, payloadDescriptor);
+    }
+
+    auto credentialProvider = FindMatchingCredentialProvider(providers, payloadDescriptor, providerId);
+    if (!credentialProvider.assigned())
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                             "Authentication is required but no credential provider supporting a compatible payload format is registered");
+    }
+
+    return credentialProvider.requestCredentials(credentialRequest);
 }
 
 DictPtr<IString, IBaseObject> CredentialDemoModule::populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions)

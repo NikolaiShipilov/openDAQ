@@ -90,6 +90,30 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
     }
 }
 
+ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IBaseObject* secret)
+{
+    OPENDAQ_PARAM_NOT_NULL(request);
+    OPENDAQ_PARAM_NOT_NULL(secret);
+
+    const auto requestPtr = CredentialRequestPtr::Borrow(request);
+    const auto descriptor = requestPtr.getPayloadDescriptor();
+    if (!descriptor.assigned())
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no payload descriptor set");
+
+    // Only FilePath secrets are cached (see `readFilePathSecretCached`) - other formats are a no-op here,
+    // since this provider never caches them either when obtaining them interactively.
+    if (descriptor.getFormat() == CredentialPayloadFormat::FilePath)
+    {
+        const auto stringSecret = BaseObjectPtr::Borrow(secret).asPtrOrNull<IString, StringPtr>(true);
+        if (!stringSecret.assigned())
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDTYPE, "Provided secret is not a FilePath-format secret");
+
+        filePathSecretCache[MakeFilePathCacheKey(requestPtr)] = stringSecret.toStdString();
+    }
+
+    return OPENDAQ_SUCCESS;
+}
+
 DictPtr<IString, IBaseObject> CmdLineCredentialProviderImpl::readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor)
 {
     const DictPtr<IString, IBoolean> keys = descriptor.getParameters().getPropertyValue("Keys");
@@ -111,12 +135,17 @@ StringPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialPayloa
     return String(secret);
 }
 
-StringPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialPayloadDescriptorPtr& descriptor)
+CmdLineCredentialProviderImpl::CacheKey CmdLineCredentialProviderImpl::MakeFilePathCacheKey(const CredentialRequestPtr& request)
 {
     const StringPtr manufacturer = request.getManufacturer();
     const StringPtr serialNumber = request.getSerialNumber();
-    const auto cacheKey = std::make_pair(manufacturer.assigned() ? manufacturer.toStdString() : std::string(),
-                                         serialNumber.assigned() ? serialNumber.toStdString() : std::string());
+    return std::make_pair(manufacturer.assigned() ? manufacturer.toStdString() : std::string(),
+                          serialNumber.assigned() ? serialNumber.toStdString() : std::string());
+}
+
+StringPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialPayloadDescriptorPtr& descriptor)
+{
+    const auto cacheKey = MakeFilePathCacheKey(request);
 
     if (const auto it = filePathSecretCache.find(cacheKey); it != filePathSecretCache.end())
         return String(it->second);

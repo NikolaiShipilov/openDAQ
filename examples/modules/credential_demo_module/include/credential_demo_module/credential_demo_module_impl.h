@@ -18,6 +18,8 @@
 #include <credential_demo_module/common.h>
 #include <opendaq/module_impl.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_payload_ptr.h>
+#include <opendaq/credential_request_ptr.h>
 #include <opendaq/streaming_type_ptr.h>
 #include <opendaq/streaming_ptr.h>
 
@@ -55,6 +57,20 @@ private:
     static CredentialProviderPtr FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
                                                                  const CredentialPayloadDescriptorPtr& payloadDescriptor,
                                                                  const StringPtr& providerId = nullptr);
+
+    // Obtains the credentials for `credentialRequest`, honoring the way an authentication config can supply
+    // the secret directly rather than have a provider obtain it interactively:
+    // - A secret is supplied: no provider is asked to obtain anything - the secret is wrapped into the
+    //   credential payload directly. If a provider id was also supplied, that specific provider is still
+    //   handed the secret via `ICredentialProvider::cacheCredentials`, so it can cache it the same way it
+    //   would one obtained interactively (see `CmdLineCredentialProvider`'s `FilePath` caching) - but the
+    //   payload used for this connection is wrapped here regardless of whether that succeeds.
+    // - No secret supplied: behaves exactly as before - the provider (auto-selected or explicitly chosen by
+    //   id) is asked to obtain the secret itself via `requestCredentials`.
+    static CredentialPayloadPtr ObtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
+                                                   const CredentialRequestPtr& credentialRequest,
+                                                   const DictPtr<IString, ICredentialProvider>& providers,
+                                                   const CredentialPayloadDescriptorPtr& payloadDescriptor);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE
