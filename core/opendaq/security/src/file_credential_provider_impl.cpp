@@ -2,10 +2,8 @@
 #include <opendaq/credential_payload_factory.h>
 #include <coreobjects/exceptions.h>
 #include <coretypes/listobject_factory.h>
-#include <coretypes/binarydata_factory.h>
 #include <iostream>
 #include <fstream>
-#include <vector>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -30,7 +28,6 @@ ErrCode FileCredentialProviderImpl::getSupportedPayloadFormats(IList** formats)
 
     auto supportedFormats = List<IInteger>();
     supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::FilePath));
-    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::BinaryBlob));
 
     *formats = supportedFormats.detach();
     return OPENDAQ_SUCCESS;
@@ -58,18 +55,6 @@ ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* reque
                 });
 
             *credentials = StringCredentialPayload(callback).detach();
-            return OPENDAQ_SUCCESS;
-        }
-        case CredentialPayloadFormat::BinaryBlob:
-        {
-            auto callback = Function(
-                [requestPtr, descriptor]()
-                {
-                    printRequestDetails(requestPtr);
-                    return readFileBlob(descriptor);
-                });
-
-            *credentials = BinaryBlobCredentialPayload(callback).detach();
             return OPENDAQ_SUCCESS;
         }
         default:
@@ -114,23 +99,6 @@ StringPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescri
 
     DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                          "Credential provider could not obtain an accessible file path after {} attempts", MaxFilePathAttempts);
-}
-
-BinaryDataPtr FileCredentialProviderImpl::readFileBlob(const CredentialPayloadDescriptorPtr& descriptor)
-{
-    const std::string path = readFilePath(descriptor).toStdString();
-
-    std::ifstream file(path, std::ios::binary | std::ios::ate);
-    const std::streamsize size = file.tellg();
-    if (!file || size <= 0)
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Credential provider could not read file \"{}\"", path);
-
-    std::vector<char> buffer(static_cast<size_t>(size));
-    file.seekg(0);
-    if (!file.read(buffer.data(), size))
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Credential provider could not read file \"{}\"", path);
-
-    return BinaryData(buffer.data(), static_cast<SizeT>(size));
 }
 
 bool FileCredentialProviderImpl::isFileAccessible(const std::string& path)

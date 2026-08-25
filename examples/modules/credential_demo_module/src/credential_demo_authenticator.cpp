@@ -6,7 +6,6 @@
 #include <coreobjects/exceptions.h>
 #include <coreobjects/property_factory.h>
 #include <coreobjects/property_object_factory.h>
-#include <coretypes/binarydata_ptr.h>
 #include <coretypes/dictobject_factory.h>
 #include <vector>
 #include <memory>
@@ -33,19 +32,6 @@ namespace crypto
                             ? PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr)
                             : PEM_read_bio_PUBKEY(bio.get(), nullptr, nullptr, nullptr);
 
-        return EvpPkeyPtr(key, &EVP_PKEY_free);
-    }
-
-    // Same as `ReadPemKeyFile`, but for a private key whose bytes were already handed over in memory
-    // (e.g. by a credential provider that reads the file on the caller's behalf) rather than read from a
-    // file path by this module.
-    EvpPkeyPtr ReadPemPrivateKeyFromMemory(const void* data, size_t size)
-    {
-        BioPtr bio(BIO_new_mem_buf(data, static_cast<int>(size)), &BIO_free);
-        if (!bio)
-            return EvpPkeyPtr(nullptr, &EVP_PKEY_free);
-
-        EVP_PKEY* key = PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr);
         return EvpPkeyPtr(key, &EVP_PKEY_free);
     }
 
@@ -101,11 +87,6 @@ CredentialPayloadDescriptorPtr BuildPinDescriptor(bool hidePin)
 CredentialPayloadDescriptorPtr BuildPrivateKeyFileDescriptor()
 {
     return FilePathPayloadDescriptor("Path to the PEM-encoded private key file");
-}
-
-CredentialPayloadDescriptorPtr BuildPrivateKeyBlobDescriptor()
-{
-    return BinaryBlobPayloadDescriptor("Raw bytes of the PEM-encoded private key file");
 }
 
 PropertyObjectPtr BuildAdditionalConfig(const StringPtr& payloadId)
@@ -200,26 +181,6 @@ static CredentialRequestPtr CreatePrivateKeyFileCredentialRequest(const StringPt
     return builder.build();
 }
 
-static CredentialRequestPtr CreatePrivateKeyBlobCredentialRequest(const StringPtr& connectionString,
-                                                                   const StringPtr& manufacturer,
-                                                                   const StringPtr& serialNumber,
-                                                                   const PropertyObjectPtr& /*additionalConfig*/,
-                                                                   bool verbose,
-                                                                   const ComponentTypePtr& componentType)
-{
-    const auto payloadDescriptor = BuildPrivateKeyBlobDescriptor();
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PrivateKeyBlobPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, componentType, verbose);
-
-    return builder.build();
-}
-
 CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
                                               const StringPtr& connectionString,
                                               const StringPtr& manufacturer,
@@ -235,9 +196,6 @@ CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
 
     if (payloadIdStr == PrivateKeyFilePayloadId)
         return CreatePrivateKeyFileCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
-
-    if (payloadIdStr == PrivateKeyBlobPayloadId)
-        return CreatePrivateKeyBlobCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
 
     if (payloadIdStr == UserNamePasswordPayloadId)
         return CreateUserNamePasswordCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
@@ -263,32 +221,15 @@ void Authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - wrong pin-code");
         }
     }
-    else if (payloadIdStr == PrivateKeyFilePayloadId || payloadIdStr == PrivateKeyBlobPayloadId)
+    else if (payloadIdStr == PrivateKeyFilePayloadId)
     {
-        crypto::EvpPkeyPtr privateKey(nullptr, &EVP_PKEY_free);
-
-        if (payloadIdStr == PrivateKeyFilePayloadId)
+        const StringPtr privateKeyPath = secrets.asPtrOrNull<IString>();
+        if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)
         {
-            const StringPtr privateKeyPath = secrets.asPtrOrNull<IString>();
-            if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)
-            {
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no private key file path provided");
-            }
-
-            privateKey = crypto::ReadPemKeyFile(privateKeyPath.toStdString(), /*isPrivateKey*/ true);
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no private key file path provided");
         }
-        else
-        {
-            // The credential provider already read the private key file on our behalf - we only ever
-            // see its raw bytes, never the file (or its path) itself.
-            const BinaryDataPtr privateKeyBlob = secrets.asPtrOrNull<IBinaryData, BinaryDataPtr>();
-            if (!privateKeyBlob.assigned() || privateKeyBlob.getSize() == 0)
-            {
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no private key bytes provided");
-            }
 
-            privateKey = crypto::ReadPemPrivateKeyFromMemory(privateKeyBlob.getAddress(), privateKeyBlob.getSize());
-        }
+        crypto::EvpPkeyPtr privateKey = crypto::ReadPemKeyFile(privateKeyPath.toStdString(), /*isPrivateKey*/ true);
 
         if (!privateKey)
         {

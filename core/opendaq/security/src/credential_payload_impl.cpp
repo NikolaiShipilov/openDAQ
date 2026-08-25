@@ -30,6 +30,5 @@ ErrCode CredentialPayloadImpl<SecretInterface, SecretPtr>::getSecrets(IBaseObjec
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValueCredentialPayload, ICredentialPayload, IFunction*, getValuesCb)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringCredentialPayload, ICredentialPayload, IFunction*, getSecretCb)
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, BinaryBlobCredentialPayload, ICredentialPayload, IFunction*, getBlobCb)
 
 END_NAMESPACE_OPENDAQ

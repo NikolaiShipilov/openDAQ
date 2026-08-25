@@ -1,6 +1,6 @@
 # Credential Provider Framework — API Reference & Authentication Flow
 
-Credentials are modelled by their **payload shape** (`CredentialPayloadFormat`: `KeyValuePairs`, `String`, `FilePath`, or `BinaryBlob`) and a **payload descriptor** (`ICredentialPayloadDescriptor`) carrying format-specific parameters and a human description. Authentication method selection happens through an `IAuthenticationConfig` object, built per component type via `addSupportedAuthenticationConfig`, or assembled ad hoc via `IAuthenticationConfigBuilder`.
+Credentials are modelled by their **payload shape** (`CredentialPayloadFormat`: `KeyValuePairs`, `String`, or `FilePath`) and a **payload descriptor** (`ICredentialPayloadDescriptor`) carrying format-specific parameters and a human description. Authentication method selection happens through an `IAuthenticationConfig` object, built per component type via `addSupportedAuthenticationConfig`, or assembled ad hoc via `IAuthenticationConfigBuilder`.
 
 ---
 
@@ -12,19 +12,18 @@ Describes the shape and presentation of the payload an authentication method exp
 
 | Member | Description |
 |---|---|
-| `getFormat(CredentialPayloadFormat*)` | The payload's format — `KeyValuePairs`, `String`, `FilePath`, or `BinaryBlob`. |
+| `getFormat(CredentialPayloadFormat*)` | The payload's format — `KeyValuePairs`, `String`, or `FilePath`. |
 | `getParameters(IPropertyObject**)` | The format's standard parameter set — for `KeyValuePairs`, a `"Keys"` dict mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool. |
-| `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Raw bytes of the SSH private key"*. |
+| `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
 
-**Factories:** `KeyValuePayloadDescriptor(keys, description)`, `StringPayloadDescriptor(description, hidden)`, `FilePathPayloadDescriptor(description)`, `BinaryBlobPayloadDescriptor(description)`
+**Factories:** `KeyValuePayloadDescriptor(keys, description)`, `StringPayloadDescriptor(description, hidden)`, `FilePathPayloadDescriptor(description)`
 
 ```cpp
 enum class CredentialPayloadFormat : EnumType
 {
     KeyValuePairs,  // N string pairs — e.g. UserName / Password
     String,         // one string — token, API key, PIN
-    FilePath,       // one string — path to a file containing the secret, e.g. a private key
-    BinaryBlob      // one raw byte buffer — pointer + size
+    FilePath        // one string — path to a file containing the secret, e.g. a private key
 };
 ```
 
@@ -123,14 +122,13 @@ Container providing access to the secrets obtained from a provider.
 
 | Member | Description |
 |---|---|
-| `getSecrets(IBaseObject**)` | The secret(s) carried by the payload. Concrete type depends on the payload format: `IString` for `String`- or `FilePath`-format, `IDict<IString, IString>` for `KeyValuePairs`, `IBinaryData` for `BinaryBlob` (raw bytes/size via `getAddress`/`getSize`). Callers are expected to know the format (from the `IAuthenticationConfig`/`ICredentialPayloadDescriptor` used) and cast accordingly. |
+| `getSecrets(IBaseObject**)` | The secret(s) carried by the payload. Concrete type depends on the payload format: `IString` for `String`- or `FilePath`-format, `IDict<IString, IString>` for `KeyValuePairs`. Callers are expected to know the format (from the `IAuthenticationConfig`/`ICredentialPayloadDescriptor` used) and cast accordingly. |
 
 **Factories:**
 - `KeyValueCredentialPayload(getValuesCb)` — `KeyValuePairs`-format payload; secrets returned as `IDict<IString, IString>`, keyed the same as the descriptor's `"Keys"` parameter.
 - `StringCredentialPayload(getSecretCb)` — `String`-format payload; single secret returned directly as `IString`. Also used for `FilePath`-format payloads, which likewise resolve to a single `IString`.
-- `BinaryBlobCredentialPayload(getBlobCb)` — `BinaryBlob`-format payload; single secret returned as `IBinaryData`.
 
-**Implementation note:** `KeyValueCredentialPayloadImpl`, `StringCredentialPayloadImpl`, and `BinaryBlobCredentialPayloadImpl` are all type aliases of one templated `CredentialPayloadImpl<SecretInterface>`.
+**Implementation note:** `KeyValueCredentialPayloadImpl` and `StringCredentialPayloadImpl` are both type aliases of one templated `CredentialPayloadImpl<SecretInterface>`.
 
 ---
 
@@ -147,7 +145,7 @@ Supplies the secrets requested via an `ICredentialRequest` — by prompting the 
 
 **Factories:**
 - `CmdLineCredentialProvider()` — prompts the user for secrets via the command line. Caches `FilePath`-format secrets in-memory for its own lifetime (i.e. for the active session), keyed by `(manufacturer, serialNumber)` — a second interactive request for the same device and format reuses the path already entered (or supplied via `cacheCredentials`) instead of prompting again. `String`/`KeyValuePairs` secrets are never cached.
-- `FileCredentialProvider()` — dedicated to file-backed secrets. Prompts for the file's path via the command line, the same way `CmdLineCredentialProvider` does. For a `FilePath`-format request it hands back the path itself; for a `BinaryBlob`-format request it reads the file and hands back its raw bytes instead, so the caller never has to touch the file itself. Supports both `FilePath` and `BinaryBlob` in `getSupportedPayloadFormats`. Retries the path prompt up to 3 times if the given path isn't accessible, then fails authentication. Never caches anything — `cacheCredentials` is a no-op.
+- `FileCredentialProvider()` — dedicated to file-backed secrets. Prompts for the file's path via the command line, the same way `CmdLineCredentialProvider` does, and hands back the path itself for a `FilePath`-format request. Retries the path prompt up to 3 times if the given path isn't accessible, then fails authentication. Never caches anything — `cacheCredentials` is a no-op.
 
 ---
 
@@ -241,7 +239,7 @@ Attaching a streaming connection is authenticated **independently** of however t
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device");
 
 // Authenticated streaming attach, with its own independent authentication config:
-auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
+auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
 ```
 
@@ -251,7 +249,7 @@ A single authentication config can carry settings for more than one connection a
 
 ```cpp
 auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
+auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
 auto deviceDefaultAuthConfig = deviceType.createDefaultAuthenticationConfig();
 
 auto deviceAuthConfig = AuthenticationConfigBuilder()
@@ -397,7 +395,7 @@ auto fileCredentialProvider = FileCredentialProvider();
 auto cmdLineCredentialProvider = CmdLineCredentialProvider();
 
 auto instanceBuilder = InstanceBuilder();
-// Registered first, so it — not CmdLineCredentialProvider — is picked for FilePath/BinaryBlob requests.
+// Registered first, so it — not CmdLineCredentialProvider — is picked for FilePath requests.
 instanceBuilder.addCredentialProvider(fileCredentialProvider.getName(), fileCredentialProvider);
 instanceBuilder.addCredentialProvider(cmdLineCredentialProvider.getName(), cmdLineCredentialProvider);
 auto instance = instanceBuilder.build();
@@ -407,10 +405,6 @@ auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice")
 // FilePath variant — module reads and parses the PEM file itself.
 auto privateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
-
-// BinaryBlob variant — provider reads the file, module only ever sees raw key bytes.
-auto privateKeyBlobConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
-auto device2 = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyBlobConfig);
 ```
 
 See [§4](#4-streaming-authentication) for authenticating a streaming connection (independently, or nested inside the device's own config) and [§5](#5-credential-provider-selection--supplied-secrets) for selecting a specific provider or supplying a secret directly.

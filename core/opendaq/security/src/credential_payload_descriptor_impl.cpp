@@ -89,8 +89,6 @@ ConstCharPtr CredentialPayloadDescriptorImpl<Format>::SerializeId()
         return "StringPayloadDescriptor";
     else if constexpr (Format == CredentialPayloadFormat::FilePath)
         return "FilePathPayloadDescriptor";
-    else if constexpr (Format == CredentialPayloadFormat::BinaryBlob)
-        return "BinaryBlobPayloadDescriptor";
     else
         return "";
 }
@@ -131,6 +129,5 @@ ErrCode CredentialPayloadDescriptorImpl<Format>::Deserialize(ISerializedObject* 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IDict*, keys, IString*, description)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description, Bool, hidden)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, BinaryBlobPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
 
 END_NAMESPACE_OPENDAQ

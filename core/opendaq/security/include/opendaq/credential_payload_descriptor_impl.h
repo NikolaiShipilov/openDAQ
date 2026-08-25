@@ -27,7 +27,7 @@ BEGIN_NAMESPACE_OPENDAQ
 /*!
  * @brief `ICredentialPayloadDescriptor` impl for all formats, parameterized by `Format`. Which
  * constructor is used - and so which `parameters` get built - depends on the format: `KeyValuePairs`
- * takes a `"Keys"` dict, `String` takes a `"Hidden"` bool, `FilePath`/`BinaryBlob` take neither. Only one
+ * takes a `"Keys"` dict, `String` takes a `"Hidden"` bool, `FilePath` takes neither. Only one
  * constructor is ever exercised per `Format` alias below; the others are simply unused for that alias.
  */
 template <CredentialPayloadFormat Format>
@@ -38,7 +38,7 @@ public:
     CredentialPayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
     // String
     CredentialPayloadDescriptorImpl(const StringPtr& description, Bool hidden);
-    // FilePath, BinaryBlob
+    // FilePath
     explicit CredentialPayloadDescriptorImpl(const StringPtr& description);
 
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
@@ -59,11 +59,9 @@ private:
 using KeyValuePayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::KeyValuePairs>;
 using StringPayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::String>;
 using FilePathPayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::FilePath>;
-using BinaryBlobPayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::BinaryBlob>;
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(KeyValuePayloadDescriptorImpl)
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(StringPayloadDescriptorImpl)
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(FilePathPayloadDescriptorImpl)
-OPENDAQ_REGISTER_DESERIALIZE_FACTORY(BinaryBlobPayloadDescriptorImpl)
 
 END_NAMESPACE_OPENDAQ

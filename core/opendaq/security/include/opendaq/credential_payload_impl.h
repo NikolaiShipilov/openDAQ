@@ -21,15 +21,14 @@
 #include <coretypes/dictobject.h>
 #include <coretypes/dictobject_factory.h>
 #include <coretypes/string_ptr.h>
-#include <coretypes/binarydata_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
  * @brief `ICredentialPayload` impl for all formats: the callback's result is cast to `SecretInterface`
  * (wrapped as `SecretPtr`, defaulting to its usual smart pointer) and returned directly by `getSecrets`.
- * Used for `KeyValuePairs` (`IDict` wrapped as `DictPtr<IString, IString>`), `String`/`FilePath`
- * (`IString`), and `BinaryBlob` (`IBinaryData`).
+ * Used for `KeyValuePairs` (`IDict` wrapped as `DictPtr<IString, IString>`) and `String`/`FilePath`
+ * (`IString`).
  */
 template <typename SecretInterface, typename SecretPtr = typename InterfaceToSmartPtr<SecretInterface>::SmartPtr>
 class CredentialPayloadImpl final : public ImplementationOf<ICredentialPayload>
@@ -45,6 +44,5 @@ private:
 
 using KeyValueCredentialPayloadImpl = CredentialPayloadImpl<IDict, DictPtr<IString, IString>>;
 using StringCredentialPayloadImpl = CredentialPayloadImpl<IString>;
-using BinaryBlobCredentialPayloadImpl = CredentialPayloadImpl<IBinaryData>;
 
 END_NAMESPACE_OPENDAQ

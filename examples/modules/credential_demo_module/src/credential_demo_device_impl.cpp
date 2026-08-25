@@ -82,12 +82,10 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
     auto userNamePasswordDescriptor = authentication::BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
     auto pinDescriptor = authentication::BuildPinDescriptor(/*hidePin*/ true);
     auto privateKeyDescriptor = authentication::BuildPrivateKeyFileDescriptor();
-    auto privateKeyBlobDescriptor = authentication::BuildPrivateKeyBlobDescriptor();
 
     auto userNamePasswordConfig = authentication::BuildAdditionalConfig(UserNamePasswordPayloadId);
     auto pinConfig = authentication::BuildAdditionalConfig(PinPayloadId);
     auto privateKeyConfig = authentication::BuildAdditionalConfig(PrivateKeyFilePayloadId);
-    auto privateKeyBlobConfig = authentication::BuildAdditionalConfig(PrivateKeyBlobPayloadId);
 
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
@@ -97,7 +95,6 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
         .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor, userNamePasswordConfig)
         .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor, pinConfig)
         .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor, privateKeyConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyBlobPayloadId, privateKeyBlobDescriptor, privateKeyBlobConfig)
         .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
 }

@@ -22,12 +22,10 @@ StreamingTypePtr CredentialDemoStreamingImpl::CreateType()
     auto userNamePasswordDescriptor = authentication::BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
     auto pinDescriptor = authentication::BuildPinDescriptor(/*hidePin*/ true);
     auto privateKeyDescriptor = authentication::BuildPrivateKeyFileDescriptor();
-    auto privateKeyBlobDescriptor = authentication::BuildPrivateKeyBlobDescriptor();
 
     auto userNamePasswordConfig = authentication::BuildAdditionalConfig(UserNamePasswordPayloadId);
     auto pinConfig = authentication::BuildAdditionalConfig(PinPayloadId);
     auto privateKeyConfig = authentication::BuildAdditionalConfig(PrivateKeyFilePayloadId);
-    auto privateKeyBlobConfig = authentication::BuildAdditionalConfig(PrivateKeyBlobPayloadId);
 
     auto defaultConfig = PropertyObject();
     defaultConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
@@ -44,7 +42,6 @@ StreamingTypePtr CredentialDemoStreamingImpl::CreateType()
         .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor, userNamePasswordConfig)
         .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor, pinConfig)
         .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor, privateKeyConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyBlobPayloadId, privateKeyBlobDescriptor, privateKeyBlobConfig)
         .setDefaultAuthenticationConfigId(PinPayloadId)
         .build();
 }

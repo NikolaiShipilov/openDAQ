@@ -45,20 +45,6 @@ void demoPrivateKeyFileAuthentication(const InstancePtr& instance, const DeviceT
     instance.removeDevice(device);
 }
 
-// PrivateKeyBlob authentication - the same private-key challenge, but via a BinaryBlob-format
-// credential payload instead of a FilePath one: fileCredentialProvider still prompts for the file's
-// path, but now reads the file itself and hands the module the raw key bytes directly, so the module
-// never touches the file (or even learns its path).
-void demoPrivateKeyBlobAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
-{
-    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
-    auto privateKeyBlobConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyBlobConfig);
-    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via a binary blob. Press \"enter\" to continue..." << std::endl;
-    std::cin.get();
-    instance.removeDevice(device);
-}
-
 // add without authentication
 void demoNoAuthentication(const InstancePtr& instance)
 {
@@ -162,7 +148,7 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
 // A single authentication config can carry settings for more than one connection at once: the device's
 // own (here its default, UserName/Password), plus one nested per streaming type for anything else
 // that's part of the same overall connection - here the demo streaming type, authenticated via a
-// different method (PrivateKeyBlob) than the device. The nested config is keyed internally by the
+// different method (PrivateKeyFile) than the device. The nested config is keyed internally by the
 // streaming type's own id - passing the type itself (rather than a bare id string) means only a real,
 // registered streaming type can ever be used as the key. The nested config is an ordinary
 // `AuthenticationConfig` in its own right - once pulled back out of the dictionary returned by
@@ -183,7 +169,7 @@ void demoDeviceAndStreamingAuthentication(const InstancePtr& instance, const Dev
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication." << std::endl;
 
     auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-    auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyBlob");
+    auto streamingAuthConfig = streamingType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
     device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
     std::cout << "Attached a streaming connection authenticated via the config nested inside the device's own. "
@@ -195,10 +181,8 @@ void demoDeviceAndStreamingAuthentication(const InstancePtr& instance, const Dev
 }
 
 // PIN authentication - an alternative, String-format credential payload. The device is authenticated via
-// PIN, then a streaming connection is attached manually with its own, separate PrivateKeyBlob credential
-// request - attaching a streaming connection is authenticated independently of however the device itself
-// got connected. Finally, the instance is saved and reloaded into a completely separate instance to show
-// that a previously authenticated device is re-authenticated (not silently reconnected) on load.
+// PIN. Finally, the instance is saved and reloaded into a completely separate instance to show that a
+// previously authenticated device is re-authenticated (not silently reconnected) on load.
 void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
     auto pinConfig = deviceType.getSupportedAuthenticationConfigs().get("Pin");
@@ -255,7 +239,6 @@ int main(int argc, const char* argv[])
     auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
 
     // demoPrivateKeyFileAuthentication(instance, deviceType);
-    // demoPrivateKeyBlobAuthentication(instance, deviceType);
     // demoNoAuthentication(instance);
     // demoUserNamePasswordAuthenticationNonVerbose(instance, deviceType);
     demoUserNamePasswordAuthenticationVerbose(instance, deviceType);

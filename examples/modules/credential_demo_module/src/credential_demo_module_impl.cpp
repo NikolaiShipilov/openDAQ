@@ -35,13 +35,6 @@ static CredentialPayloadPtr WrapProvidedSecret(const BaseObjectPtr& suppliedSecr
                 DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret is not a String/FilePath-format secret");
             return StringCredentialPayload(Function([secret]() { return secret; }));
         }
-        case CredentialPayloadFormat::BinaryBlob:
-        {
-            const auto secret = suppliedSecret.asPtrOrNull<IBinaryData, BinaryDataPtr>(true);
-            if (!secret.assigned())
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret is not a BinaryBlob-format secret");
-            return BinaryBlobCredentialPayload(Function([secret]() { return secret; }));
-        }
         default:
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Unsupported credential payload format");
     }
