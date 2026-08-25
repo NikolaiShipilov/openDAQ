@@ -305,17 +305,28 @@ public:
     }
 
     /*!
-     * @brief Creates and returns a streaming object using the specified connection string and config object.
+     * @brief Creates and returns a streaming object using the specified connection string and config object,
+     * optionally authenticating the connection by obtaining credentials - as specified by the given authentication
+     * configuration - from a compatible registered credential provider.
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case
+     * of a null value, the streaming is connected to without authentication.
+     * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
+     * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @param[out] streaming The created streaming object.
      */
-    ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) override
+    ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
+                                           IString* connectionString,
+                                           IPropertyObject* config = nullptr,
+                                           IAuthenticationConfig* authenticationConfig = nullptr,
+                                           IString* manufacturer = nullptr,
+                                           IString* serialNumber = nullptr) override
     {
         OPENDAQ_PARAM_NOT_NULL(streaming);
         OPENDAQ_PARAM_NOT_NULL(connectionString);
-        
+
         DictPtr<IString, IStreamingType> types;
         ErrCode errCode = wrapHandlerReturn(this, &Module::onGetAvailableStreamingTypes, types);
         OPENDAQ_RETURN_IF_FAILED_EXCEPT(errCode, OPENDAQ_ERR_NOTIMPLEMENTED);
@@ -335,7 +346,14 @@ public:
         }
 
         StreamingPtr createdStreaming;
-        errCode = wrapHandlerReturn(this, &Module::onCreateStreaming, createdStreaming, connectionString, mergeConfig(config, streamingType));
+        errCode = wrapHandlerReturn(this,
+                                    &Module::onCreateStreaming,
+                                    createdStreaming,
+                                    connectionString,
+                                    mergeConfig(config, streamingType),
+                                    authenticationConfig,
+                                    manufacturer,
+                                    serialNumber);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         *streaming = createdStreaming.detach();
@@ -470,7 +488,23 @@ public:
         return nullptr;
     }
 
-    virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
+    /*!
+     * @brief Creates and returns a streaming object using the specified connection string and config object,
+     * optionally authenticating the connection by obtaining credentials - as specified by the given authentication
+     * configuration - from a compatible registered credential provider.
+     * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
+     * @param config A config object that contains parameters used to configure a streaming connection.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case
+     * of a null value, the streaming is connected to without authentication.
+     * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
+     * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
+     * @returns The created streaming object.
+     */
+    virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString,
+                                           const PropertyObjectPtr& config,
+                                           const AuthenticationConfigPtr& authenticationConfig,
+                                           const StringPtr& manufacturer,
+                                           const StringPtr& serialNumber)
     {
         return nullptr;
     }

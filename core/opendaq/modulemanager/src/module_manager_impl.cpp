@@ -1198,13 +1198,19 @@ ErrCode ModuleManagerImpl::createFunctionBlock(IFunctionBlock** functionBlock, I
     );
 }
 
-ErrCode ModuleManagerImpl::createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config)
+ErrCode ModuleManagerImpl::createStreaming(IStreaming** streaming,
+                                           IString* connectionString,
+                                           IPropertyObject* config,
+                                           IAuthenticationConfig* authenticationConfig,
+                                           IString* manufacturer,
+                                           IString* serialNumber)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
     OPENDAQ_PARAM_NOT_NULL(streaming);
 
     StreamingPtr streamingPtr;
-    const ErrCode errCode = wrapHandlerReturn(this, &ModuleManagerImpl::onCreateStreaming, streamingPtr, connectionString, config);
+    const ErrCode errCode = wrapHandlerReturn(
+        this, &ModuleManagerImpl::onCreateStreaming, streamingPtr, connectionString, config, authenticationConfig, manufacturer, serialNumber);
     OPENDAQ_RETURN_IF_FAILED(errCode);
 
     *streaming = streamingPtr.detach();
@@ -1557,7 +1563,11 @@ PropertyObjectPtr ModuleManagerImpl::PopulateGeneralConfig(PropertyObjectPtr& ad
     return generalConfig;
 }
 
-StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) const
+StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionString,
+                                                  const PropertyObjectPtr& config,
+                                                  const AuthenticationConfigPtr& authenticationConfig,
+                                                  const StringPtr& manufacturer,
+                                                  const StringPtr& serialNumber) const
 {
     StreamingPtr streaming = nullptr;
     PropertyObjectPtr inputConfig;
@@ -1606,7 +1616,7 @@ StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionStr
 
         try
         {
-            streaming = module.createStreaming(connectionString, streamingTypeConfig);
+            streaming = module.createStreaming(connectionString, streamingTypeConfig, authenticationConfig, manufacturer, serialNumber);
         }
         catch ([[maybe_unused]] const std::exception& e)
         {

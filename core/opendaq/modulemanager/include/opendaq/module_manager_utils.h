@@ -114,14 +114,28 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
     virtual ErrCode INTERFACE_FUNC createFunctionBlock(IFunctionBlock** functionBlock, IString* id, IComponent* parent, IPropertyObject* config = nullptr, IString* localId = nullptr) = 0;
     
     /*!
-     * @brief Creates a streaming object using the specified connection string and config object.
+     * @brief Creates a streaming object using the specified connection string and config object, optionally
+     * authenticating the connection by obtaining credentials - as specified by the given authentication
+     * configuration - from a compatible registered credential provider.
      * @param[out] streaming The created streaming object.
      * @param connectionString Describes the connection parameters of the streaming.
      * @param config A configuration object that contains parameters used to configure a streaming connection in the form of key-value pairs.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case of
+     * a null value, the streaming is connected to without authentication.
+     * @param manufacturer The manufacturer of the device the streaming connection belongs to.
+     * @param serialNumber The serial number of the device the streaming connection belongs to.
      *
-     * Iterates through all loaded modules and creates a streaming connection with the first module that accepts the provided connection string.
+     * Iterates through all loaded modules and creates a streaming connection with the first module that accepts the
+     * provided connection string. Unlike `createAuthenticatedDevice`, there is no smart-string/discovery resolution
+     * here - streaming connection strings are always concrete, protocol-specific strings, not `daq://` smart ones -
+     * so `manufacturer`/`serialNumber` are simply forwarded as given, defaulting to a null value when not known.
      */
-    virtual ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) = 0;
+    virtual ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
+                                                   IString* connectionString,
+                                                   IPropertyObject* config = nullptr,
+                                                   IAuthenticationConfig* authenticationConfig = nullptr,
+                                                   IString* manufacturer = nullptr,
+                                                   IString* serialNumber = nullptr) = 0;
     // [templateType(streamingTypes, IString, IStreamingType)]
     virtual ErrCode INTERFACE_FUNC getAvailableStreamingTypes(IDict** streamingTypes) = 0;
 

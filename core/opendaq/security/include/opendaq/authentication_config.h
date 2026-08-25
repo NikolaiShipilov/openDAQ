@@ -59,6 +59,35 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IBaseObject)
      * @param[out] config The configuration property object.
      */
     virtual ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) = 0;
+
+    /*!
+     * @brief Gets the id of the credential provider to request credentials from.
+     * @param[out] providerId The credential provider id, or `nullptr` if none was explicitly selected - in
+     * which case the module auto-selects a registered provider supporting the payload descriptor's format,
+     * same as when this is left unset.
+     */
+    virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
+
+    /*!
+     * @brief Gets the secret supplied directly by the caller, to be used instead of a credential provider
+     * obtaining it (e.g. by prompting the user).
+     * @param[out] suppliedSecret The supplied secret, in the format described by `getCredentialPayloadDescriptor`
+     * (see `ICredentialPayload::getSecrets` for the expected concrete type per format), or `nullptr` (the
+     * default) if none was supplied - in which case the module obtains the secret from a credential
+     * provider as usual.
+     */
+    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IBaseObject** suppliedSecret) = 0;
+
+    /*!
+     * @brief Gets the authentication configs nested under this one, accumulated via
+     * `IAuthenticationConfigBuilder::addStreamingAuthenticationConfig` - so a single authentication config,
+     * formed for connecting to a device, can also carry the settings needed to authenticate a streaming
+     * source attached to that device. Each is an ordinary authentication config in its own right, keyed by
+     * the streaming type's own id.
+     * @param[out] streamingAuthenticationConfigs The streaming type id -> authentication config dictionary.
+     */
+    // [templateType(streamingAuthenticationConfigs, IString, IAuthenticationConfig)]
+    virtual ErrCode INTERFACE_FUNC getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs) = 0;
 };
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(

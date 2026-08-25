@@ -5,11 +5,15 @@ set(SRC_Include common.h
                 module_dll.h
                 credential_demo_module_impl.h
                 credential_demo_device_impl.h
+                credential_demo_streaming_impl.h
+                credential_demo_authenticator.h
 )
 
 set(SRC_Srcs module_dll.cpp
              credential_demo_module_impl.cpp
              credential_demo_device_impl.cpp
+             credential_demo_streaming_impl.cpp
+             credential_demo_authenticator.cpp
 )
 
 opendaq_prepend_include(${TARGET_FOLDER_NAME} SRC_Include)
@@ -17,10 +21,14 @@ opendaq_prepend_include(${TARGET_FOLDER_NAME} SRC_Include)
 source_group("module" FILES ${MODULE_HEADERS_DIR}/common.h
                             ${MODULE_HEADERS_DIR}/credential_demo_module_impl.h
                             ${MODULE_HEADERS_DIR}/credential_demo_device_impl.h
+                            ${MODULE_HEADERS_DIR}/credential_demo_streaming_impl.h
+                            ${MODULE_HEADERS_DIR}/credential_demo_authenticator.h
                             ${MODULE_HEADERS_DIR}/module_dll.h
                             module_dll.cpp
                             credential_demo_module_impl.cpp
                             credential_demo_device_impl.cpp
+                            credential_demo_streaming_impl.cpp
+                            credential_demo_authenticator.cpp
 )
 
 add_library(${LIB_NAME} SHARED ${SRC_Include}

@@ -169,7 +169,10 @@ public:
 
     ErrCode INTERFACE_FUNC getTicksSinceOrigin(uint64_t* ticks) override;
 
-    ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) override;
+    ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming,
+                                        IString* connectionString,
+                                        IPropertyObject* config = nullptr,
+                                        IAuthenticationConfig* authenticationConfig = nullptr) override;
 
     // ISerializable
     ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
@@ -239,7 +242,9 @@ protected:
 
     void setDeviceDomainNoCoreEvent(const DeviceDomainPtr& domain);
 
-    virtual StreamingPtr onAddStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config);
+    virtual StreamingPtr onAddStreaming(const StringPtr& connectionString,
+                                        const PropertyObjectPtr& config,
+                                        const AuthenticationConfigPtr& authenticationConfig);
     virtual ServerPtr onAddServer(const StringPtr& typeId, const PropertyObjectPtr& config);
     virtual void onRemoveServer(const ServerPtr& server);
 
@@ -1444,7 +1449,10 @@ DevicePtr GenericDevice<TInterface, Interfaces...>::onAddAuthenticatedDevice(con
 }
 
 template <typename TInterface, typename... Interfaces>
-ErrCode GenericDevice<TInterface, Interfaces...>::addStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config)
+ErrCode GenericDevice<TInterface, Interfaces...>::addStreaming(IStreaming** streaming,
+                                                                IString* connectionString,
+                                                                IPropertyObject* config,
+                                                                IAuthenticationConfig* authenticationConfig)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
     OPENDAQ_PARAM_NOT_NULL(streaming);
@@ -1453,7 +1461,7 @@ ErrCode GenericDevice<TInterface, Interfaces...>::addStreaming(IStreaming** stre
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_COMPONENT_REMOVED);
 
     StreamingPtr streamingPtr;
-    const ErrCode errCode = wrapHandlerReturn(this, &Self::onAddStreaming, streamingPtr, connectionString, config);
+    const ErrCode errCode = wrapHandlerReturn(this, &Self::onAddStreaming, streamingPtr, connectionString, config, authenticationConfig);
     OPENDAQ_RETURN_IF_FAILED(errCode);
 
     *streaming = streamingPtr.detach();
@@ -1461,7 +1469,9 @@ ErrCode GenericDevice<TInterface, Interfaces...>::addStreaming(IStreaming** stre
 }
 
 template <typename TInterface, typename... Interfaces>
-StreamingPtr GenericDevice<TInterface, Interfaces...>::onAddStreaming(const StringPtr& /*connectionString*/, const PropertyObjectPtr& /*config*/)
+StreamingPtr GenericDevice<TInterface, Interfaces...>::onAddStreaming(const StringPtr& /*connectionString*/,
+                                                                      const PropertyObjectPtr& /*config*/,
+                                                                      const AuthenticationConfigPtr& /*authenticationConfig*/)
 {
     DAQ_THROW_EXCEPTION(NotImplementedException);
 }

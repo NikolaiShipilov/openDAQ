@@ -77,6 +77,16 @@ ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* reque
     }
 }
 
+ErrCode FileCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IBaseObject* secret)
+{
+    OPENDAQ_PARAM_NOT_NULL(request);
+    OPENDAQ_PARAM_NOT_NULL(secret);
+
+    // This provider never caches secrets obtained interactively either, so supplying one in advance has
+    // nothing to do here - the caller already wraps it into a credential payload itself.
+    return OPENDAQ_SUCCESS;
+}
+
 StringPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescriptorPtr& descriptor)
 {
     const StringPtr description = descriptor.getDescription();

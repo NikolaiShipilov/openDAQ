@@ -76,7 +76,10 @@ public:
     ErrCode INTERFACE_FUNC saveConfiguration(IString** configuration) override;
     ErrCode INTERFACE_FUNC loadConfiguration(IString* configuration, IUpdateParameters* config = nullptr) override;
 
-    ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) override;
+    ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming,
+                                        IString* connectionString,
+                                        IPropertyObject* config = nullptr,
+                                        IAuthenticationConfig* authenticationConfig = nullptr) override;
 
     ErrCode INTERFACE_FUNC getSyncComponent(ISyncComponent** syncComponent) override;
 

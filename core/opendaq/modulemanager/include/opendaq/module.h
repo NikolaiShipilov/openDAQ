@@ -132,13 +132,24 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
 
 
     /*!
-     * @brief Creates and returns a streaming object using the specified connection string and config object.
+     * @brief Creates and returns a streaming object using the specified connection string and config object,
+     * optionally authenticating the connection by obtaining credentials - as specified by the given authentication
+     * configuration - from a compatible registered credential provider.
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case
+     * of a null value, the streaming is connected to without authentication.
+     * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
+     * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @param[out] streaming The created streaming object.
      */
-    virtual ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) = 0;
+    virtual ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
+                                                   IString* connectionString,
+                                                   IPropertyObject* config = nullptr,
+                                                   IAuthenticationConfig* authenticationConfig = nullptr,
+                                                   IString* manufacturer = nullptr,
+                                                   IString* serialNumber = nullptr) = 0;
 
     virtual ErrCode INTERFACE_FUNC completeServerCapability(Bool* succeeded, IServerCapability* source, IServerCapabilityConfig* target) = 0;
 

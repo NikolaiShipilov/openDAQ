@@ -18,6 +18,7 @@
 #include <opendaq/authentication_config.h>
 #include <opendaq/authentication_config_private.h>
 #include <coretypes/impl.h>
+#include <coretypes/dictobject_factory.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 #include <opendaq/credential_request_ptr.h>
 
@@ -26,12 +27,20 @@ BEGIN_NAMESPACE_OPENDAQ
 class AuthenticationConfigImpl : public ImplementationOf<IAuthenticationConfig, IAuthenticationConfigPrivate>
 {
 public:
-    AuthenticationConfigImpl(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor, const PropertyObjectPtr& config = nullptr);
+    AuthenticationConfigImpl(const StringPtr& payloadId,
+                             const CredentialPayloadDescriptorPtr& payloadDescriptor,
+                             const PropertyObjectPtr& config = nullptr,
+                             const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs = nullptr,
+                             const StringPtr& credentialProviderId = nullptr,
+                             const BaseObjectPtr& suppliedSecret = nullptr);
     explicit AuthenticationConfigImpl(const CredentialRequestPtr& credentialRequest);
 
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
     ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) override;
+    ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
+    ErrCode INTERFACE_FUNC getSuppliedSecret(IBaseObject** suppliedSecret) override;
+    ErrCode INTERFACE_FUNC getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs) override;
 
     // IAuthenticationConfigPrivate
     ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) override;
@@ -41,6 +50,9 @@ private:
     CredentialPayloadDescriptorPtr payloadDescriptor;
     PropertyObjectPtr config;
     CredentialRequestPtr credentialRequest;
+    DictPtr<IString, IAuthenticationConfig> streamingAuthenticationConfigs;
+    StringPtr credentialProviderId;
+    BaseObjectPtr suppliedSecret;
 };
 
 END_NAMESPACE_OPENDAQ

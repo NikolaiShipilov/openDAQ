@@ -46,6 +46,19 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
      */
     virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials) = 0;
 
+    /*!
+     * @brief Accepts a secret already known in advance - e.g. supplied directly via
+     * `IAuthenticationConfig::getSuppliedSecret` - so an implementation that would otherwise cache a value
+     * it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format
+     * secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive
+     * `requestCredentials` call for the same context then reuses it instead of prompting again. Does not
+     * itself produce a credential payload - the caller already has the secret and wraps it directly.
+     * @param request The credential request the secret is being supplied for.
+     * @param secret The secret, in the format described by the request's payload descriptor (see
+     * `ICredentialPayload::getSecrets` for the expected concrete type per format).
+     */
+    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IBaseObject* secret) = 0;
+
     // [elementType(formats, IInteger)]
     /*!
      * @brief Gets a list of the credential payload formats this provider can provide. Used for

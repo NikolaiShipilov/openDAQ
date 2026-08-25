@@ -129,7 +129,10 @@ ErrCode MockFunctionBlockModuleImpl::createServer(IServer** server,
 
 ErrCode MockFunctionBlockModuleImpl::createStreaming(IStreaming** /*streaming*/,
                                                      IString* /*connectionString*/,
-                                                     IPropertyObject* /*config*/)
+                                                     IPropertyObject* /*config*/,
+                                                     IAuthenticationConfig* /*authenticationConfig*/,
+                                                     IString* /*manufacturer*/,
+                                                     IString* /*serialNumber*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }

@@ -64,15 +64,23 @@ protected:
 
     void removed() override;
 
-    StreamingPtr onAddStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) override;
+    StreamingPtr onAddStreaming(const StringPtr& connectionString,
+                                const PropertyObjectPtr& config,
+                                const AuthenticationConfigPtr& authenticationConfig) override;
 
     virtual bool isAddedToLocalComponentTree();
     virtual StringPtr onGetRemoteId() const = 0;
 
+    void setAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig);
+
 private:
+    void checkDuplicateStreamingSource(const StringPtr& connectionString) const;
+    StreamingPtr registerStreamingSource(const StreamingPtr& streamingPtr);
+
     std::vector<StreamingPtr> streamingSources;
     StreamingSourceManagerPtr streamingSourceManager;
     DeviceTypePtr mirroredDeviceType;
+    AuthenticationConfigPtr authenticationConfig;
 };
 
 template <typename... Interfaces>
@@ -289,17 +297,38 @@ ErrCode MirroredDeviceBase<Interfaces...>::setComponentConfig(IPropertyObject* c
         bool automaticallyConnectStreamings = generalConfig.getPropertyValue("AutomaticallyConnectStreaming");
         if (automaticallyConnectStreamings &&
             !(generalConfig.getPropertyValue("StreamingConnectionHeuristic") == 2)) // is not "NotConnected"
-            streamingSourceManager = std::make_shared<StreamingSourceManager>(this->context, deviceSelf, this->componentConfig);
+            streamingSourceManager =
+                std::make_shared<StreamingSourceManager>(this->context, deviceSelf, this->componentConfig, this->authenticationConfig);
     }
 
     return errCode;
 }
 
 template <typename... Interfaces>
-StreamingPtr MirroredDeviceBase<Interfaces...>::onAddStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
+void MirroredDeviceBase<Interfaces...>::setAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig)
+{
+    this->authenticationConfig = authenticationConfig;
+}
+
+template <typename... Interfaces>
+StreamingPtr MirroredDeviceBase<Interfaces...>::onAddStreaming(const StringPtr& connectionString,
+                                                                const PropertyObjectPtr& config,
+                                                                const AuthenticationConfigPtr& authenticationConfig)
 {
     auto lock = this->getRecursiveConfigLock2();
+    checkDuplicateStreamingSource(connectionString);
 
+    const auto deviceInfo = this->deviceInfo;
+    const StringPtr manufacturer = deviceInfo.assigned() ? deviceInfo.getManufacturer() : nullptr;
+    const StringPtr serialNumber = deviceInfo.assigned() ? deviceInfo.getSerialNumber() : nullptr;
+
+    const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
+    return registerStreamingSource(managerUtils.createStreaming(connectionString, config, authenticationConfig, manufacturer, serialNumber));
+}
+
+template <typename... Interfaces>
+void MirroredDeviceBase<Interfaces...>::checkDuplicateStreamingSource(const StringPtr& connectionString) const
+{
     auto it = std::find_if(streamingSources.begin(),
                            streamingSources.end(),
                            [&connectionString](const StreamingPtr& item)
@@ -315,9 +344,11 @@ StreamingPtr MirroredDeviceBase<Interfaces...>::onAddStreaming(const StringPtr& 
                             connectionString
         );
     }
+}
 
-    const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
-    auto streamingPtr = managerUtils.createStreaming(connectionString, config);
+template <typename... Interfaces>
+StreamingPtr MirroredDeviceBase<Interfaces...>::registerStreamingSource(const StreamingPtr& streamingPtr)
+{
     streamingSources.push_back(streamingPtr);
 
     this->connectionStatusContainer.addStreamingConnectionStatus(streamingPtr.getConnectionString(),

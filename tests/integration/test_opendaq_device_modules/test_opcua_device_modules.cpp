@@ -1689,7 +1689,7 @@ public:
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }
-    daq::ErrCode INTERFACE_FUNC createStreaming(daq::IStreaming**, daq::IString*, daq::IPropertyObject*) override
+    daq::ErrCode INTERFACE_FUNC createStreaming(daq::IStreaming**, daq::IString*, daq::IPropertyObject*, daq::IAuthenticationConfig*, daq::IString*, daq::IString*) override
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }
