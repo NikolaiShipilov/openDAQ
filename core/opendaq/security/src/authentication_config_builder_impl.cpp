@@ -101,8 +101,7 @@ ErrCode AuthenticationConfigBuilderImpl::addStreamingAuthenticationConfig(IStrea
     OPENDAQ_PARAM_NOT_NULL(streamingAuthenticationConfig);
 
     const StringPtr typeId = StreamingTypePtr::Borrow(streamingType).getId();
-    streamingAuthenticationConfigs.set(typeId, streamingAuthenticationConfig);
-    return OPENDAQ_SUCCESS;
+    return streamingAuthenticationConfigs->set(typeId, streamingAuthenticationConfig);
 }
 
 ErrCode AuthenticationConfigBuilderImpl::getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs)

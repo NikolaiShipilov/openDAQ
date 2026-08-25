@@ -190,6 +190,7 @@ run_rtgen opendaq opendaq/component       opendaq opendaq/generated/component   
 run_rtgen opendaq opendaq/utility         opendaq opendaq/generated/utility          device_update_options
 run_rtgen opendaq opendaq/security        opendaq opendaq/generated/security         credential_payload_descriptor
 run_rtgen opendaq opendaq/security        opendaq opendaq/generated/security         authentication_config
+run_rtgen opendaq opendaq/security        opendaq opendaq/generated/security         authentication_config_builder
 run_rtgen opendaq opendaq/security        opendaq opendaq/generated/security         credential_provider
 run_rtgen opendaq opendaq/security        opendaq opendaq/generated/security         credential_request
 run_rtgen opendaq opendaq/security        opendaq opendaq/generated/security         credential_request_builder

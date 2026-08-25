@@ -71,4 +71,30 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         },
         py::return_value_policy::take_ownership,
         "Gets additional configuration specific to selected authentication method.");
+    cls.def_property_readonly("credential_provider_id",
+        [](daq::IAuthenticationConfig *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            return objectPtr.getCredentialProviderId().toStdString();
+        },
+        "Gets the id of the credential provider to request credentials from.");
+    cls.def_property_readonly("supplied_secret",
+        [](daq::IAuthenticationConfig *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            return baseObjectToPyObject(objectPtr.getSuppliedSecret());
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the secret supplied directly by the caller, to be used instead of a credential provider obtaining it (e.g. by prompting the user).");
+    cls.def_property_readonly("streaming_authentication_configs",
+        [](daq::IAuthenticationConfig *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            return objectPtr.getStreamingAuthenticationConfigs().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the authentication configs nested under this one, accumulated via `IAuthenticationConfigBuilder::addStreamingAuthenticationConfig` - so a single authentication config, formed for connecting to a device, can also carry the settings needed to authenticate a streaming source attached to that device. Each is an ordinary authentication config in its own right, keyed by the streaming type's own id.");
 }

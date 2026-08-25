@@ -193,6 +193,15 @@ void defineIDevice(pybind11::module_ m, PyDaqIntf<daq::IDevice, daq::IFolder> cl
         },
         py::arg("connection_string"), py::arg("config") = nullptr,
         "Connects to a device at the given connection string and returns it.");
+    cls.def("add_authenticated_device",
+        [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config, daq::IAuthenticationConfig* authenticationConfig)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::DevicePtr::Borrow(object);
+            return objectPtr.addAuthenticatedDevice(getVariantValue<daq::IString*>(connectionString), config, authenticationConfig).detach();
+        },
+        py::arg("connection_string"), py::arg("config") = nullptr, py::arg("authentication_config") = nullptr,
+        "Connects to a device at the given connection string using the provided authentication configuration and returns the added device.");
     cls.def("remove_device",
         [](daq::IDevice *object, daq::IDevice* device)
         {
@@ -273,13 +282,13 @@ void defineIDevice(pybind11::module_ m, PyDaqIntf<daq::IDevice, daq::IFolder> cl
         },
         "Gets the number of ticks passed since the device's absolute origin.");
     cls.def("add_streaming",
-        [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config)
+        [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config, daq::IAuthenticationConfig* authenticationConfig)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::DevicePtr::Borrow(object);
-            return objectPtr.addStreaming(getVariantValue<daq::IString*>(connectionString), config).detach();
+            return objectPtr.addStreaming(getVariantValue<daq::IString*>(connectionString), config, authenticationConfig).detach();
         },
-        py::arg("connection_string"), py::arg("config") = nullptr,
+        py::arg("connection_string"), py::arg("config") = nullptr, py::arg("authentication_config") = nullptr,
         "Connects to a streaming at the given connection string, adds it as a streaming source of device and returns created streaming object.");
     cls.def("create_default_add_device_config",
         [](daq::IDevice *object)
