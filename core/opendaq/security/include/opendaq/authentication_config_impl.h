@@ -16,6 +16,7 @@
 
 #pragma once
 #include <opendaq/authentication_config.h>
+#include <opendaq/authentication_config_mirrored.h>
 #include <opendaq/authentication_config_private.h>
 #include <coretypes/impl.h>
 #include <coretypes/dictobject_factory.h>
@@ -24,12 +25,11 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-class AuthenticationConfigImpl : public ImplementationOf<IAuthenticationConfig, IAuthenticationConfigPrivate>
+class AuthenticationConfigImpl : public ImplementationOf<IAuthenticationConfigMirrored, IAuthenticationConfigPrivate>
 {
 public:
     AuthenticationConfigImpl(const StringPtr& payloadId,
                              const CredentialPayloadDescriptorPtr& payloadDescriptor,
-                             const PropertyObjectPtr& config = nullptr,
                              const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs = nullptr,
                              const StringPtr& credentialProviderId = nullptr,
                              const PropertyObjectPtr& suppliedSecret = nullptr);
@@ -37,9 +37,10 @@ public:
 
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
-    ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) override;
     ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
     ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** suppliedSecret) override;
+
+    // IAuthenticationConfigMirrored
     ErrCode INTERFACE_FUNC getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs) override;
 
     // IAuthenticationConfigPrivate
@@ -48,7 +49,6 @@ public:
 private:
     StringPtr payloadId;
     CredentialPayloadDescriptorPtr payloadDescriptor;
-    PropertyObjectPtr config;
     CredentialRequestPtr credentialRequest;
     DictPtr<IString, IAuthenticationConfig> streamingAuthenticationConfigs;
     StringPtr credentialProviderId;

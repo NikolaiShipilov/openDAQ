@@ -32,19 +32,12 @@ namespace authentication
 {
     /*
      * Descriptors for the three showcased auth methods - shared between the device's and the streaming
-     * type's supported authentication configs.
+     * type's supported authentication configs. UserName/Password's "Password" and PIN's single secret are
+     * always hidden as typed - there is no caller-facing way to change that.
      */
-    CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor(bool hidePassword);
-    CredentialPayloadDescriptorPtr BuildPinDescriptor(bool hidePin);
+    CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor();
+    CredentialPayloadDescriptorPtr BuildPinDescriptor();
     CredentialPayloadDescriptorPtr BuildPrivateKeyFileDescriptor();
-
-    /*
-     * Builds the "additional config" property object for one of the three payload ids - a
-     * "VerboseCredentialRequest" bool every method gets, plus a "HidePasswordInput"/"HidePinInput" bool
-     * for the two methods that have something to hide on input. Shared between the device's and the
-     * streaming type's supported authentication configs.
-     */
-    PropertyObjectPtr BuildAdditionalConfig(const StringPtr& payloadId);
 
     /*
      * Verifies credentials for one of the three showcased auth methods (UserName/Password, PIN,
@@ -63,8 +56,6 @@ namespace authentication
                                                  const StringPtr& connectionString,
                                                  const StringPtr& manufacturer,
                                                  const StringPtr& serialNumber,
-                                                 const PropertyObjectPtr& additionalConfig,
-                                                 bool verbose,
                                                  const ComponentTypePtr& componentType);
 }
 

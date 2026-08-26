@@ -17,6 +17,7 @@
 #pragma once
 
 #include <opendaq/mirrored_device_config_ptr.h>
+#include <opendaq/authentication_config_mirrored_ptr.h>
 #include <map>
 #include <unordered_set>
 #include <opendaq/ids_parser.h>
@@ -485,8 +486,9 @@ inline void StreamingSourceManager::attachStreamingsToDevice(const MirroredDevic
     // was authenticated, a streaming capability with no matching entry here is never auto-attached - only
     // explicitly authorized streaming types are. If the device was not authenticated at all (plain
     // `addDevice`), streaming capabilities are auto-attached as before, without authentication.
+    const auto authenticationConfigMirrored = authenticationConfig.assigned() ? authenticationConfig.asPtrOrNull<IAuthenticationConfigMirrored>() : nullptr;
     const DictPtr<IString, IAuthenticationConfig> streamingAuthenticationConfigs =
-        authenticationConfig.assigned() ? authenticationConfig.getStreamingAuthenticationConfigs() : nullptr;
+        authenticationConfigMirrored.assigned() ? authenticationConfigMirrored.getStreamingAuthenticationConfigs() : nullptr;
 
     // Build a map of discovered addresses by protocol ID for quick lookup
     std::unordered_map<std::string, ListPtr<IAddressInfo>> discoveredAddressesByProtocol;

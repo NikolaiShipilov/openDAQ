@@ -1,7 +1,6 @@
 #include <credential_demo_module/credential_demo_streaming_impl.h>
 
 #include <opendaq/streaming_type_factory.h>
-#include <coreobjects/property_factory.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
@@ -19,18 +18,9 @@ CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connec
 
 StreamingTypePtr CredentialDemoStreamingImpl::CreateType()
 {
-    auto userNamePasswordDescriptor = authentication::BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
-    auto pinDescriptor = authentication::BuildPinDescriptor(/*hidePin*/ true);
+    auto userNamePasswordDescriptor = authentication::BuildUserNamePasswordDescriptor();
+    auto pinDescriptor = authentication::BuildPinDescriptor();
     auto privateKeyDescriptor = authentication::BuildPrivateKeyFileDescriptor();
-
-    auto userNamePasswordConfig = authentication::BuildAdditionalConfig(UserNamePasswordPayloadId);
-    auto pinConfig = authentication::BuildAdditionalConfig(PinPayloadId);
-    auto privateKeyConfig = authentication::BuildAdditionalConfig(PrivateKeyFilePayloadId);
-
-    auto defaultConfig = PropertyObject();
-    defaultConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
-    defaultConfig.addProperty(BoolProperty("HidePasswordInput", True));
-    defaultConfig.addProperty(BoolProperty("HidePinInput", True));
 
     return StreamingTypeBuilder()
         .setId(CredentialDemoStreamingTypeId)
@@ -38,10 +28,9 @@ StreamingTypePtr CredentialDemoStreamingImpl::CreateType()
         .setDescription("Dummy streaming connection, authenticated via the same credential framework and "
                          "auth methods as the device")
         .setConnectionStringPrefix(CredentialDemoStreamingPrefix)
-        .setDefaultConfig(defaultConfig)
-        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor, userNamePasswordConfig)
-        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor, pinConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor, privateKeyConfig)
+        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor)
+        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor)
+        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor)
         .setDefaultAuthenticationConfigId(PinPayloadId)
         .build();
 }

@@ -33,13 +33,13 @@ BEGIN_NAMESPACE_OPENDAQ
 /*!
  * @brief Builds `IAuthenticationConfig` objects.
  *
- * Besides the payload id/descriptor/config that make up a plain authentication config, a builder can also
+ * Besides the payload id/descriptor that make up a plain authentication config, a builder can also
  * accumulate authentication configs nested under a streaming type - so a single authentication config,
  * formed for connecting to a device, can also carry the settings needed to authenticate a streaming source
- * attached to that device. Each nested config, once retrieved via
- * `IAuthenticationConfig::getStreamingAuthenticationConfigs`, is an ordinary authentication config in its
- * own right, usable anywhere a standalone one would be (e.g. passed directly to a manual `addStreaming`
- * call).
+ * attached to that device. The built object always also implements `IAuthenticationConfigMirrored`, so the
+ * nested configs accumulated here can be read back via `IAuthenticationConfigMirrored::getStreamingAuthenticationConfigs`.
+ * Each nested config, once retrieved, is an ordinary authentication config in its own right, usable
+ * anywhere a standalone one would be (e.g. passed directly to a manual `addStreaming` call).
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfigBuilder, IBaseObject)
 {
@@ -74,19 +74,6 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfigBuilder, IBaseObject)
      * @param[out] descriptor The payload descriptor.
      */
     virtual ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
-
-    /*!
-     * @brief Sets additional configuration specific to the selected authentication method.
-     * @param config The configuration property object.
-     */
-    // [returnSelf]
-    virtual ErrCode INTERFACE_FUNC setConfig(IPropertyObject* config) = 0;
-
-    /*!
-     * @brief Gets additional configuration specific to the selected authentication method.
-     * @param[out] config The configuration property object.
-     */
-    virtual ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) = 0;
 
     /*!
      * @brief Sets the id of the credential provider to request credentials from.

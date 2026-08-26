@@ -5,8 +5,7 @@
 BEGIN_NAMESPACE_OPENDAQ
 
 AuthenticationConfigBuilderImpl::AuthenticationConfigBuilderImpl()
-    : config(PropertyObject())
-    , streamingAuthenticationConfigs(Dict<IString, IAuthenticationConfig>())
+    : streamingAuthenticationConfigs(Dict<IString, IAuthenticationConfig>())
 {
 }
 
@@ -19,7 +18,7 @@ ErrCode AuthenticationConfigBuilderImpl::build(IAuthenticationConfig** authentic
         {
             *authenticationConfig =
                 createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>(
-                    payloadId, payloadDescriptor, config, streamingAuthenticationConfigs, credentialProviderId, suppliedSecret)
+                    payloadId, payloadDescriptor, streamingAuthenticationConfigs, credentialProviderId, suppliedSecret)
                     .detach();
             return OPENDAQ_SUCCESS;
         });
@@ -50,20 +49,6 @@ ErrCode AuthenticationConfigBuilderImpl::getPayloadDescriptor(ICredentialPayload
     OPENDAQ_PARAM_NOT_NULL(descriptor);
 
     *descriptor = this->payloadDescriptor.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode AuthenticationConfigBuilderImpl::setConfig(IPropertyObject* config)
-{
-    this->config = config;
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode AuthenticationConfigBuilderImpl::getConfig(IPropertyObject** config)
-{
-    OPENDAQ_PARAM_NOT_NULL(config);
-
-    *config = this->config.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

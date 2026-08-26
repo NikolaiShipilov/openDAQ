@@ -26,14 +26,10 @@ BEGIN_NAMESPACE_OPENDAQ
  * @brief Creates an `AuthenticationConfig` describing the credential payload expected by an authentication method.
  * @param payloadId The id of the payload the authentication method requires.
  * @param payloadDescriptor The descriptor of the payload the authentication method uses.
- * @param config Additional configuration defined by the component type alongside the specific authentication method and payload.
- * In case of a null value, an empty configuration is used.
  */
-inline AuthenticationConfigPtr AuthenticationConfig(const StringPtr& payloadId,
-                                                    const CredentialPayloadDescriptorPtr& payloadDescriptor,
-                                                    const PropertyObjectPtr& config = nullptr)
+inline AuthenticationConfigPtr AuthenticationConfig(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor)
 {
-    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadId, payloadDescriptor, config));
+    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadId, payloadDescriptor));
     return obj;
 }
 

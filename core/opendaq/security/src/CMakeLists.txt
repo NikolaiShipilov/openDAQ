@@ -5,6 +5,7 @@ function(rtgen_component_${BASE_NAME})
     rtgen(SRC_CredentialRequest credential_request.h)
     rtgen(SRC_CredentialRequestBuilder credential_request_builder.h)
     rtgen(SRC_AuthenticationConfig authentication_config.h)
+    rtgen(SRC_AuthenticationConfigMirrored authentication_config_mirrored.h)
     rtgen(SRC_AuthenticationConfigPrivate authentication_config_private.h)
     rtgen(SRC_AuthenticationConfigBuilder authentication_config_builder.h)
     rtgen(SRC_CredentialPayloadDescriptor credential_payload_descriptor.h)
@@ -14,6 +15,7 @@ function(rtgen_component_${BASE_NAME})
         ${SRC_CredentialRequest_PublicHeaders}
         ${SRC_CredentialRequestBuilder_PublicHeaders}
         ${SRC_AuthenticationConfig_PublicHeaders}
+        ${SRC_AuthenticationConfigMirrored_PublicHeaders}
         ${SRC_AuthenticationConfigPrivate_PublicHeaders}
         ${SRC_AuthenticationConfigBuilder_PublicHeaders}
         ${SRC_CredentialPayloadDescriptor_PublicHeaders}
@@ -25,6 +27,7 @@ function(rtgen_component_${BASE_NAME})
         ${SRC_CredentialRequest_PrivateHeaders}
         ${SRC_CredentialRequestBuilder_PrivateHeaders}
         ${SRC_AuthenticationConfig_PrivateHeaders}
+        ${SRC_AuthenticationConfigMirrored_PrivateHeaders}
         ${SRC_AuthenticationConfigPrivate_PrivateHeaders}
         ${SRC_AuthenticationConfigBuilder_PrivateHeaders}
         ${SRC_CredentialPayloadDescriptor_PrivateHeaders}
@@ -36,6 +39,7 @@ function(rtgen_component_${BASE_NAME})
         ${SRC_CredentialRequest_Cpp}
         ${SRC_CredentialRequestBuilder_Cpp}
         ${SRC_AuthenticationConfig_Cpp}
+        ${SRC_AuthenticationConfigMirrored_Cpp}
         ${SRC_AuthenticationConfigPrivate_Cpp}
         ${SRC_AuthenticationConfigBuilder_Cpp}
         ${SRC_CredentialPayloadDescriptor_Cpp}
@@ -58,6 +62,7 @@ function(create_component_source_groups_${BASE_NAME})
         ${SDK_HEADERS_DIR}/cmd_line_credential_provider_impl.h
         ${SDK_HEADERS_DIR}/file_credential_provider_impl.h
         ${SDK_HEADERS_DIR}/authentication_config.h
+        ${SDK_HEADERS_DIR}/authentication_config_mirrored.h
         ${SDK_HEADERS_DIR}/authentication_config_factory.h
         ${SDK_HEADERS_DIR}/authentication_config_impl.h
         ${SDK_HEADERS_DIR}/authentication_config_private.h
@@ -83,6 +88,7 @@ set(SRC_PublicHeaders_Component
     credential_request_builder.h
     credential_request_factory.h
     authentication_config.h
+    authentication_config_mirrored.h
     authentication_config_factory.h
     authentication_config_private.h
     authentication_config_builder.h

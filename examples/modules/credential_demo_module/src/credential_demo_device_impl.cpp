@@ -8,7 +8,6 @@
 #include <opendaq/server_capability_config.h>
 #include <opendaq/device_info_internal.h>
 #include <opendaq/streaming_ptr.h>
-#include <coreobjects/property_factory.h>
 #include <fmt/format.h>
 #include <string_view>
 
@@ -79,22 +78,18 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
-    auto userNamePasswordDescriptor = authentication::BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
-    auto pinDescriptor = authentication::BuildPinDescriptor(/*hidePin*/ true);
+    auto userNamePasswordDescriptor = authentication::BuildUserNamePasswordDescriptor();
+    auto pinDescriptor = authentication::BuildPinDescriptor();
     auto privateKeyDescriptor = authentication::BuildPrivateKeyFileDescriptor();
-
-    auto userNamePasswordConfig = authentication::BuildAdditionalConfig(UserNamePasswordPayloadId);
-    auto pinConfig = authentication::BuildAdditionalConfig(PinPayloadId);
-    auto privateKeyConfig = authentication::BuildAdditionalConfig(PrivateKeyFilePayloadId);
 
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix("daq.credential_demo")
-        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor, userNamePasswordConfig)
-        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor, pinConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor, privateKeyConfig)
+        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor)
+        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor)
+        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor)
         .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
 }

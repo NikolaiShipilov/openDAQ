@@ -56,23 +56,11 @@ void demoNoAuthentication(const InstancePtr& instance)
 
 // authenticate with username and password
 // UserName/Password authentication - a KeyValuePairs-format credential payload.
-void demoUserNamePasswordAuthenticationNonVerbose(const InstancePtr& instance, const DeviceTypePtr& deviceType)
+void demoUserNamePasswordAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
     auto userNamePasswordConfig = deviceType.createDefaultAuthenticationConfig();
     auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
-    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, non-verbose credential request. Press \"enter\" to continue..." << std::endl;
-    std::cin.get();
-    instance.removeDevice(device);
-}
-
-// authenticate with username and password but not hide the password
-void demoUserNamePasswordAuthenticationVerbose(const InstancePtr& instance, const DeviceTypePtr& deviceType)
-{
-    auto userNamePasswordConfig = deviceType.createDefaultAuthenticationConfig();
-    userNamePasswordConfig.getConfig().setPropertyValue("VerboseCredentialRequest", True);
-    userNamePasswordConfig.getConfig().setPropertyValue("HidePasswordInput", True);
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
-    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication, verbose credential request. Press \"enter\" to continue..." << std::endl;
+    std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
 }
@@ -90,7 +78,6 @@ void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const 
     auto explicitProviderConfig = AuthenticationConfigBuilder()
                                        .setPayloadId(privateKeyFileConfig.getCredentialPayloadId())
                                        .setPayloadDescriptor(privateKeyFileConfig.getCredentialPayloadDescriptor())
-                                       .setConfig(privateKeyFileConfig.getConfig())
                                        .setCredentialProviderId(credentialProviderId)
                                        .build();
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
@@ -116,7 +103,6 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
     auto streamingAuthConfig = AuthenticationConfigBuilder()
                                    .setPayloadId(streamingPrivateKeyFileConfig.getCredentialPayloadId())
                                    .setPayloadDescriptor(streamingPrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                                   .setConfig(streamingPrivateKeyFileConfig.getConfig())
                                    .setCredentialProviderId(credentialProviderId)
                                    .build();
 
@@ -130,7 +116,6 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
     auto deviceAuthConfig = AuthenticationConfigBuilder()
                                  .setPayloadId(devicePrivateKeyFileConfig.getCredentialPayloadId())
                                  .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                                 .setConfig(devicePrivateKeyFileConfig.getConfig())
                                  .setCredentialProviderId(credentialProviderId)
                                  .setSuppliedSecret(suppliedSecret)
                                  .addStreamingAuthenticationConfig(streamingType, streamingAuthConfig)
@@ -167,7 +152,6 @@ void demoDeviceAndStreamingAuthentication(const InstancePtr& instance, const Dev
     auto deviceAuthConfig = AuthenticationConfigBuilder()
                                  .setPayloadId(deviceDefaultAuthConfig.getCredentialPayloadId())
                                  .setPayloadDescriptor(deviceDefaultAuthConfig.getCredentialPayloadDescriptor())
-                                 .setConfig(deviceDefaultAuthConfig.getConfig())
                                  .build();
 
     std::cout << "Device authentication (default method - UserName/Password):" << std::endl;
@@ -246,8 +230,7 @@ int main(int argc, const char* argv[])
 
     // demoPrivateKeyFileAuthentication(instance, deviceType);
     // demoNoAuthentication(instance);
-    // demoUserNamePasswordAuthenticationNonVerbose(instance, deviceType);
-    demoUserNamePasswordAuthenticationVerbose(instance, deviceType);
+    demoUserNamePasswordAuthentication(instance, deviceType);
     demoDeviceAndStreamingAuthentication(instance, deviceType);
     // demoExplicitCredentialProviderSelection(instance, deviceType, credentialProvider.getName());
     demoCachedFilePathCredentialAcrossDeviceAndStreaming(instance, deviceType, credentialProvider.getName());

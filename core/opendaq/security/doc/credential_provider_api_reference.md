@@ -38,15 +38,25 @@ Carries the authentication settings for a single connection attempt. Lives along
 |---|---|
 | `getCredentialPayloadId(IString**)` | The id of the payload associated with the selected authentication method. |
 | `getCredentialPayloadDescriptor(ICredentialPayloadDescriptor**)` | The descriptor of the payload the selected method uses. |
-| `getConfig(IPropertyObject**)` | Additional configuration specific to the selected method — settings that may travel with the credential request to the provider (e.g. hide input as typed). Supplied for this connection attempt only; never saved. |
 | `getCredentialProviderId(IString**)` | The id of a specifically selected credential provider, or `nullptr` (the default) if none was chosen — in which case the module auto-selects a registered provider supporting the payload descriptor's format. |
 | `getSuppliedSecret(IPropertyObject**)` | A secret supplied directly by the caller, to be used instead of a provider obtaining it — or `nullptr` (the default), leaving the module to obtain it from a provider as usual. See [§5](#5-credential-provider-selection--supplied-secrets). |
-| `getStreamingAuthenticationConfigs(IDict**)` | Authentication configs nested under this one, keyed by streaming type id — each an ordinary `IAuthenticationConfig` in its own right. See [§4](#4-streaming-authentication). |
+
+There is no "additional config" on `IAuthenticationConfig` itself - settings like whether to hide secret input as it's typed travel via the component's own, generic config object instead (the same one `addDevice`/`addStreaming` always take), read by the module from its own `config` parameter alongside the authentication config.
 
 **Factories:**
-- `AuthenticationConfig(payloadId, payloadDescriptor, config = nullptr)` — normal construction path for a live connection attempt, with none of the builder-only settings below (provider id, supplied secret, nested streaming configs) set.
+- `AuthenticationConfig(payloadId, payloadDescriptor)` — normal construction path for a live connection attempt, with none of the builder-only settings below (provider id, supplied secret, nested streaming configs) set.
 - `AuthenticationConfigFromCredentialRequest(credentialRequest)` — reconstructs a config from a previously saved `CredentialRequest`; used only when reloading a device that was previously added with authentication. Hidden from other language bindings; not for regular user code.
 - `AuthenticationConfigBuilder()` — see `IAuthenticationConfigBuilder` below; the only way to set a provider id, a supplied secret, or nested streaming configs.
+
+---
+
+### `IAuthenticationConfigMirrored`
+
+Extends `IAuthenticationConfig` with the nested per-streaming-type configs - relevant to a mirrored device's own authentication config specifically (the thing `MirroredDeviceBase`/`StreamingSourceManager` consult for auto-attach gating, see [§4](#4-streaming-authentication)). Any `IAuthenticationConfig` built via `IAuthenticationConfigBuilder` (the only way to set nested configs in the first place) also implements this - callers that need to read the nested configs back cast to it explicitly.
+
+| Member | Description |
+|---|---|
+| `getStreamingAuthenticationConfigs(IDict**)` | Authentication configs nested under this one, keyed by streaming type id — each an ordinary `IAuthenticationConfig` in its own right. |
 
 ---
 
@@ -59,13 +69,12 @@ Builds `IAuthenticationConfig` objects, exposing every setting the plain factory
 | `build(IAuthenticationConfig**)` | Builds and returns an `AuthenticationConfig` from the currently configured values. |
 | `setPayloadId` / `getPayloadId` | The id of the payload associated with the selected authentication method. |
 | `setPayloadDescriptor` / `getPayloadDescriptor` | The descriptor of the payload the selected method uses. |
-| `setConfig` / `getConfig` | Additional configuration specific to the selected method. |
 | `setCredentialProviderId` / `getCredentialProviderId` | Selects a specific registered provider by id, bypassing format-based auto-selection. `nullptr` (the default) leaves auto-selection in place. |
 | `setSuppliedSecret` / `getSuppliedSecret` | Supplies the secret directly - a property object built from `setPayloadDescriptor`'s `createDefaultPayload` template and filled in with the actual secret value(s). `nullptr` (the default) leaves the module to obtain it from a provider. |
 | `addStreamingAuthenticationConfig(IStreamingType*, IAuthenticationConfig*)` | Adds (or replaces) an authentication config nested under the given streaming type — keyed internally by the type's own id (`IComponentType::getId`), so only a real, registered streaming type can ever be used as the key, not an arbitrary string. |
 | `getStreamingAuthenticationConfigs(IDict**)` | The nested configs accumulated so far, keyed by streaming type id. |
 
-A single built config can therefore carry, at once: the settings for the connection it's directly used for, plus one nested config per streaming type for anything else that's part of the same overall connection attempt (see [§4](#4-streaming-authentication)).
+A single built config can therefore carry, at once: the settings for the connection it's directly used for, plus one nested config per streaming type for anything else that's part of the same overall connection attempt (see [§4](#4-streaming-authentication)). The built object always also implements `IAuthenticationConfigMirrored`.
 
 **Factory:** `AuthenticationConfigBuilder()` — starts with no values set.
 
@@ -156,7 +165,7 @@ Supplies the secrets requested via an `ICredentialRequest` — by prompting the 
 |---|---|
 | `setDefaultAuthenticationConfigId(IString*)` | Sets which added config (by id) is the default. Left unset ⇒ the built type doesn't support authentication. |
 | `getDefaultAuthenticationConfigId(IString**)` | Gets the id set above, or `nullptr`. |
-| `addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor*, IPropertyObject* config = nullptr)` | Adds a supported payload; builds and stores a full `AuthenticationConfig` immediately, keyed by `id`. |
+| `addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor*)` | Adds a supported payload; builds and stores a full `AuthenticationConfig` immediately, keyed by `id`. |
 | `getSupportedAuthenticationConfigs(IDict**)` | The configs built so far, keyed by payload id. |
 
 **Validation on build:** if configs were added but no default id was set (or vice versa), or the default id doesn't match any added config, `build()` fails with `OPENDAQ_ERR_INVALIDPARAMETER`.
@@ -246,14 +255,14 @@ auto deviceDefaultAuthConfig = deviceType.createDefaultAuthenticationConfig();
 auto deviceAuthConfig = AuthenticationConfigBuilder()
                              .setPayloadId(deviceDefaultAuthConfig.getCredentialPayloadId())
                              .setPayloadDescriptor(deviceDefaultAuthConfig.getCredentialPayloadDescriptor())
-                             .setConfig(deviceDefaultAuthConfig.getConfig())
                              .addStreamingAuthenticationConfig(streamingType, streamingAuthConfig)
                              .build();
 
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
 
-// Pulling the nested config back out of the very same object used to authenticate the device above:
-auto nestedConfig = deviceAuthConfig.getStreamingAuthenticationConfigs().get(streamingType.getId());
+// Pulling the nested config back out of the very same object used to authenticate the device above -
+// cast to IAuthenticationConfigMirrored, since that's where getStreamingAuthenticationConfigs lives:
+auto nestedConfig = deviceAuthConfig.asPtr<IAuthenticationConfigMirrored>().getStreamingAuthenticationConfigs().get(streamingType.getId());
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, nestedConfig);
 ```
 
@@ -261,7 +270,7 @@ The nested config is keyed internally by the streaming type's own id — passing
 
 ### Auto-attach only for explicitly authorized streaming types
 
-`StreamingSourceManager` (the implementation behind the `PrioritizedStreamingProtocols`/`AutomaticallyConnectStreaming` add-device config) auto-attaches streaming sources for a device once it's added. If the device itself was authenticated (`addAuthenticatedDevice`), the manager consults the device's own nested streaming configs (`getStreamingAuthenticationConfigs`, resolved via `MirroredDeviceBase::setAuthenticationConfig`) for each candidate streaming capability:
+`StreamingSourceManager` (the implementation behind the `PrioritizedStreamingProtocols`/`AutomaticallyConnectStreaming` add-device config) auto-attaches streaming sources for a device once it's added. If the device itself was authenticated (`addAuthenticatedDevice`), the manager casts the device's own authentication config (resolved via `MirroredDeviceBase::setAuthenticationConfig`) to `IAuthenticationConfigMirrored` and consults its nested streaming configs (`getStreamingAuthenticationConfigs`) for each candidate streaming capability:
 
 - A capability whose protocol id has **no matching nested entry** is never auto-attached — only explicitly authorized streaming types are, so an authenticated device doesn't silently pick up unauthenticated (or differently-authenticated) streaming connections on its own.
 - A capability whose protocol id **does** have a matching entry is auto-attached using that nested config as its authentication config.
@@ -285,7 +294,6 @@ By default, the module auto-selects the first registered provider whose `getSupp
 auto config = AuthenticationConfigBuilder()
                    .setPayloadId(privateKeyFileConfig.getCredentialPayloadId())
                    .setPayloadDescriptor(privateKeyFileConfig.getCredentialPayloadDescriptor())
-                   .setConfig(privateKeyFileConfig.getConfig())
                    .setCredentialProviderId(cmdLineCredentialProvider.getName())
                    .build();
 ```
@@ -304,7 +312,6 @@ payload.setPropertyValue("Password", "pass");
 auto config = AuthenticationConfigBuilder()
                    .setPayloadId(userNamePasswordConfig.getCredentialPayloadId())
                    .setPayloadDescriptor(userNamePasswordConfig.getCredentialPayloadDescriptor())
-                   .setConfig(userNamePasswordConfig.getConfig())
                    .setSuppliedSecret(payload)
                    .build();
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, config);
@@ -322,7 +329,6 @@ devicePayload.setPropertyValue("Secret", "/path/to/private_key.pem");
 auto deviceConfig = AuthenticationConfigBuilder()
                          .setPayloadId(devicePrivateKeyFileConfig.getCredentialPayloadId())
                          .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                         .setConfig(devicePrivateKeyFileConfig.getConfig())
                          .setCredentialProviderId(cmdLineCredentialProvider.getName())
                          .setSuppliedSecret(devicePayload)
                          .build();
@@ -333,7 +339,6 @@ auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, dev
 auto streamingConfig = AuthenticationConfigBuilder()
                            .setPayloadId(streamingPrivateKeyFileConfig.getCredentialPayloadId())
                            .setPayloadDescriptor(streamingPrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                           .setConfig(streamingPrivateKeyFileConfig.getConfig())
                            .setCredentialProviderId(cmdLineCredentialProvider.getName())
                            .build();
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingConfig);

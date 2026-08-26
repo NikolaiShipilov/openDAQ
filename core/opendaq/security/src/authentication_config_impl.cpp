@@ -5,13 +5,11 @@ BEGIN_NAMESPACE_OPENDAQ
 
 AuthenticationConfigImpl::AuthenticationConfigImpl(const StringPtr& payloadId,
                                                    const CredentialPayloadDescriptorPtr& payloadDescriptor,
-                                                   const PropertyObjectPtr& config,
                                                    const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs,
                                                    const StringPtr& credentialProviderId,
                                                    const PropertyObjectPtr& suppliedSecret)
     : payloadId(payloadId)
     , payloadDescriptor(payloadDescriptor)
-    , config(config.assigned() ? config : PropertyObject())
     , streamingAuthenticationConfigs(streamingAuthenticationConfigs.assigned() ? streamingAuthenticationConfigs : Dict<IString, IAuthenticationConfig>())
     , credentialProviderId(credentialProviderId)
     , suppliedSecret(suppliedSecret)
@@ -19,8 +17,7 @@ AuthenticationConfigImpl::AuthenticationConfigImpl(const StringPtr& payloadId,
 }
 
 AuthenticationConfigImpl::AuthenticationConfigImpl(const CredentialRequestPtr& credentialRequest)
-    : config(PropertyObject())
-    , credentialRequest(credentialRequest)
+    : credentialRequest(credentialRequest)
     , streamingAuthenticationConfigs(Dict<IString, IAuthenticationConfig>())
 {
     if (!credentialRequest.assigned())
@@ -43,14 +40,6 @@ ErrCode AuthenticationConfigImpl::getCredentialPayloadDescriptor(ICredentialPayl
     OPENDAQ_PARAM_NOT_NULL(descriptor);
 
     *descriptor = this->payloadDescriptor.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode AuthenticationConfigImpl::getConfig(IPropertyObject** config)
-{
-    OPENDAQ_PARAM_NOT_NULL(config);
-
-    *config = this->config.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
@@ -88,7 +77,7 @@ ErrCode AuthenticationConfigImpl::getCredentialRequest(ICredentialRequest** requ
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor, IPropertyObject*, config
+    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor
 )
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE_AND_CREATEFUNC(

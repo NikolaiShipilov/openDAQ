@@ -40,9 +40,9 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
 {
     cls.doc() = "Carries the authentication settings used for a single connection attempt to a component.";
 
-    m.def("AuthenticationConfig", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadId, daq::ICredentialPayloadDescriptor* payloadDescriptor, daq::IPropertyObject* config){
-        return daq::AuthenticationConfig_Create(getVariantValue<daq::IString*>(payloadId), payloadDescriptor, config);
-    }, py::arg("payload_id"), py::arg("payload_descriptor"), py::arg("config"));
+    m.def("AuthenticationConfig", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadId, daq::ICredentialPayloadDescriptor* payloadDescriptor){
+        return daq::AuthenticationConfig_Create(getVariantValue<daq::IString*>(payloadId), payloadDescriptor);
+    }, py::arg("payload_id"), py::arg("payload_descriptor"));
 
 
     cls.def_property_readonly("credential_payload_id",
@@ -62,15 +62,6 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         },
         py::return_value_policy::take_ownership,
         "Gets the descriptor of the payload which selected authentication method uses.");
-    cls.def_property_readonly("config",
-        [](daq::IAuthenticationConfig *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getConfig().detach();
-        },
-        py::return_value_policy::take_ownership,
-        "Gets additional configuration specific to selected authentication method.");
     cls.def_property_readonly("credential_provider_id",
         [](daq::IAuthenticationConfig *object)
         {
@@ -88,13 +79,4 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         },
         py::return_value_policy::take_ownership,
         "Gets the secret supplied directly by the caller, to be used instead of a credential provider obtaining it (e.g. by prompting the user).");
-    cls.def_property_readonly("streaming_authentication_configs",
-        [](daq::IAuthenticationConfig *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getStreamingAuthenticationConfigs().detach();
-        },
-        py::return_value_policy::take_ownership,
-        "Gets the authentication configs nested under this one, accumulated via `IAuthenticationConfigBuilder::addStreamingAuthenticationConfig` - so a single authentication config, formed for connecting to a device, can also carry the settings needed to authenticate a streaming source attached to that device. Each is an ordinary authentication config in its own right, keyed by the streaming type's own id.");
 }

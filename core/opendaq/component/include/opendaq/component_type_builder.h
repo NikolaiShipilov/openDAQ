@@ -193,12 +193,11 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
     // [returnSelf]
     /*!
      * @brief Adds a supported credential payload, keyed by payload id, within the whole authentication config that is
-     * built immediately from the given id, descriptor and additional config, and stored under the same id.
+     * built immediately from the given id and descriptor, and stored under the same id.
      * @param id The payload id.
      * @param payloadDescriptor The descriptor of the supported payload.
-     * @param config Additional, payload-specific configuration to carry settings that might travel with the credential request to the provider.
      */
-    virtual ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payloadDescriptor, IPropertyObject* config = nullptr) = 0;
+    virtual ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payloadDescriptor) = 0;
 
     /*!
      * @brief Gets the authentication configs built for each supported payload added via `addSupportedAuthenticationConfig`, keyed

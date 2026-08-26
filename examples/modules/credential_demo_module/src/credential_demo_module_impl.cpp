@@ -66,16 +66,13 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
     const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
 
     // A config reconstructed while reloading a saved device already carries the request formed the first
-    // time around - reuse it as-is instead of forming a new one from the payload descriptor and additional
-    // config.
+    // time around - reuse it as-is instead of forming a new one from the payload descriptor and the
+    // device's own config.
     auto credentialRequest = authenticationConfig.asPtr<IAuthenticationConfigPrivate>(true).getCredentialRequest();
     if (!credentialRequest.assigned())
     {
-        const auto additionalConfig = authenticationConfig.getConfig();
-        const bool verboseCredentialRequest = additionalConfig.getPropertyValue("VerboseCredentialRequest");
-
         credentialRequest = authentication::CreateCredentialRequest(
-            payloadId, connectionString, manufacturer, serialNumber, additionalConfig, verboseCredentialRequest, CredentialDemoDeviceImpl::CreateType());
+            payloadId, connectionString, manufacturer, serialNumber, CredentialDemoDeviceImpl::CreateType());
     }
 
     // The authenticated path always obtains credentials - the device is never connected to anonymously.
@@ -106,7 +103,7 @@ DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTy
 }
 
 StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connectionString,
-                                                     const PropertyObjectPtr& config,
+                                                     const PropertyObjectPtr& /*config*/,
                                                      const AuthenticationConfigPtr& authenticationConfig,
                                                      const StringPtr& manufacturer,
                                                      const StringPtr& serialNumber)
@@ -121,10 +118,8 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
     const auto payloadId = resolvedAuthenticationConfig.getCredentialPayloadId();
     const auto payloadDescriptor = resolvedAuthenticationConfig.getCredentialPayloadDescriptor();
 
-    const bool verboseCredentialRequest = config.getPropertyValue("VerboseCredentialRequest");
-
     const auto credentialRequest = authentication::CreateCredentialRequest(
-        payloadId, connectionString, manufacturer, serialNumber, config, verboseCredentialRequest, CredentialDemoStreamingImpl::CreateType());
+        payloadId, connectionString, manufacturer, serialNumber, CredentialDemoStreamingImpl::CreateType());
 
     const auto credentials = ObtainCredentials(resolvedAuthenticationConfig, credentialRequest, context.getCredentialProviders(), payloadDescriptor);
 

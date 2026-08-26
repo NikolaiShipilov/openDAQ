@@ -79,21 +79,6 @@ void defineIAuthenticationConfigBuilder(pybind11::module_ m, PyDaqIntf<daq::IAut
         },
         py::return_value_policy::take_ownership,
         "Gets the descriptor of the payload the selected authentication method uses. / Sets the descriptor of the payload the selected authentication method uses.");
-    cls.def_property("config",
-        [](daq::IAuthenticationConfigBuilder *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigBuilderPtr::Borrow(object);
-            return objectPtr.getConfig().detach();
-        },
-        [](daq::IAuthenticationConfigBuilder *object, daq::IPropertyObject* config)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigBuilderPtr::Borrow(object);
-            objectPtr.setConfig(config);
-        },
-        py::return_value_policy::take_ownership,
-        "Gets additional configuration specific to the selected authentication method. / Sets additional configuration specific to the selected authentication method.");
     cls.def_property("credential_provider_id",
         [](daq::IAuthenticationConfigBuilder *object)
         {
