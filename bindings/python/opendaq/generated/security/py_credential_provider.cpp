@@ -68,7 +68,7 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
             objectPtr.cacheCredentials(request, secret);
         },
         py::arg("request"), py::arg("secret"),
-        "Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig::getSuppliedSecret` - so an implementation that would otherwise cache a value it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a credential payload - the caller already has the secret and uses it directly.");
+        "Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s `\"SuppliedSecret\"` property - so an implementation that would otherwise cache a value it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a credential payload - the caller already has the secret and uses it directly.");
     cls.def_property_readonly("supported_payload_formats",
         [](daq::ICredentialProvider *object)
         {

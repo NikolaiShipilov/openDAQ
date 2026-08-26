@@ -14,9 +14,9 @@ DeviceTypeImpl::DeviceTypeImpl(const StringPtr& id,
                                const StringPtr& description,
                                const PropertyObjectPtr& defaultConfig,
                                const StringPtr& prefix,
-                               const DictPtr<IString, IAuthenticationConfig>& supportedAuthenticationConfigs,
+                               const DictPtr<IString, ICredentialPayloadDescriptor>& supportedAuthenticationDescriptors,
                                const StringPtr& defaultAuthenticationConfigId)
-    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig, supportedAuthenticationConfigs, defaultAuthenticationConfigId)
+    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig, supportedAuthenticationDescriptors, defaultAuthenticationConfigId)
 {
 }
 
@@ -26,7 +26,7 @@ DeviceTypeImpl::DeviceTypeImpl(const ComponentTypeBuilderPtr& builder)
                      builder.getDescription(),
                      builder.getDefaultConfig(),
                      builder.getConnectionStringPrefix(),
-                     builder.getSupportedAuthenticationConfigs(),
+                     builder.getSupportedAuthenticationDescriptors(),
                      builder.getDefaultAuthenticationConfigId())
 {
 }

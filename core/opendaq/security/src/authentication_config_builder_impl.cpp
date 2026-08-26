@@ -5,7 +5,6 @@
 BEGIN_NAMESPACE_OPENDAQ
 
 AuthenticationConfigBuilderImpl::AuthenticationConfigBuilderImpl()
-    : streamingAuthenticationConfigs(Dict<IString, IAuthenticationConfig>())
 {
 }
 
@@ -18,24 +17,10 @@ ErrCode AuthenticationConfigBuilderImpl::build(IAuthenticationConfig** authentic
         {
             *authenticationConfig =
                 createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>(
-                    payloadId, payloadDescriptor, streamingAuthenticationConfigs, credentialProviderId, suppliedSecret)
+                    payloadDescriptor, credentialProviderId, suppliedSecret)
                     .detach();
             return OPENDAQ_SUCCESS;
         });
-}
-
-ErrCode AuthenticationConfigBuilderImpl::setPayloadId(IString* payloadId)
-{
-    this->payloadId = payloadId;
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode AuthenticationConfigBuilderImpl::getPayloadId(IString** payloadId)
-{
-    OPENDAQ_PARAM_NOT_NULL(payloadId);
-
-    *payloadId = this->payloadId.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
 }
 
 ErrCode AuthenticationConfigBuilderImpl::setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor)
@@ -77,23 +62,6 @@ ErrCode AuthenticationConfigBuilderImpl::getSuppliedSecret(IPropertyObject** sup
     OPENDAQ_PARAM_NOT_NULL(suppliedSecret);
 
     *suppliedSecret = this->suppliedSecret.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode AuthenticationConfigBuilderImpl::addStreamingAuthenticationConfig(IStreamingType* streamingType, IAuthenticationConfig* streamingAuthenticationConfig)
-{
-    OPENDAQ_PARAM_NOT_NULL(streamingType);
-    OPENDAQ_PARAM_NOT_NULL(streamingAuthenticationConfig);
-
-    const StringPtr typeId = StreamingTypePtr::Borrow(streamingType).getId();
-    return streamingAuthenticationConfigs->set(typeId, streamingAuthenticationConfig);
-}
-
-ErrCode AuthenticationConfigBuilderImpl::getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs)
-{
-    OPENDAQ_PARAM_NOT_NULL(streamingAuthenticationConfigs);
-
-    *streamingAuthenticationConfigs = this->streamingAuthenticationConfigs.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

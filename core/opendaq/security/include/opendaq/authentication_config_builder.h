@@ -19,27 +19,16 @@
 #include <coreobjects/property_object.h>
 #include <opendaq/credential_payload_descriptor.h>
 #include <opendaq/authentication_config.h>
-#include <opendaq/streaming_type.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
- * [interfaceLibrary(IStreamingType, "opendaq")]
- * [interfaceSmartPtr(IStreamingType, StreamingTypePtr, "<opendaq/streaming_type_ptr.h>")]
  */
 
 /*!
  * @brief Builds `IAuthenticationConfig` objects.
- *
- * Besides the payload id/descriptor that make up a plain authentication config, a builder can also
- * accumulate authentication configs nested under a streaming type - so a single authentication config,
- * formed for connecting to a device, can also carry the settings needed to authenticate a streaming source
- * attached to that device. The built object always also implements `IAuthenticationConfigMirrored`, so the
- * nested configs accumulated here can be read back via `IAuthenticationConfigMirrored::getStreamingAuthenticationConfigs`.
- * Each nested config, once retrieved, is an ordinary authentication config in its own right, usable
- * anywhere a standalone one would be (e.g. passed directly to a manual `addStreaming` call).
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfigBuilder, IBaseObject)
 {
@@ -50,20 +39,8 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfigBuilder, IBaseObject)
     virtual ErrCode INTERFACE_FUNC build(IAuthenticationConfig** authenticationConfig) = 0;
 
     /*!
-     * @brief Sets the id of the payload associated with the selected authentication method.
-     * @param payloadId The payload id.
-     */
-    // [returnSelf]
-    virtual ErrCode INTERFACE_FUNC setPayloadId(IString* payloadId) = 0;
-
-    /*!
-     * @brief Gets the id of the payload associated with the selected authentication method.
-     * @param[out] payloadId The payload id.
-     */
-    virtual ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) = 0;
-
-    /*!
-     * @brief Sets the descriptor of the payload the selected authentication method uses.
+     * @brief Sets the descriptor of the payload the selected authentication method uses - its own
+     * `ICredentialPayloadDescriptor::getId()` becomes the built config's payload id.
      * @param descriptor The payload descriptor.
      */
     // [returnSelf]
@@ -104,23 +81,6 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfigBuilder, IBaseObject)
      * @param[out] suppliedSecret The supplied secret.
      */
     virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** suppliedSecret) = 0;
-
-    /*!
-     * @brief Adds (or replaces) the authentication config nested under the given streaming type - keyed
-     * internally by the type's own id (`IComponentType::getId`), so only an id a real, registered streaming
-     * type actually has can ever be used as the key, rather than an arbitrary caller-supplied string.
-     * @param streamingType The streaming type the nested config is for.
-     * @param streamingAuthenticationConfig The nested authentication config.
-     */
-    // [returnSelf]
-    virtual ErrCode INTERFACE_FUNC addStreamingAuthenticationConfig(IStreamingType* streamingType, IAuthenticationConfig* streamingAuthenticationConfig) = 0;
-
-    /*!
-     * @brief Gets the nested authentication configs accumulated via `addStreamingAuthenticationConfig`.
-     * @param[out] streamingAuthenticationConfigs The streaming type id -> authentication config dictionary.
-     */
-    // [templateType(streamingAuthenticationConfigs, IString, IAuthenticationConfig)]
-    virtual ErrCode INTERFACE_FUNC getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs) = 0;
 };
 
 /*!

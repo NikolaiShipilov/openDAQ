@@ -173,10 +173,10 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
 
     // [returnSelf]
     /*!
-     * @brief Sets the id of the authentication config (see `addSupportedAuthenticationConfig`) to use as the
-     * default, returned to users via `createDefaultAuthenticationConfig`.
-     * @param id The id of the default authentication config. Must match one of the ids added via
-     * `addSupportedAuthenticationConfig`.
+     * @brief Sets the payload id of the authentication method (see `addSupportedAuthenticationDescriptor`) to
+     * select by default in the self-contained config returned by `createDefaultAuthenticationConfig`.
+     * @param id The default payload id. Must match one of the payload descriptors' own ids added via
+     * `addSupportedAuthenticationDescriptor`.
      *
      * When left unset, the built Component type is considered to not support authentication, and
      * `createDefaultAuthenticationConfig` will fail with `OPENDAQ_ERR_NOT_SUPPORTED`.
@@ -184,28 +184,29 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
     virtual ErrCode INTERFACE_FUNC setDefaultAuthenticationConfigId(IString* id) = 0;
 
     /*!
-     * @brief Gets the id of the authentication config (see `addSupportedAuthenticationConfig`) set via
-     * `setDefaultAuthenticationConfigId`.
-     * @param[out] id The id of the default authentication config, or `nullptr` if none was set.
+     * @brief Gets the default payload id set via `setDefaultAuthenticationConfigId`.
+     * @param[out] id The default payload id, or `nullptr` if none was set.
      */
     virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationConfigId(IString** id) = 0;
 
     // [returnSelf]
     /*!
-     * @brief Adds a supported credential payload, keyed by payload id, within the whole authentication config that is
-     * built immediately from the given id and descriptor, and stored under the same id.
-     * @param id The payload id.
-     * @param payloadDescriptor The descriptor of the supported payload.
+     * @brief Adds a supported authentication method's payload descriptor - its own
+     * `ICredentialPayloadDescriptor::getId()` is the id it's known by (see `setDefaultAuthenticationConfigId`).
+     * Every descriptor added this way becomes a selection candidate of the single, self-contained
+     * authentication config `createDefaultAuthenticationConfig` returns - there is no separate config built
+     * per method.
+     * @param payloadDescriptor The descriptor of the supported method.
      */
-    virtual ErrCode INTERFACE_FUNC addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payloadDescriptor) = 0;
+    virtual ErrCode INTERFACE_FUNC addSupportedAuthenticationDescriptor(ICredentialPayloadDescriptor* payloadDescriptor) = 0;
 
     /*!
-     * @brief Gets the authentication configs built for each supported payload added via `addSupportedAuthenticationConfig`, keyed
-     * by the same payload id.
-     * @param[out] authenticationConfigs The payload id -> authentication config dictionary.
+     * @brief Gets the payload descriptors accumulated via `addSupportedAuthenticationDescriptor`, keyed by
+     * their own id (`ICredentialPayloadDescriptor::getId()`).
+     * @param[out] payloadDescriptors The payload id -> payload descriptor dictionary.
      */
-    // [templateType(authenticationConfigs, IString, IAuthenticationConfig)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationConfigs(IDict** authenticationConfigs) = 0;
+    // [templateType(payloadDescriptors, IString, ICredentialPayloadDescriptor)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationDescriptors(IDict** payloadDescriptors) = 0;
 };
 /*!@}*/
 

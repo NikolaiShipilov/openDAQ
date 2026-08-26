@@ -51,7 +51,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 
     /*!
      * @brief Accepts a secret already known in advance - e.g. supplied directly via
-     * `IAuthenticationConfig::getSuppliedSecret` - so an implementation that would otherwise cache a value
+     * `IAuthenticationConfig`'s `"SuppliedSecret"` property - so an implementation that would otherwise cache a value
      * it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format
      * secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive
      * `requestCredentials` call for the same context then reuses it instead of prompting again. Does not

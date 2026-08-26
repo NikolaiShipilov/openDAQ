@@ -42,8 +42,7 @@ public:
                                       const DeviceInfoPtr& info,
                                       bool authenticated,
                                       const StringPtr& payloadId = nullptr,
-                                      const PropertyObjectPtr& credentials = nullptr,
-                                      const AuthenticationConfigPtr& authenticationConfig = nullptr);
+                                      const PropertyObjectPtr& credentials = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();

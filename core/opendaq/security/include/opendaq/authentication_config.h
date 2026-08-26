@@ -24,7 +24,7 @@ BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
+ * [interfaceSmartPtr(IPropertyObject, GenericPropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
  */
 
 /*!
@@ -32,43 +32,47 @@ BEGIN_NAMESPACE_OPENDAQ
  *
  * Credential settings do not live in the base add-component config or its default - they travel in a
  * dedicated authentication config object that exists alongside base config and is never serialized.
+ *
+ * Is itself a Property object (like `IDeviceInfo`) - the payload id and its descriptor are bound
+ * together as one `"PayloadDescriptor"` Selection property (its selection value is the
+ * `ICredentialPayloadDescriptor` Struct itself, so the two can never be set out of sync - the payload id
+ * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`), the credential
+ * provider id is a plain `"CredentialProviderId"` String property, and a directly-supplied secret (see
+ * `IAuthenticationConfigBuilder::setSuppliedSecret`) is carried, when present, as a `"SuppliedSecret"`
+ * property (absent when none was supplied). The typed getters below are a convenience layer on top of the
+ * first two properties; `"SuppliedSecret"`, `"CredentialProviderId"`, and `"PayloadDescriptor"` can all
+ * equally be read (and, via `IAuthenticationConfigBuilder`-built instances, set) through the ordinary
+ * `IPropertyObject` interface this object also implements.
  */
-DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IBaseObject)
+DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
     /*!
-     * @brief Gets the id of the payload associated with selected authentication method.
+     * @brief Gets the id of the payload associated with selected authentication method - the selected
+     * `"PayloadDescriptor"` property value's own `ICredentialPayloadDescriptor::getId()`.
      * @param[out] payloadId The payload id.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) = 0;
 
     /*!
-     * @brief Gets the descriptor of the payload which selected authentication method uses.
+     * @brief Gets the descriptor of the payload which selected authentication method uses - the current
+     * selection value of the `"PayloadDescriptor"` property.
      * @param[out] descriptor The payload descriptor.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
 
     /*!
-     * @brief Gets the id of the credential provider to request credentials from.
+     * @brief Gets the id of the credential provider to request credentials from - the value of the
+     * `"CredentialProviderId"` String property.
      * @param[out] providerId The credential provider id, or `nullptr` if none was explicitly selected - in
      * which case the module auto-selects a registered provider supporting the payload descriptor's format,
      * same as when this is left unset.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
-
-    /*!
-     * @brief Gets the secret supplied directly by the caller, to be used instead of a credential provider
-     * obtaining it (e.g. by prompting the user).
-     * @param[out] suppliedSecret The supplied secret - a property object shaped like
-     * `getCredentialPayloadDescriptor()`'s `createDefaultPayload` template, filled in with the actual
-     * secret value(s) - or `nullptr` (the default) if none was supplied, in which case the module obtains
-     * the secret from a credential provider as usual.
-     */
-    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** suppliedSecret) = 0;
 };
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor
+    ICredentialPayloadDescriptor*, payloadDescriptor
 )
 
 /*!
@@ -81,6 +85,20 @@ OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfigFromCredentialRequest, IAuthenticationConfig,
     ICredentialRequest*, credentialRequest
+)
+
+/*!
+ * @brief Builds a self-contained `AuthenticationConfig` listing every one of `payloadDescriptors` as a
+ * candidate of its `"PayloadDescriptor"` selection property, defaulting to the one whose own
+ * `ICredentialPayloadDescriptor::getId()` matches `defaultPayloadId` - used by
+ * `IComponentType::createDefaultAuthenticationConfig` to hand the caller one config object covering every
+ * authentication method the component type supports, rather than a separate config per method. Never
+ * exposed to other language bindings; not meant for regular user code.
+ */
+//[factory(Hide)]
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
+    LIBRARY_FACTORY, AuthenticationConfigFromSupportedMethods, IAuthenticationConfig,
+    IList*, payloadDescriptors, IString*, defaultPayloadId
 )
 
 END_NAMESPACE_OPENDAQ

@@ -19,17 +19,18 @@
 #include <opendaq/authentication_config_builder_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 #include <opendaq/credential_request_ptr.h>
+#include <coretypes/listobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
  * @brief Creates an `AuthenticationConfig` describing the credential payload expected by an authentication method.
- * @param payloadId The id of the payload the authentication method requires.
- * @param payloadDescriptor The descriptor of the payload the authentication method uses.
+ * @param payloadDescriptor The descriptor of the payload the authentication method uses - its own
+ * `ICredentialPayloadDescriptor::getId()` becomes the config's payload id.
  */
-inline AuthenticationConfigPtr AuthenticationConfig(const StringPtr& payloadId, const CredentialPayloadDescriptorPtr& payloadDescriptor)
+inline AuthenticationConfigPtr AuthenticationConfig(const CredentialPayloadDescriptorPtr& payloadDescriptor)
 {
-    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadId, payloadDescriptor));
+    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadDescriptor));
     return obj;
 }
 
@@ -42,6 +43,20 @@ inline AuthenticationConfigPtr AuthenticationConfig(const StringPtr& payloadId, 
 inline AuthenticationConfigPtr AuthenticationConfigFromCredentialRequest(const CredentialRequestPtr& credentialRequest)
 {
     AuthenticationConfigPtr obj(AuthenticationConfigFromCredentialRequest_Create(credentialRequest));
+    return obj;
+}
+
+/*!
+ * @brief Builds a self-contained `AuthenticationConfig` listing every one of `payloadDescriptors` as a
+ * candidate of its `"PayloadDescriptor"` selection property. Used by
+ * `IComponentType::createDefaultAuthenticationConfig` - not meant for regular user code.
+ * @param payloadDescriptors The full set of supported payload descriptors.
+ * @param defaultPayloadId The payload id of the descriptor to select by default.
+ */
+inline AuthenticationConfigPtr AuthenticationConfigFromSupportedMethods(const ListPtr<ICredentialPayloadDescriptor>& payloadDescriptors,
+                                                                        const StringPtr& defaultPayloadId)
+{
+    AuthenticationConfigPtr obj(AuthenticationConfigFromSupportedMethods_Create(payloadDescriptors, defaultPayloadId));
     return obj;
 }
 

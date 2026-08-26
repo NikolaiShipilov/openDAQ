@@ -50,20 +50,6 @@ void defineIAuthenticationConfigBuilder(pybind11::module_ m, PyDaqIntf<daq::IAut
             return objectPtr.build().detach();
         },
         "Builds and returns an `AuthenticationConfig` using the currently configured values.");
-    cls.def_property("payload_id",
-        [](daq::IAuthenticationConfigBuilder *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigBuilderPtr::Borrow(object);
-            return objectPtr.getPayloadId().toStdString();
-        },
-        [](daq::IAuthenticationConfigBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadId)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigBuilderPtr::Borrow(object);
-            objectPtr.setPayloadId(getVariantValue<daq::IString*>(payloadId));
-        },
-        "Gets the id of the payload associated with the selected authentication method. / Sets the id of the payload associated with the selected authentication method.");
     cls.def_property("payload_descriptor",
         [](daq::IAuthenticationConfigBuilder *object)
         {
@@ -78,7 +64,7 @@ void defineIAuthenticationConfigBuilder(pybind11::module_ m, PyDaqIntf<daq::IAut
             objectPtr.setPayloadDescriptor(descriptor);
         },
         py::return_value_policy::take_ownership,
-        "Gets the descriptor of the payload the selected authentication method uses. / Sets the descriptor of the payload the selected authentication method uses.");
+        "Gets the descriptor of the payload the selected authentication method uses. / Sets the descriptor of the payload the selected authentication method uses - its own `ICredentialPayloadDescriptor::getId()` becomes the built config's payload id.");
     cls.def_property("credential_provider_id",
         [](daq::IAuthenticationConfigBuilder *object)
         {
@@ -108,22 +94,4 @@ void defineIAuthenticationConfigBuilder(pybind11::module_ m, PyDaqIntf<daq::IAut
         },
         py::return_value_policy::take_ownership,
         "Gets the secret to use directly instead of a credential provider obtaining it. / Sets a secret to use directly instead of a credential provider obtaining it (e.g. by prompting the user).");
-    cls.def("add_streaming_authentication_config",
-        [](daq::IAuthenticationConfigBuilder *object, daq::IStreamingType* streamingType, daq::IAuthenticationConfig* streamingAuthenticationConfig)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigBuilderPtr::Borrow(object);
-            objectPtr.addStreamingAuthenticationConfig(streamingType, streamingAuthenticationConfig);
-        },
-        py::arg("streaming_type"), py::arg("streaming_authentication_config"),
-        "Adds (or replaces) the authentication config nested under the given streaming type - keyed internally by the type's own id (`IComponentType::getId`), so only an id a real, registered streaming type actually has can ever be used as the key, rather than an arbitrary caller-supplied string.");
-    cls.def_property_readonly("streaming_authentication_configs",
-        [](daq::IAuthenticationConfigBuilder *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::AuthenticationConfigBuilderPtr::Borrow(object);
-            return objectPtr.getStreamingAuthenticationConfigs().detach();
-        },
-        py::return_value_policy::take_ownership,
-        "Gets the nested authentication configs accumulated via `addStreamingAuthenticationConfig`.");
 }

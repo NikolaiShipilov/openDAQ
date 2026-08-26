@@ -85,8 +85,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         info,
         /*authenticated*/true,
         payloadId,
-        credentials,
-        authenticationConfig);
+        credentials);
 
     // Persisted alongside the device, so a reload can re-request credentials for it without ever having
     // saved the authentication config or its secrets.
@@ -182,7 +181,11 @@ PropertyObjectPtr CredentialDemoModule::ObtainCredentials(const AuthenticationCo
                                                             const CredentialPayloadDescriptorPtr& payloadDescriptor)
 {
     const auto providerId = authenticationConfig.getCredentialProviderId();
-    const auto suppliedSecret = authenticationConfig.getSuppliedSecret();
+
+    // `IAuthenticationConfig` is itself a property object - a directly-supplied secret has no dedicated
+    // getter, it is simply present (or not) as the "SuppliedSecret" property.
+    const PropertyObjectPtr suppliedSecret =
+        authenticationConfig.hasProperty("SuppliedSecret") ? authenticationConfig.getPropertyValue("SuppliedSecret") : nullptr;
 
     if (suppliedSecret.assigned())
     {

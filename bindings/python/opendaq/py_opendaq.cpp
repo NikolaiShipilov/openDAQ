@@ -135,7 +135,6 @@ void wrapDaqComponentOpenDaq(pybind11::module_ m)
     auto classIDeviceUpdateOptions = declareIDeviceUpdateOptions(m);
     auto classICredentialPayloadDescriptor = declareICredentialPayloadDescriptor(m);
     auto classIAuthenticationConfig = declareIAuthenticationConfig(m);
-    auto classIAuthenticationConfigMirrored = declareIAuthenticationConfigMirrored(m);
     auto classIAuthenticationConfigBuilder = declareIAuthenticationConfigBuilder(m);
     auto classICredentialProvider = declareICredentialProvider(m);
     auto classICredentialRequest = declareICredentialRequest(m);
@@ -248,7 +247,6 @@ void wrapDaqComponentOpenDaq(pybind11::module_ m)
     defineIDeviceUpdateOptions(m, classIDeviceUpdateOptions);
     defineICredentialPayloadDescriptor(m, classICredentialPayloadDescriptor);
     defineIAuthenticationConfig(m, classIAuthenticationConfig);
-    defineIAuthenticationConfigMirrored(m, classIAuthenticationConfigMirrored);
     defineIAuthenticationConfigBuilder(m, classIAuthenticationConfigBuilder);
     defineICredentialProvider(m, classICredentialProvider);
     defineICredentialRequest(m, classICredentialRequest);

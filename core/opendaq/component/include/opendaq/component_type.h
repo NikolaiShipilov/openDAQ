@@ -80,31 +80,31 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
     virtual ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) = 0;
 
     /*!
-     * @brief The function clones and returns the default authentication config. On each call, a new object is
-     * created, same as with `createDefaultConfig`.
+     * @brief Builds and returns a new, self-contained authentication config covering every authentication
+     * method this component type supports - not just one of them. A new object is created on each call,
+     * same as with `createDefaultConfig`.
      * @param[out] authenticationConfig Newly created authentication config object.
      *
+     * The returned config's `"PayloadDescriptor"` property (see `IAuthenticationConfig`) has every payload
+     * descriptor added via `IComponentTypeBuilder::addSupportedAuthenticationDescriptor` as a selection
+     * candidate, defaulting to the one set via `IComponentTypeBuilder::setDefaultAuthenticationConfigId`.
+     * The caller tunes the returned config directly - e.g. selecting a different supported method, or
+     * setting `"CredentialProviderId"`/`"SuppliedSecret"` - before handing it to `addAuthenticatedDevice`/
+     * `addAuthenticatedStreaming`, all via plain `IPropertyObject` calls.
+     *
      * Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the component type does not support authentication, i.e. no default
-     * authentication config was set on the type's builder.
+     * authentication config id was set on the type's builder.
      */
     virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig) = 0;
-
-    /*!
-     * @brief Gets the authentication configs supported by this component type, keyed by payload id (see
-     * `IComponentTypeBuilder::addSupportedAuthenticationConfig`).
-     * @param[out] authenticationConfigs The payload id -> authentication config dictionary.
-     */
-    // [templateType(authenticationConfigs, IString, IAuthenticationConfig)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationConfigs(IDict** authenticationConfigs) = 0;
 
     /*!
      * @brief Checks whether the component type supports authentication.
      * @param[out] supported `True` if the component type supports authentication; `False` otherwise.
      *
-     * A component type supports authentication when at least one authentication config was added via
-     * `IComponentTypeBuilder::addSupportedAuthenticationConfig`, and a default authentication config id was
-     * set via `IComponentTypeBuilder::setDefaultAuthenticationConfigId` that matches one of the added configs.
-     * When `True`, `createDefaultAuthenticationConfig` is guaranteed to succeed.
+     * A component type supports authentication when at least one payload descriptor was added via
+     * `IComponentTypeBuilder::addSupportedAuthenticationDescriptor`, and a default authentication config id was
+     * set via `IComponentTypeBuilder::setDefaultAuthenticationConfigId` that matches one of the added
+     * descriptors. When `True`, `createDefaultAuthenticationConfig` is guaranteed to succeed.
      */
     virtual ErrCode INTERFACE_FUNC isAuthenticationSupported(Bool* supported) = 0;
 

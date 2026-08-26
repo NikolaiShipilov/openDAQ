@@ -19,9 +19,7 @@
 #include <coretypes/impl.h>
 #include <opendaq/authentication_config_builder.h>
 #include <opendaq/authentication_config_ptr.h>
-#include <coretypes/dictobject_factory.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
-#include <opendaq/streaming_type_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -32,8 +30,6 @@ public:
 
     ErrCode INTERFACE_FUNC build(IAuthenticationConfig** authenticationConfig) override;
 
-    ErrCode INTERFACE_FUNC setPayloadId(IString* payloadId) override;
-    ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor) override;
     ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
     ErrCode INTERFACE_FUNC setCredentialProviderId(IString* providerId) override;
@@ -41,15 +37,10 @@ public:
     ErrCode INTERFACE_FUNC setSuppliedSecret(IPropertyObject* suppliedSecret) override;
     ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** suppliedSecret) override;
 
-    ErrCode INTERFACE_FUNC addStreamingAuthenticationConfig(IStreamingType* streamingType, IAuthenticationConfig* streamingAuthenticationConfig) override;
-    ErrCode INTERFACE_FUNC getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs) override;
-
 private:
-    StringPtr payloadId;
     CredentialPayloadDescriptorPtr payloadDescriptor;
     StringPtr credentialProviderId;
     PropertyObjectPtr suppliedSecret;
-    DictPtr<IString, IAuthenticationConfig> streamingAuthenticationConfigs;
 };
 
 END_NAMESPACE_OPENDAQ

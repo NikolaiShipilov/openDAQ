@@ -21,14 +21,12 @@ CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& conf
                                                    const DeviceInfoPtr& info,
                                                    bool authenticated,
                                                    const StringPtr& payloadId,
-                                                   const PropertyObjectPtr& credentials,
-                                                   const AuthenticationConfigPtr& authenticationConfig)
+                                                   const PropertyObjectPtr& credentials)
     : MirroredDevice(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
     if (authenticated)
     {
         authentication::Authenticate(ctx, credentials, payloadId);
-        this->setAuthenticationConfig(authenticationConfig);
     }
 
     this->deviceInfo = info;
@@ -87,9 +85,9 @@ DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix("daq.credential_demo")
-        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor)
-        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor)
-        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor)
+        .addSupportedAuthenticationDescriptor(userNamePasswordDescriptor)
+        .addSupportedAuthenticationDescriptor(pinDescriptor)
+        .addSupportedAuthenticationDescriptor(privateKeyDescriptor)
         .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
 }

@@ -113,7 +113,6 @@ set(SRC_Cpp
     generated/utility/py_device_update_options.cpp
     generated/security/py_credential_payload_descriptor.cpp
     generated/security/py_authentication_config.cpp
-    generated/security/py_authentication_config_mirrored.cpp
     generated/security/py_authentication_config_builder.cpp
     generated/security/py_credential_provider.cpp
     generated/security/py_credential_request.cpp

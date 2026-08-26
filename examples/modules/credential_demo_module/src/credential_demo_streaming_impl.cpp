@@ -28,9 +28,9 @@ StreamingTypePtr CredentialDemoStreamingImpl::CreateType()
         .setDescription("Dummy streaming connection, authenticated via the same credential framework and "
                          "auth methods as the device")
         .setConnectionStringPrefix(CredentialDemoStreamingPrefix)
-        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor)
-        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor)
-        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor)
+        .addSupportedAuthenticationDescriptor(userNamePasswordDescriptor)
+        .addSupportedAuthenticationDescriptor(pinDescriptor)
+        .addSupportedAuthenticationDescriptor(privateKeyDescriptor)
         .setDefaultAuthenticationConfigId(PinPayloadId)
         .build();
 }

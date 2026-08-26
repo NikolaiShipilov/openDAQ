@@ -20,7 +20,6 @@
 #include <opendaq/component_type_builder_ptr.h>
 #include <opendaq/streaming_type_factory.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
-#include <opendaq/authentication_config_ptr.h>
 #include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -36,7 +35,7 @@ public:
                                const StringPtr& description,
                                const StringPtr& prefix,
                                const PropertyObjectPtr& defaultConfig,
-                               const DictPtr<IString, IAuthenticationConfig>& supportedAuthenticationConfigs = Dict<IString, IAuthenticationConfig>(),
+                               const DictPtr<IString, ICredentialPayloadDescriptor>& supportedAuthenticationDescriptors = Dict<IString, ICredentialPayloadDescriptor>(),
                                const StringPtr& defaultAuthenticationConfigId = nullptr);
 
     explicit StreamingTypeImpl(const ComponentTypeBuilderPtr& builder);

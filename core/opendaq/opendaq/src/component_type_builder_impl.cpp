@@ -5,13 +5,12 @@
 #include <opendaq/streaming_type_impl.h>
 #include <coretypes/validation.h>
 #include <coretypes/dictobject_factory.h>
-#include <opendaq/authentication_config_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 ComponentTypeBuilderImpl::ComponentTypeBuilderImpl(ComponentTypeSort sort)
     : sort(sort)
-    , supportedAuthenticationConfigs(Dict<IString, IAuthenticationConfig>())
+    , supportedAuthenticationDescriptors(Dict<IString, ICredentialPayloadDescriptor>())
 {
 }
 
@@ -144,33 +143,33 @@ ErrCode ComponentTypeBuilderImpl::getDefaultAuthenticationConfigId(IString** id)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::addSupportedAuthenticationConfig(IString* id, ICredentialPayloadDescriptor* payloadDescriptor)
+ErrCode ComponentTypeBuilderImpl::addSupportedAuthenticationDescriptor(ICredentialPayloadDescriptor* payloadDescriptor)
 {
-    OPENDAQ_PARAM_NOT_NULL(id);
     OPENDAQ_PARAM_NOT_NULL(payloadDescriptor);
 
-    supportedAuthenticationConfigs.set(id, AuthenticationConfig(id, payloadDescriptor));
+    const CredentialPayloadDescriptorPtr payloadDescriptorPtr = CredentialPayloadDescriptorPtr::Borrow(payloadDescriptor);
+    supportedAuthenticationDescriptors.set(payloadDescriptorPtr.getId(), payloadDescriptorPtr);
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::getSupportedAuthenticationConfigs(IDict** authenticationConfigs)
+ErrCode ComponentTypeBuilderImpl::getSupportedAuthenticationDescriptors(IDict** payloadDescriptors)
 {
-    OPENDAQ_PARAM_NOT_NULL(authenticationConfigs);
+    OPENDAQ_PARAM_NOT_NULL(payloadDescriptors);
 
-    *authenticationConfigs = supportedAuthenticationConfigs.addRefAndReturn();
+    *payloadDescriptors = supportedAuthenticationDescriptors.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
 ErrCode ComponentTypeBuilderImpl::validateAuthenticationCapabilities()
 {
-    const bool noneAuthenticationConfigs = !supportedAuthenticationConfigs.assigned() || supportedAuthenticationConfigs.getCount() == 0;
+    const bool noneAuthenticationDescriptors = !supportedAuthenticationDescriptors.assigned() || supportedAuthenticationDescriptors.getCount() == 0;
 
-    if (noneAuthenticationConfigs)
+    if (noneAuthenticationDescriptors)
     {
         if (defaultAuthenticationConfigId.assigned())
             return DAQ_MAKE_ERROR_INFO(
                 OPENDAQ_ERR_INVALIDPARAMETER,
-                "A default authentication config id is set, but no supported authentication configs were added");
+                "A default authentication config id is set, but no supported authentication methods were added");
 
         return OPENDAQ_SUCCESS;
     }
@@ -179,12 +178,12 @@ ErrCode ComponentTypeBuilderImpl::validateAuthenticationCapabilities()
         if (!defaultAuthenticationConfigId.assigned())
             return DAQ_MAKE_ERROR_INFO(
                 OPENDAQ_ERR_INVALIDPARAMETER,
-                "Supported authentication configs were added, but no default authentication config id is set");
+                "Supported authentication methods were added, but no default authentication config id is set");
 
-        if (!supportedAuthenticationConfigs.hasKey(defaultAuthenticationConfigId))
+        if (!supportedAuthenticationDescriptors.hasKey(defaultAuthenticationConfigId))
             return DAQ_MAKE_ERROR_INFO(
                 OPENDAQ_ERR_INVALIDPARAMETER,
-                "The default authentication config id does not match any of the supported authentication configs");
+                "The default authentication config id does not match any of the supported authentication methods");
     }
 
     return OPENDAQ_SUCCESS;
