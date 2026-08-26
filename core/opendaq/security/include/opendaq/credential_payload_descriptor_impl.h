@@ -70,12 +70,13 @@ class CredentialPayloadDescriptorImpl final : public GenericStructImpl<ICredenti
 {
 public:
     // KeyValuePairs
-    CredentialPayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
+    CredentialPayloadDescriptorImpl(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
     // String
-    CredentialPayloadDescriptorImpl(const StringPtr& description, Bool hidden);
+    CredentialPayloadDescriptorImpl(const StringPtr& id, const StringPtr& description, Bool hidden);
     // FilePath
-    explicit CredentialPayloadDescriptorImpl(const StringPtr& description);
+    CredentialPayloadDescriptorImpl(const StringPtr& id, const StringPtr& description);
 
+    ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
     ErrCode INTERFACE_FUNC getParameters(IStruct** parameters) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
@@ -88,9 +89,9 @@ public:
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
 private:
-    static DictPtr<IString, IBaseObject> BuildFields(const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
-    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& description, Bool hidden);
-    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& description);
+    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
+    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const StringPtr& description, Bool hidden);
+    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const StringPtr& description);
 };
 
 using KeyValuePayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::KeyValuePairs>;

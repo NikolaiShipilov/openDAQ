@@ -23,36 +23,39 @@ BEGIN_NAMESPACE_OPENDAQ
 
 /*!
  * @brief Creates a `CredentialPayloadDescriptor` describing a `KeyValuePairs`-format payload.
+ * @param id The id that uniquely identifies this authentication method within the module that offers it.
  * @param keys The expected keys, mapped to whether the corresponding value should be hidden as it is
  * entered (e.g. `{"UserName": False, "Password": True}`).
  * @param description A human-readable description of the payload, for the user.
  */
-inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
+inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
 {
-    CredentialPayloadDescriptorPtr obj(KeyValuePayloadDescriptor_Create(keys, description));
+    CredentialPayloadDescriptorPtr obj(KeyValuePayloadDescriptor_Create(id, keys, description));
     return obj;
 }
 
 /*!
  * @brief Creates a `CredentialPayloadDescriptor` describing a `String`-format payload - a single secret,
  * e.g. a PIN, token, or API key.
+ * @param id The id that uniquely identifies this authentication method within the module that offers it.
  * @param description A human-readable description of the payload, for the user.
  * @param hidden Whether the secret should be hidden as it is entered.
  */
-inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& description, Bool hidden = True)
+inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& id, const StringPtr& description, Bool hidden = True)
 {
-    CredentialPayloadDescriptorPtr obj(StringPayloadDescriptor_Create(description, hidden));
+    CredentialPayloadDescriptorPtr obj(StringPayloadDescriptor_Create(id, description, hidden));
     return obj;
 }
 
 /*!
  * @brief Creates a `CredentialPayloadDescriptor` describing a `FilePath`-format payload - a single secret
  * stating that the secret is a path to a file (e.g. a private key) rather than the value itself.
+ * @param id The id that uniquely identifies this authentication method within the module that offers it.
  * @param description A human-readable description of the payload, for the user.
  */
-inline CredentialPayloadDescriptorPtr FilePathPayloadDescriptor(const StringPtr& description)
+inline CredentialPayloadDescriptorPtr FilePathPayloadDescriptor(const StringPtr& id, const StringPtr& description)
 {
-    CredentialPayloadDescriptorPtr obj(FilePathPayloadDescriptor_Create(description));
+    CredentialPayloadDescriptorPtr obj(FilePathPayloadDescriptor_Create(id, description));
     return obj;
 }
 

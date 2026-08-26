@@ -41,8 +41,11 @@ enum class CredentialPayloadFormat : EnumType
 /*!
  * @brief Describes the details of the payload required for an authentication method used by the module and produced by credential provider.
  *
- * A descriptor carries the payload's format, its format-specific parameter set, and a human-readable
- * description. The parameter set is itself a Struct, whose exact Struct type (and so its fields) depends
+ * A descriptor carries the payload's id, format, its format-specific parameter set, and a human-readable
+ * description. The id uniquely identifies the authentication method within the module that offers it
+ * (e.g. `"UserNamePassword"`, `"Pin"`) - the same id used to key the method within
+ * `IComponentTypeBuilder::addSupportedAuthenticationConfig`/`IComponentType::getSupportedAuthenticationConfigs`.
+ * The parameter set is itself a Struct, whose exact Struct type (and so its fields) depends
  * on the format: for a `KeyValuePairs`-format payload, a `"Keys"` dict field maps each expected key to
  * its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String`-format payload, a
  * single `"Hidden"` bool field applies to the one secret. A `FilePath`-format payload's parameters Struct
@@ -50,6 +53,13 @@ enum class CredentialPayloadFormat : EnumType
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 {
+    /*!
+     * @brief Gets the id that uniquely identifies the authentication method this payload belongs to,
+     * within the module that offers it.
+     * @param[out] id The payload id.
+     */
+    virtual ErrCode INTERFACE_FUNC getId(IString** id) = 0;
+
     /*!
      * @brief Gets the format of the described payload.
      * @param[out] format The payload format.
@@ -86,17 +96,17 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor,
-    IDict*, keys, IString*, description
+    IString*, id, IDict*, keys, IString*, description
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, description, Bool, hidden
+    IString*, id, IString*, description, Bool, hidden
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, description
+    IString*, id, IString*, description
 )
 
 END_NAMESPACE_OPENDAQ

@@ -12,12 +12,13 @@ Describes the shape and presentation of the payload an authentication method exp
 
 | Member | Description |
 |---|---|
+| `getId(IString**)` | The id that uniquely identifies this authentication method within the module that offers it - the same id `IComponentTypeBuilder::addSupportedAuthenticationConfig`/`IComponentType::getSupportedAuthenticationConfigs` key it by. |
 | `getFormat(CredentialPayloadFormat*)` | The payload's format — `KeyValuePairs`, `String`, or `FilePath`. |
 | `getParameters(IStruct**)` | The format's standard parameter set, as a Struct whose own Struct type is pinned to the format - for `KeyValuePairs`, a `"Keys"` dict field mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool field; for `FilePath`, no fields at all. |
 | `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
 | `createDefaultPayload(IPropertyObject**)` | Builds an empty credential payload template matching this format: a property object with one empty (default `""`) String property per secret expected - one per key named in `getParameters()`'s `"Keys"` dict for `KeyValuePairs` (e.g. `"UserName"`, `"Password"`), or a single `"Secret"` property for `String`/`FilePath`. Meant to be filled in with the actual secret value(s) and used as the credential payload itself - see [§5](#5-credential-provider-selection--supplied-secrets). |
 
-**Factories:** `KeyValuePayloadDescriptor(keys, description)`, `StringPayloadDescriptor(description, hidden)`, `FilePathPayloadDescriptor(description)`
+**Factories:** `KeyValuePayloadDescriptor(id, keys, description)`, `StringPayloadDescriptor(id, description, hidden)`, `FilePathPayloadDescriptor(id, description)`
 
 ```cpp
 enum class CredentialPayloadFormat : EnumType

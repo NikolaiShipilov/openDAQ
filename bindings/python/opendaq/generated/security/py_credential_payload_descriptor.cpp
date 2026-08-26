@@ -45,19 +45,27 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
 {
     cls.doc() = "Describes the details of the payload required for an authentication method used by the module and produced by credential provider.";
 
-    m.def("KeyValuePayloadDescriptor", [](std::variant<daq::IDict*, py::dict>& keys, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
-        return daq::KeyValuePayloadDescriptor_Create(getVariantValue<daq::IDict*>(keys), getVariantValue<daq::IString*>(description));
-    }, py::arg("keys"), py::arg("description"));
+    m.def("KeyValuePayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IDict*, py::dict>& keys, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
+        return daq::KeyValuePayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IDict*>(keys), getVariantValue<daq::IString*>(description));
+    }, py::arg("id"), py::arg("keys"), py::arg("description"));
 
-    m.def("StringPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, const bool hidden){
-        return daq::StringPayloadDescriptor_Create(getVariantValue<daq::IString*>(description), hidden);
-    }, py::arg("description"), py::arg("hidden"));
+    m.def("StringPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, const bool hidden){
+        return daq::StringPayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), hidden);
+    }, py::arg("id"), py::arg("description"), py::arg("hidden"));
 
-    m.def("FilePathPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
-        return daq::FilePathPayloadDescriptor_Create(getVariantValue<daq::IString*>(description));
-    }, py::arg("description"));
+    m.def("FilePathPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
+        return daq::FilePathPayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description));
+    }, py::arg("id"), py::arg("description"));
 
 
+    cls.def_property_readonly("id",
+        [](daq::ICredentialPayloadDescriptor *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialPayloadDescriptorPtr::Borrow(object);
+            return objectPtr.getId().toStdString();
+        },
+        "Gets the id that uniquely identifies the authentication method this payload belongs to, within the module that offers it.");
     cls.def_property_readonly("format",
         [](daq::ICredentialPayloadDescriptor *object)
         {

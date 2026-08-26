@@ -42,22 +42,22 @@ namespace detail
     inline StructTypePtr MakeKeyValuePayloadDescriptorStructType()
     {
         return StructType("KeyValuePayloadDescriptor",
-                          List<IString>("Description", "Parameters"),
-                          List<IType>(SimpleType(ctString), keyValuePayloadParametersStructType));
+                          List<IString>("Id", "Description", "Parameters"),
+                          List<IType>(SimpleType(ctString), SimpleType(ctString), keyValuePayloadParametersStructType));
     }
 
     inline StructTypePtr MakeStringPayloadDescriptorStructType()
     {
         return StructType("StringPayloadDescriptor",
-                          List<IString>("Description", "Parameters"),
-                          List<IType>(SimpleType(ctString), stringPayloadParametersStructType));
+                          List<IString>("Id", "Description", "Parameters"),
+                          List<IType>(SimpleType(ctString), SimpleType(ctString), stringPayloadParametersStructType));
     }
 
     inline StructTypePtr MakeFilePathPayloadDescriptorStructType()
     {
         return StructType("FilePathPayloadDescriptor",
-                          List<IString>("Description", "Parameters"),
-                          List<IType>(SimpleType(ctString), filePathPayloadParametersStructType));
+                          List<IString>("Id", "Description", "Parameters"),
+                          List<IType>(SimpleType(ctString), SimpleType(ctString), filePathPayloadParametersStructType));
     }
 
     static const StructTypePtr keyValuePayloadDescriptorStructType = MakeKeyValuePayloadDescriptorStructType();
@@ -172,45 +172,54 @@ ErrCode CredentialPayloadParametersImpl<Format>::Deserialize(ISerializedObject* 
 //
 
 template <CredentialPayloadFormat Format>
-DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl<Format>::BuildFields(const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
+DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl<Format>::BuildFields(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
 {
     if (!keys.assigned() || keys.getCount() == 0)
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Keys must be assigned and non-empty when creating a key-value credential payload descriptor");
 
     return Dict<IString, IBaseObject>(
-        {{"Description", description}, {"Parameters", createWithImplementation<IStruct, CredentialPayloadParametersImpl<Format>>(keys)}});
+        {{"Id", id}, {"Description", description}, {"Parameters", createWithImplementation<IStruct, CredentialPayloadParametersImpl<Format>>(keys)}});
 }
 
 template <CredentialPayloadFormat Format>
-DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl<Format>::BuildFields(const StringPtr& description, Bool hidden)
+DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl<Format>::BuildFields(const StringPtr& id, const StringPtr& description, Bool hidden)
 {
     return Dict<IString, IBaseObject>(
-        {{"Description", description}, {"Parameters", createWithImplementation<IStruct, CredentialPayloadParametersImpl<Format>>(hidden)}});
+        {{"Id", id}, {"Description", description}, {"Parameters", createWithImplementation<IStruct, CredentialPayloadParametersImpl<Format>>(hidden)}});
 }
 
 template <CredentialPayloadFormat Format>
-DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl<Format>::BuildFields(const StringPtr& description)
+DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl<Format>::BuildFields(const StringPtr& id, const StringPtr& description)
 {
     return Dict<IString, IBaseObject>(
-        {{"Description", description}, {"Parameters", createWithImplementation<IStruct, CredentialPayloadParametersImpl<Format>>()}});
+        {{"Id", id}, {"Description", description}, {"Parameters", createWithImplementation<IStruct, CredentialPayloadParametersImpl<Format>>()}});
 }
 
 template <CredentialPayloadFormat Format>
-CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
-    : GenericStructImpl<ICredentialPayloadDescriptor, IStruct>(detail::PayloadDescriptorStructType<Format>(), BuildFields(keys, description))
+CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
+    : GenericStructImpl<ICredentialPayloadDescriptor, IStruct>(detail::PayloadDescriptorStructType<Format>(), BuildFields(id, keys, description))
 {
 }
 
 template <CredentialPayloadFormat Format>
-CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const StringPtr& description, Bool hidden)
-    : GenericStructImpl<ICredentialPayloadDescriptor, IStruct>(detail::PayloadDescriptorStructType<Format>(), BuildFields(description, hidden))
+CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const StringPtr& id, const StringPtr& description, Bool hidden)
+    : GenericStructImpl<ICredentialPayloadDescriptor, IStruct>(detail::PayloadDescriptorStructType<Format>(), BuildFields(id, description, hidden))
 {
 }
 
 template <CredentialPayloadFormat Format>
-CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const StringPtr& description)
-    : GenericStructImpl<ICredentialPayloadDescriptor, IStruct>(detail::PayloadDescriptorStructType<Format>(), BuildFields(description))
+CredentialPayloadDescriptorImpl<Format>::CredentialPayloadDescriptorImpl(const StringPtr& id, const StringPtr& description)
+    : GenericStructImpl<ICredentialPayloadDescriptor, IStruct>(detail::PayloadDescriptorStructType<Format>(), BuildFields(id, description))
 {
+}
+
+template <CredentialPayloadFormat Format>
+ErrCode CredentialPayloadDescriptorImpl<Format>::getId(IString** id)
+{
+    OPENDAQ_PARAM_NOT_NULL(id);
+
+    *id = this->fields.get("Id").template asPtr<IString>().addRefAndReturn();
+    return OPENDAQ_SUCCESS;
 }
 
 template <CredentialPayloadFormat Format>
@@ -268,6 +277,10 @@ ErrCode CredentialPayloadDescriptorImpl<Format>::serialize(ISerializer* serializ
 {
     serializer->startTaggedObject(this);
 
+    const StringPtr id = this->fields.get("Id");
+    serializer->key("Id");
+    serializer->writeString(id.getCharPtr(), id.getLength());
+
     const StringPtr description = this->fields.get("Description");
     serializer->key("Description");
     serializer->writeString(description.getCharPtr(), description.getLength());
@@ -310,31 +323,32 @@ ErrCode CredentialPayloadDescriptorImpl<Format>::Deserialize(ISerializedObject* 
     return daqTry(
         [&]
         {
+            const auto id = serializedObj.readString("Id");
             const auto description = serializedObj.readString("Description");
 
             if constexpr (Format == CredentialPayloadFormat::KeyValuePairs)
             {
                 const StructPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
                 const DictPtr<IString, IBoolean> keys = parameters.get("Keys");
-                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(keys, description).detach();
+                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(id, keys, description).detach();
             }
             else if constexpr (Format == CredentialPayloadFormat::String)
             {
                 const StructPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
                 const Bool hidden = parameters.get("Hidden");
-                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(description, hidden).detach();
+                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(id, description, hidden).detach();
             }
             else
             {
-                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(description).detach();
+                *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(id, description).detach();
             }
 
             return OPENDAQ_SUCCESS;
         });
 }
 
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IDict*, keys, IString*, description)
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description, Bool, hidden)
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor, IString*, description)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IString*, id, IDict*, keys, IString*, description)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, id, IString*, description, Bool, hidden)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor, IString*, id, IString*, description)
 
 END_NAMESPACE_OPENDAQ

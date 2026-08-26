@@ -75,17 +75,17 @@ namespace authentication
 
 CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor()
 {
-    return KeyValuePayloadDescriptor(Dict<IString, IBoolean>({{"UserName", False}, {"Password", True}}), "Username and password");
+    return KeyValuePayloadDescriptor(UserNamePasswordPayloadId, Dict<IString, IBoolean>({{"UserName", False}, {"Password", True}}), "Username and password");
 }
 
 CredentialPayloadDescriptorPtr BuildPinDescriptor()
 {
-    return StringPayloadDescriptor("PIN code", True);
+    return StringPayloadDescriptor(PinPayloadId, "PIN code", True);
 }
 
 CredentialPayloadDescriptorPtr BuildPrivateKeyFileDescriptor()
 {
-    return FilePathPayloadDescriptor("Path to the PEM-encoded private key file");
+    return FilePathPayloadDescriptor(PrivateKeyFilePayloadId, "Path to the PEM-encoded private key file");
 }
 
 static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, const ComponentTypePtr& componentType)
