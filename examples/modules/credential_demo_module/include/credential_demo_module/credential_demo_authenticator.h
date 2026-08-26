@@ -17,7 +17,6 @@
 #pragma once
 #include <credential_demo_module/common.h>
 #include <opendaq/context_ptr.h>
-#include <opendaq/credential_payload_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 #include <opendaq/credential_request_ptr.h>
 #include <opendaq/component_type_ptr.h>
@@ -52,7 +51,7 @@ namespace authentication
      * PrivateKeyFile). Shared by both the device (authenticating a connection to it) and the streaming
      * implementation (authenticating a streaming connection).
      */
-    void Authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials, const StringPtr& payloadId);
+    void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& payloadId);
 
     /*
      * Builds a credential request for one of the three showcased auth methods. Shared by both the device

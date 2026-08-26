@@ -8,7 +8,7 @@ AuthenticationConfigImpl::AuthenticationConfigImpl(const StringPtr& payloadId,
                                                    const PropertyObjectPtr& config,
                                                    const DictPtr<IString, IAuthenticationConfig>& streamingAuthenticationConfigs,
                                                    const StringPtr& credentialProviderId,
-                                                   const BaseObjectPtr& suppliedSecret)
+                                                   const PropertyObjectPtr& suppliedSecret)
     : payloadId(payloadId)
     , payloadDescriptor(payloadDescriptor)
     , config(config.assigned() ? config : PropertyObject())
@@ -62,7 +62,7 @@ ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode AuthenticationConfigImpl::getSuppliedSecret(IBaseObject** suppliedSecret)
+ErrCode AuthenticationConfigImpl::getSuppliedSecret(IPropertyObject** suppliedSecret)
 {
     OPENDAQ_PARAM_NOT_NULL(suppliedSecret);
 

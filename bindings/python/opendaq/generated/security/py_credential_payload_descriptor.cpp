@@ -83,4 +83,12 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
             return objectPtr.getDescription().toStdString();
         },
         "Gets the description of the payload, for the user. States how the module interpretes it, e.g. \"PIN-code\", \"username and password\", \"Raw bytes of the SSH private key\", \"Path to file containing the SSH private key\".");
+    cls.def("create_default_payload",
+        [](daq::ICredentialPayloadDescriptor *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialPayloadDescriptorPtr::Borrow(object);
+            return objectPtr.createDefaultPayload().detach();
+        },
+        "Builds an empty payload template matching this descriptor's shape - a property object with one empty (default `\"\"`) String property per secret the format expects: for `KeyValuePairs`, one property per key named in `getParameters()`'s `\"Keys\"` dict (e.g. `\"UserName\"`, `\"Password\"`); for `String` and `FilePath`, a single `\"Secret\"` property.");
 }

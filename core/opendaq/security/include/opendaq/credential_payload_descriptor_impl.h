@@ -79,6 +79,7 @@ public:
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
     ErrCode INTERFACE_FUNC getParameters(IStruct** parameters) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
+    ErrCode INTERFACE_FUNC createDefaultPayload(IPropertyObject** payload) override;
 
     // ISerializable
     ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;

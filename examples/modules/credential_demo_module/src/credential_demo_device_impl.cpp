@@ -22,7 +22,7 @@ CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& conf
                                                    const DeviceInfoPtr& info,
                                                    bool authenticated,
                                                    const StringPtr& payloadId,
-                                                   const CredentialPayloadPtr& credentials,
+                                                   const PropertyObjectPtr& credentials,
                                                    const AuthenticationConfigPtr& authenticationConfig)
     : MirroredDevice(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {

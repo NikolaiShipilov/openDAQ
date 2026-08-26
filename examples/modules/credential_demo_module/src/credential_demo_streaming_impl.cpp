@@ -11,7 +11,7 @@ static const std::string CredentialDemoStreamingPrefix = "daq.credential_demo_st
 CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connectionString,
                                                           const ContextPtr& ctx,
                                                           const StringPtr& payloadId,
-                                                          const CredentialPayloadPtr& credentials)
+                                                          const PropertyObjectPtr& credentials)
     : Streaming(connectionString, ctx, /*skipDomainSignalSubscribe*/ true)
 {
     authentication::Authenticate(ctx, credentials, payloadId);

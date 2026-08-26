@@ -15,6 +15,7 @@ Describes the shape and presentation of the payload an authentication method exp
 | `getFormat(CredentialPayloadFormat*)` | The payload's format — `KeyValuePairs`, `String`, or `FilePath`. |
 | `getParameters(IStruct**)` | The format's standard parameter set, as a Struct whose own Struct type is pinned to the format - for `KeyValuePairs`, a `"Keys"` dict field mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool field; for `FilePath`, no fields at all. |
 | `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
+| `createDefaultPayload(IPropertyObject**)` | Builds an empty credential payload template matching this format: a property object with one empty (default `""`) String property per secret expected - one per key named in `getParameters()`'s `"Keys"` dict for `KeyValuePairs` (e.g. `"UserName"`, `"Password"`), or a single `"Secret"` property for `String`/`FilePath`. Meant to be filled in with the actual secret value(s) and used as the credential payload itself - see [§5](#5-credential-provider-selection--supplied-secrets). |
 
 **Factories:** `KeyValuePayloadDescriptor(keys, description)`, `StringPayloadDescriptor(description, hidden)`, `FilePathPayloadDescriptor(description)`
 
@@ -39,7 +40,7 @@ Carries the authentication settings for a single connection attempt. Lives along
 | `getCredentialPayloadDescriptor(ICredentialPayloadDescriptor**)` | The descriptor of the payload the selected method uses. |
 | `getConfig(IPropertyObject**)` | Additional configuration specific to the selected method — settings that may travel with the credential request to the provider (e.g. hide input as typed). Supplied for this connection attempt only; never saved. |
 | `getCredentialProviderId(IString**)` | The id of a specifically selected credential provider, or `nullptr` (the default) if none was chosen — in which case the module auto-selects a registered provider supporting the payload descriptor's format. |
-| `getSuppliedSecret(IBaseObject**)` | A secret supplied directly by the caller, to be used instead of a provider obtaining it — or `nullptr` (the default), leaving the module to obtain it from a provider as usual. See [§5](#5-credential-provider-selection--supplied-secrets). |
+| `getSuppliedSecret(IPropertyObject**)` | A secret supplied directly by the caller, to be used instead of a provider obtaining it — or `nullptr` (the default), leaving the module to obtain it from a provider as usual. See [§5](#5-credential-provider-selection--supplied-secrets). |
 | `getStreamingAuthenticationConfigs(IDict**)` | Authentication configs nested under this one, keyed by streaming type id — each an ordinary `IAuthenticationConfig` in its own right. See [§4](#4-streaming-authentication). |
 
 **Factories:**
@@ -60,7 +61,7 @@ Builds `IAuthenticationConfig` objects, exposing every setting the plain factory
 | `setPayloadDescriptor` / `getPayloadDescriptor` | The descriptor of the payload the selected method uses. |
 | `setConfig` / `getConfig` | Additional configuration specific to the selected method. |
 | `setCredentialProviderId` / `getCredentialProviderId` | Selects a specific registered provider by id, bypassing format-based auto-selection. `nullptr` (the default) leaves auto-selection in place. |
-| `setSuppliedSecret` / `getSuppliedSecret` | Supplies the secret directly, in the format described by `setPayloadDescriptor`. `nullptr` (the default) leaves the module to obtain it from a provider. |
+| `setSuppliedSecret` / `getSuppliedSecret` | Supplies the secret directly - a property object built from `setPayloadDescriptor`'s `createDefaultPayload` template and filled in with the actual secret value(s). `nullptr` (the default) leaves the module to obtain it from a provider. |
 | `addStreamingAuthenticationConfig(IStreamingType*, IAuthenticationConfig*)` | Adds (or replaces) an authentication config nested under the given streaming type — keyed internally by the type's own id (`IComponentType::getId`), so only a real, registered streaming type can ever be used as the key, not an arbitrary string. |
 | `getStreamingAuthenticationConfigs(IDict**)` | The nested configs accumulated so far, keyed by streaming type id. |
 
@@ -116,19 +117,9 @@ Builds `ICredentialRequest` objects.
 
 ---
 
-### `ICredentialPayload`
+### Credential payload
 
-Container providing access to the secrets obtained from a provider.
-
-| Member | Description |
-|---|---|
-| `getSecrets(IBaseObject**)` | The secret(s) carried by the payload. Concrete type depends on the payload format: `IString` for `String`- or `FilePath`-format, `IDict<IString, IString>` for `KeyValuePairs`. Callers are expected to know the format (from the `IAuthenticationConfig`/`ICredentialPayloadDescriptor` used) and cast accordingly. |
-
-**Factories:**
-- `KeyValueCredentialPayload(getValuesCb)` — `KeyValuePairs`-format payload; secrets returned as `IDict<IString, IString>`, keyed the same as the descriptor's `"Keys"` parameter.
-- `StringCredentialPayload(getSecretCb)` — `String`-format payload; single secret returned directly as `IString`. Also used for `FilePath`-format payloads, which likewise resolve to a single `IString`.
-
-**Implementation note:** `KeyValueCredentialPayloadImpl` and `StringCredentialPayloadImpl` are both type aliases of one templated `CredentialPayloadImpl<SecretInterface>`.
+There is no dedicated payload interface - a credential payload is simply an `IPropertyObject`, built from the payload descriptor's `createDefaultPayload()` template and filled in with the actual secret value(s). For a `KeyValuePairs`-format payload it has one String property per key (e.g. `"UserName"`, `"Password"`); for `String`/`FilePath` it has a single `"Secret"` String property. Both a credential provider's `requestCredentials` and a caller directly supplying a secret (`IAuthenticationConfigBuilder::setSuppliedSecret`) produce/consume this exact same shape - see [§5](#5-credential-provider-selection--supplied-secrets).
 
 ---
 
@@ -139,8 +130,8 @@ Supplies the secrets requested via an `ICredentialRequest` — by prompting the 
 | Member | Description |
 |---|---|
 | `getName(IString**)` | The provider's name. |
-| `requestCredentials(ICredentialRequest*, ICredentialPayload**)` | Requests credentials for the given request, in the format described by its payload descriptor — obtaining them interactively (prompting, reading a file, etc.) unless a cached value from an earlier `cacheCredentials`/`requestCredentials` call for the same context already covers it. |
-| `cacheCredentials(ICredentialRequest*, IBaseObject* secret)` | Accepts a secret already known in advance (see `IAuthenticationConfig::getSuppliedSecret`) so an implementation that would otherwise cache a value obtained interactively caches this one the same way — a later `requestCredentials` call for the same context then reuses it instead of prompting. Produces no payload itself; the caller already has the secret and wraps it directly. Implementations for which caching doesn't apply (or doesn't apply to the request's format) may treat this as a no-op. |
+| `requestCredentials(ICredentialRequest*, IPropertyObject**)` | Requests credentials for the given request, in the format described by its payload descriptor — obtaining them interactively (prompting, reading a file, etc.) unless a cached value from an earlier `cacheCredentials`/`requestCredentials` call for the same context already covers it. Returns a property object built from the descriptor's `createDefaultPayload` template, filled in with the obtained secret(s). |
+| `cacheCredentials(ICredentialRequest*, IPropertyObject* secret)` | Accepts a secret already known in advance (see `IAuthenticationConfig::getSuppliedSecret`), shaped like the request's payload descriptor's `createDefaultPayload` template, so an implementation that would otherwise cache a value obtained interactively caches this one the same way — a later `requestCredentials` call for the same context then reuses it instead of prompting. Produces no payload itself; the caller already has the secret and uses it directly. Implementations for which caching doesn't apply (or doesn't apply to the request's format) may treat this as a no-op. |
 | `getSupportedPayloadFormats(IList**)` | The list of `CredentialPayloadFormat` values this provider can supply — used for format-matching against a device type's supported formats. |
 
 **Factories:**
@@ -303,30 +294,37 @@ This only makes an observable difference for a format more than one registered p
 
 ### Supplying the secret directly
 
-`setSuppliedSecret` hands the module a secret it already has — in the format described by the config's payload descriptor (see `ICredentialPayload::getSecrets` for the expected concrete type per format) — instead of having a provider obtain one interactively:
+`setSuppliedSecret` hands the module a secret it already has — a property object built from the config's payload descriptor's `createDefaultPayload()` template and filled in with the actual value(s) — instead of having a provider obtain one interactively:
 
 ```cpp
+auto payload = userNamePasswordConfig.getCredentialPayloadDescriptor().createDefaultPayload();
+payload.setPropertyValue("UserName", "user");
+payload.setPropertyValue("Password", "pass");
+
 auto config = AuthenticationConfigBuilder()
                    .setPayloadId(userNamePasswordConfig.getCredentialPayloadId())
                    .setPayloadDescriptor(userNamePasswordConfig.getCredentialPayloadDescriptor())
                    .setConfig(userNamePasswordConfig.getConfig())
-                   .setSuppliedSecret(Dict<IString, IString>({{"UserName", "user"}, {"Password", "pass"}}))
+                   .setSuppliedSecret(payload)
                    .build();
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, config);
 ```
 
-- **No provider id set:** no provider is looked up at all — the module wraps the supplied secret into the credential payload itself and authenticates with it directly, with no prompt of any kind.
-- **A provider id is also set:** the module still wraps the secret itself for this connection, but first hands both the secret and the credential request to that specific provider via `ICredentialProvider::cacheCredentials`, so the provider can remember it the same way it would one obtained interactively.
+- **No provider id set:** no provider is looked up at all — the module uses the supplied payload directly and authenticates with it, with no prompt of any kind.
+- **A provider id is also set:** the module still uses the supplied payload directly for this connection, but first hands both it and the credential request to that specific provider via `ICredentialProvider::cacheCredentials`, so the provider can remember it the same way it would one obtained interactively.
 
 The second combination is what makes it possible for a *later*, ordinary `requestCredentials` call — e.g. authenticating a streaming connection attached to the same device — to be served from the provider's cache instead of prompting, provided the provider actually caches for that format (see `CmdLineCredentialProvider`'s `FilePath` caching) and the two requests share the same `(manufacturer, serialNumber)`:
 
 ```cpp
+auto devicePayload = devicePrivateKeyFileConfig.getCredentialPayloadDescriptor().createDefaultPayload();
+devicePayload.setPropertyValue("Secret", "/path/to/private_key.pem");
+
 auto deviceConfig = AuthenticationConfigBuilder()
                          .setPayloadId(devicePrivateKeyFileConfig.getCredentialPayloadId())
                          .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
                          .setConfig(devicePrivateKeyFileConfig.getConfig())
                          .setCredentialProviderId(cmdLineCredentialProvider.getName())
-                         .setSuppliedSecret(String("/path/to/private_key.pem"))
+                         .setSuppliedSecret(devicePayload)
                          .build();
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceConfig);
 
@@ -426,12 +424,12 @@ This section describes what a module does internally when `Module::createAuthent
 2. **Obtain or reuse the credential request.** If the `IAuthenticationConfig` was reconstructed from a saved device (i.e. this is a reload, not a fresh connection), `IAuthenticationConfigPrivate::getCredentialRequest()` returns the original request as-is, and the module reuses it unchanged. Otherwise, the module builds a new `ICredentialRequest` via `ICredentialRequestBuilder`, populating connection string, manufacturer/serial number (if resolved), and metadata for the provider to present to the user.
 
 3. **Resolve the credentials.** The module reads `getCredentialProviderId()` and `getSuppliedSecret()` off the authentication config and branches:
-   - **A secret is supplied:** no provider obtains anything — the module wraps the secret into a credential payload directly, matching the shape the payload's format expects. If a provider id was *also* set, that specific provider is first looked up and handed the secret via `provider.cacheCredentials(request, secret)`, so it can remember it the same way it would one obtained interactively — but the payload used for *this* connection is always the one the module just wrapped, regardless of whether caching succeeds.
-   - **No secret supplied:** the module finds a matching provider — the one named by `getCredentialProviderId()` if set (failing immediately, with a message identifying the problem, if that id names no registered provider or one that doesn't support the required format), otherwise the first registered provider whose `getSupportedPayloadFormats()` includes the required format. Either way, `provider.requestCredentials(request)` is then called, obtaining an `ICredentialPayload` — interactively, or served from that provider's own cache if a matching entry exists (e.g. from an earlier `cacheCredentials` call, or an earlier interactive request for the same context).
+   - **A secret is supplied:** no provider obtains anything — the supplied property object (already shaped like the payload descriptor's `createDefaultPayload` template) is used directly as the credential payload. If a provider id was *also* set, that specific provider is first looked up and handed the secret via `provider.cacheCredentials(request, secret)`, so it can remember it the same way it would one obtained interactively — but the payload used for *this* connection is always the one the caller supplied, regardless of whether caching succeeds.
+   - **No secret supplied:** the module finds a matching provider — the one named by `getCredentialProviderId()` if set (failing immediately, with a message identifying the problem, if that id names no registered provider or one that doesn't support the required format), otherwise the first registered provider whose `getSupportedPayloadFormats()` includes the required format. Either way, `provider.requestCredentials(request)` is then called, obtaining a credential payload - a property object built from the descriptor's `createDefaultPayload` template - interactively, or served from that provider's own cache if a matching entry exists (e.g. from an earlier `cacheCredentials` call, or an earlier interactive request for the same context).
 
-4. **Construct the device (or streaming) and authenticate.** The component is constructed and its authentication step runs — extracting the secrets (`getSecrets()`) and verifying them against whatever the specific method requires (a fixed value, a signed challenge, etc.). A mismatch throws `AuthenticationFailedException`, and construction fails.
+4. **Construct the device (or streaming) and authenticate.** The component is constructed and its authentication step runs — reading the credential payload's property values and verifying them against whatever the specific method requires (a fixed value, a signed challenge, etc.). A mismatch throws `AuthenticationFailedException`, and construction fails.
 
 5. **Persist the credential request for later reload (devices only).** On success, the module stores the credential request on the newly created device (`IComponentPrivate::setCredentialRequest`) — this is what step 2 reads back on a future reload, without ever needing to persist the secrets, provider id, or supplied secret themselves.
 
 ![Application / Module / Credential Provider — sequence view of the same steps](credential_flow_diagram_sequence.png)
-*Diagram 3 — the same steps as above, as a sequence diagram across the three parties involved: the Application first discovers which authentication methods a type supports (`getSupportedAuthenticationConfigs`) before building its `authConfig`; the Module then either resolves credentials through a Credential Provider (querying `getSupportedPayloadFormats()` to find or validate one, then `requestCredentials`/`cacheCredentials`) or wraps a supplied secret itself — matching the branching in Diagram 1. As there, the pink notes are prototype-specific policy, not core-mandated behavior.*
+*Diagram 3 — the same steps as above, as a sequence diagram across the three parties involved: the Application first discovers which authentication methods a type supports (`getSupportedAuthenticationConfigs`) before building its `authConfig`; the Module then either resolves credentials through a Credential Provider (querying `getSupportedPayloadFormats()` to find or validate one, then `requestCredentials`/`cacheCredentials`) or uses a supplied secret directly — matching the branching in Diagram 1. As there, the pink notes are prototype-specific policy, not core-mandated behavior.*

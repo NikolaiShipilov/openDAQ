@@ -18,6 +18,7 @@
 #include <coretypes/baseobject.h>
 #include <coretypes/string_ptr.h>
 #include <coretypes/struct.h>
+#include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -33,6 +34,8 @@ enum class CredentialPayloadFormat : EnumType
 
 /*#
  * [interfaceLibrary(IStruct, CoreTypes)]
+ * [interfaceLibrary(IPropertyObject, "coreobjects")]
+ * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
  */
 
 /*!
@@ -66,6 +69,19 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
      * @param[out] description The payload description.
      */
     virtual ErrCode INTERFACE_FUNC getDescription(IString** description) = 0;
+
+    /*!
+     * @brief Builds an empty payload template matching this descriptor's shape - a property object with
+     * one empty (default `""`) String property per secret the format expects: for `KeyValuePairs`, one
+     * property per key named in `getParameters()`'s `"Keys"` dict (e.g. `"UserName"`, `"Password"`); for
+     * `String` and `FilePath`, a single `"Secret"` property.
+     *
+     * Meant to be filled in with the actual secret value(s) and used as the credential payload itself -
+     * either by the caller, to supply a secret directly (`IAuthenticationConfigBuilder::setSuppliedSecret`),
+     * or by a credential provider, once it has obtained the secret(s) interactively.
+     * @param[out] payload The empty payload template.
+     */
+    virtual ErrCode INTERFACE_FUNC createDefaultPayload(IPropertyObject** payload) = 0;
 };
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(

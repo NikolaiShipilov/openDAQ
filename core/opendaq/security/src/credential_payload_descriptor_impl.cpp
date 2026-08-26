@@ -2,6 +2,8 @@
 #include <coretypes/struct_type_factory.h>
 #include <coretypes/simple_type_factory.h>
 #include <coretypes/dictobject_factory.h>
+#include <coreobjects/property_object_factory.h>
+#include <coreobjects/property_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -235,6 +237,29 @@ ErrCode CredentialPayloadDescriptorImpl<Format>::getDescription(IString** descri
     OPENDAQ_PARAM_NOT_NULL(description);
 
     *description = this->fields.get("Description").template asPtr<IString>().addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+template <CredentialPayloadFormat Format>
+ErrCode CredentialPayloadDescriptorImpl<Format>::createDefaultPayload(IPropertyObject** payload)
+{
+    OPENDAQ_PARAM_NOT_NULL(payload);
+
+    auto payloadObj = PropertyObject();
+
+    if constexpr (Format == CredentialPayloadFormat::KeyValuePairs)
+    {
+        const StructPtr parameters = this->fields.get("Parameters");
+        const DictPtr<IString, IBoolean> keys = parameters.get("Keys");
+        for (const auto& [key, hidden] : keys)
+            payloadObj.addProperty(StringProperty(key, ""));
+    }
+    else
+    {
+        payloadObj.addProperty(StringProperty("Secret", ""));
+    }
+
+    *payload = payloadObj.detach();
     return OPENDAQ_SUCCESS;
 }
 

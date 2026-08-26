@@ -6,39 +6,11 @@
 
 #include <coretypes/version_info_factory.h>
 #include <opendaq/credential_payload_descriptor_factory.h>
-#include <opendaq/credential_payload_factory.h>
 #include <opendaq/authentication_config_factory.h>
 #include <opendaq/authentication_config_private_ptr.h>
 #include <opendaq/component_private_ptr.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
-
-// Wraps a secret already known in advance (rather than obtained interactively from a provider) into the
-// credential payload shape matching its format - the same shapes `ICredentialProvider::requestCredentials`
-// implementations produce.
-static CredentialPayloadPtr WrapProvidedSecret(const BaseObjectPtr& suppliedSecret, const CredentialPayloadDescriptorPtr& payloadDescriptor)
-{
-    switch (payloadDescriptor.getFormat())
-    {
-        case CredentialPayloadFormat::KeyValuePairs:
-        {
-            const auto secret = suppliedSecret.asPtrOrNull<IDict, DictPtr<IString, IString>>(true);
-            if (!secret.assigned())
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret is not a KeyValuePairs-format secret");
-            return KeyValueCredentialPayload(Function([secret]() { return secret; }));
-        }
-        case CredentialPayloadFormat::String:
-        case CredentialPayloadFormat::FilePath:
-        {
-            const auto secret = suppliedSecret.asPtrOrNull<IString, StringPtr>(true);
-            if (!secret.assigned())
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret is not a String/FilePath-format secret");
-            return StringCredentialPayload(Function([secret]() { return secret; }));
-        }
-        default:
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Unsupported credential payload format");
-    }
-}
 
 CredentialDemoModule::CredentialDemoModule(const ContextPtr& context)
     : Module(CREDENTIAL_DEMO_MODULE_NAME,
@@ -209,20 +181,21 @@ CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const
     return nullptr;
 }
 
-CredentialPayloadPtr CredentialDemoModule::ObtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
-                                                              const CredentialRequestPtr& credentialRequest,
-                                                              const DictPtr<IString, ICredentialProvider>& providers,
-                                                              const CredentialPayloadDescriptorPtr& payloadDescriptor)
+PropertyObjectPtr CredentialDemoModule::ObtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
+                                                            const CredentialRequestPtr& credentialRequest,
+                                                            const DictPtr<IString, ICredentialProvider>& providers,
+                                                            const CredentialPayloadDescriptorPtr& payloadDescriptor)
 {
     const auto providerId = authenticationConfig.getCredentialProviderId();
     const auto suppliedSecret = authenticationConfig.getSuppliedSecret();
 
     if (suppliedSecret.assigned())
     {
-        // A secret was already supplied - it is used directly rather than obtained from a provider, either
-        // way. If a specific provider was also named, it still gets a chance to cache the secret (e.g.
-        // CmdLineCredentialProvider caching a FilePath one), so a later interactive request for the same
-        // context reuses it - but the wrapping into a credential payload is done here regardless.
+        // A secret was already supplied - already shaped like the payload descriptor's `createDefaultPayload`
+        // template (filled in by the caller), so it is used directly as the credential payload, no provider
+        // asked to obtain anything. If a specific provider was also named, it still gets a chance to cache
+        // the secret (e.g. CmdLineCredentialProvider caching a FilePath one), so a later interactive request
+        // for the same context reuses it.
         if (providerId.assigned())
         {
             auto credentialProvider = FindMatchingCredentialProvider(providers, payloadDescriptor, providerId);
@@ -235,7 +208,7 @@ CredentialPayloadPtr CredentialDemoModule::ObtainCredentials(const Authenticatio
             credentialProvider.cacheCredentials(credentialRequest, suppliedSecret);
         }
 
-        return WrapProvidedSecret(suppliedSecret, payloadDescriptor);
+        return suppliedSecret;
     }
 
     auto credentialProvider = FindMatchingCredentialProvider(providers, payloadDescriptor, providerId);

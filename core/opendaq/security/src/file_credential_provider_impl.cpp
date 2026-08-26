@@ -1,5 +1,4 @@
 #include <opendaq/file_credential_provider_impl.h>
-#include <opendaq/credential_payload_factory.h>
 #include <coreobjects/exceptions.h>
 #include <coretypes/listobject_factory.h>
 #include <iostream>
@@ -33,7 +32,7 @@ ErrCode FileCredentialProviderImpl::getSupportedPayloadFormats(IList** formats)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials)
+ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* request, IPropertyObject** credentials)
 {
     OPENDAQ_PARAM_NOT_NULL(credentials);
     OPENDAQ_PARAM_NOT_NULL(request);
@@ -47,14 +46,8 @@ ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* reque
     {
         case CredentialPayloadFormat::FilePath:
         {
-            auto callback = Function(
-                [requestPtr, descriptor]()
-                {
-                    printRequestDetails(requestPtr);
-                    return readFilePath(descriptor);
-                });
-
-            *credentials = StringCredentialPayload(callback).detach();
+            printRequestDetails(requestPtr);
+            *credentials = readFilePath(descriptor).detach();
             return OPENDAQ_SUCCESS;
         }
         default:
@@ -62,7 +55,7 @@ ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* reque
     }
 }
 
-ErrCode FileCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IBaseObject* secret)
+ErrCode FileCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IPropertyObject* secret)
 {
     OPENDAQ_PARAM_NOT_NULL(request);
     OPENDAQ_PARAM_NOT_NULL(secret);
@@ -72,7 +65,7 @@ ErrCode FileCredentialProviderImpl::cacheCredentials(ICredentialRequest* request
     return OPENDAQ_SUCCESS;
 }
 
-StringPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescriptorPtr& descriptor)
+PropertyObjectPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescriptorPtr& descriptor)
 {
     const StringPtr description = descriptor.getDescription();
     const std::string prompt = (description.assigned() ? description.toStdString() : "File path") + ": ";
@@ -87,7 +80,11 @@ StringPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescri
             throw std::runtime_error("Input cancelled");
 
         if (isFileAccessible(value))
-            return String(value);
+        {
+            auto payload = descriptor.createDefaultPayload();
+            payload.setPropertyValue("Secret", String(value));
+            return payload;
+        }
 
         const int attemptsLeft = MaxFilePathAttempts - attempt;
         std::cout << "File \"" << value << "\" does not exist or is not accessible.";

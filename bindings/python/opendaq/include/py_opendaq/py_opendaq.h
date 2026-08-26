@@ -129,7 +129,6 @@ PyDaqIntf<daq::IAuthenticationConfigBuilder, daq::IBaseObject> declareIAuthentic
 PyDaqIntf<daq::ICredentialProvider, daq::IBaseObject> declareICredentialProvider(pybind11::module_ m);
 PyDaqIntf<daq::ICredentialRequest, daq::IBaseObject> declareICredentialRequest(pybind11::module_ m);
 PyDaqIntf<daq::ICredentialRequestBuilder, daq::IBaseObject> declareICredentialRequestBuilder(pybind11::module_ m);
-PyDaqIntf<daq::ICredentialPayload, daq::IBaseObject> declareICredentialPayload(pybind11::module_ m);
 
 py::class_<daq::TimeReader<daq::StreamReaderPtr>> declareTimeStreamReader(pybind11::module_ m);
 py::class_<daq::TimeReader<daq::TailReaderPtr>> declareTimeTailReader(pybind11::module_ m);
@@ -249,6 +248,5 @@ void defineIAuthenticationConfigBuilder(pybind11::module_ m, PyDaqIntf<daq::IAut
 void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialProvider, daq::IBaseObject> cls);
 void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialRequest, daq::IBaseObject> cls);
 void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICredentialRequestBuilder, daq::IBaseObject> cls);
-void defineICredentialPayload(pybind11::module_ m, PyDaqIntf<daq::ICredentialPayload, daq::IBaseObject> cls);
 
 void defineComponentSearchFilterFactories(pybind11::module_ m);

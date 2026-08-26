@@ -20,8 +20,8 @@
 #include <opendaq/device_impl.h>
 #include <opendaq/mirrored_device_impl.h>
 #include <opendaq/credential_request_ptr.h>
-#include <opendaq/credential_payload_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <coreobjects/property_object_ptr.h>
 
 /*
  * Minimal mirrored device implementation with no signals or channels. When connected to via the
@@ -42,7 +42,7 @@ public:
                                       const DeviceInfoPtr& info,
                                       bool authenticated,
                                       const StringPtr& payloadId = nullptr,
-                                      const CredentialPayloadPtr& credentials = nullptr,
+                                      const PropertyObjectPtr& credentials = nullptr,
                                       const AuthenticationConfigPtr& authenticationConfig = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);

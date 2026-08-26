@@ -81,13 +81,13 @@ ErrCode AuthenticationConfigBuilderImpl::getCredentialProviderId(IString** provi
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode AuthenticationConfigBuilderImpl::setSuppliedSecret(IBaseObject* suppliedSecret)
+ErrCode AuthenticationConfigBuilderImpl::setSuppliedSecret(IPropertyObject* suppliedSecret)
 {
     this->suppliedSecret = suppliedSecret;
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode AuthenticationConfigBuilderImpl::getSuppliedSecret(IBaseObject** suppliedSecret)
+ErrCode AuthenticationConfigBuilderImpl::getSuppliedSecret(IPropertyObject** suppliedSecret)
 {
     OPENDAQ_PARAM_NOT_NULL(suppliedSecret);
 

@@ -84,7 +84,7 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return baseObjectToPyObject(objectPtr.getSuppliedSecret());
+            return objectPtr.getSuppliedSecret().detach();
         },
         py::return_value_policy::take_ownership,
         "Gets the secret supplied directly by the caller, to be used instead of a credential provider obtaining it (e.g. by prompting the user).");

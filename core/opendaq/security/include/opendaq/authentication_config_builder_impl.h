@@ -40,8 +40,8 @@ public:
     ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) override;
     ErrCode INTERFACE_FUNC setCredentialProviderId(IString* providerId) override;
     ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
-    ErrCode INTERFACE_FUNC setSuppliedSecret(IBaseObject* suppliedSecret) override;
-    ErrCode INTERFACE_FUNC getSuppliedSecret(IBaseObject** suppliedSecret) override;
+    ErrCode INTERFACE_FUNC setSuppliedSecret(IPropertyObject* suppliedSecret) override;
+    ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** suppliedSecret) override;
 
     ErrCode INTERFACE_FUNC addStreamingAuthenticationConfig(IStreamingType* streamingType, IAuthenticationConfig* streamingAuthenticationConfig) override;
     ErrCode INTERFACE_FUNC getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs) override;
@@ -51,7 +51,7 @@ private:
     CredentialPayloadDescriptorPtr payloadDescriptor;
     PropertyObjectPtr config;
     StringPtr credentialProviderId;
-    BaseObjectPtr suppliedSecret;
+    PropertyObjectPtr suppliedSecret;
     DictPtr<IString, IAuthenticationConfig> streamingAuthenticationConfigs;
 };
 

@@ -16,8 +16,8 @@
 
 #pragma once
 #include <coretypes/baseobject.h>
+#include <coreobjects/property_object.h>
 #include <opendaq/credential_request.h>
-#include <opendaq/credential_payload.h>
 #include <opendaq/credential_payload_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -25,6 +25,8 @@ BEGIN_NAMESPACE_OPENDAQ
 /*#
  * [interfaceLibrary(IInteger, "coretypes")]
  * [interfaceSmartPtr(IInteger, IntegerPtr, "<coretypes/integer.h>")]
+ * [interfaceLibrary(IPropertyObject, "coreobjects")]
+ * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
  */
 
 /*!
@@ -42,9 +44,10 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
     /*!
      * @brief Requests credentials for the given request, in the format described by its payload descriptor.
      * @param request The credential request to obtain credentials for.
-     * @param[out] credentials The obtained credential payload.
+     * @param[out] credentials The obtained credential payload - a property object built from the request's
+     * payload descriptor's `createDefaultPayload` template, filled in with the obtained secret(s).
      */
-    virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials) = 0;
+    virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) = 0;
 
     /*!
      * @brief Accepts a secret already known in advance - e.g. supplied directly via
@@ -52,12 +55,12 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
      * it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format
      * secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive
      * `requestCredentials` call for the same context then reuses it instead of prompting again. Does not
-     * itself produce a credential payload - the caller already has the secret and wraps it directly.
+     * itself produce a credential payload - the caller already has the secret and uses it directly.
      * @param request The credential request the secret is being supplied for.
-     * @param secret The secret, in the format described by the request's payload descriptor (see
-     * `ICredentialPayload::getSecrets` for the expected concrete type per format).
+     * @param secret The secret, shaped like the request's payload descriptor's `createDefaultPayload`
+     * template - a property object filled in with the actual secret value(s).
      */
-    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IBaseObject* secret) = 0;
+    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* secret) = 0;
 
     // [elementType(formats, IInteger)]
     /*!

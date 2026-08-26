@@ -139,7 +139,6 @@ void wrapDaqComponentOpenDaq(pybind11::module_ m)
     auto classICredentialProvider = declareICredentialProvider(m);
     auto classICredentialRequest = declareICredentialRequest(m);
     auto classICredentialRequestBuilder = declareICredentialRequestBuilder(m);
-    auto classICredentialPayload = declareICredentialPayload(m);
 
     defineIModuleInfo(m, classIModuleInfo);
     defineIComponentType(m, classIComponentType);
@@ -252,7 +251,6 @@ void wrapDaqComponentOpenDaq(pybind11::module_ m)
     defineICredentialProvider(m, classICredentialProvider);
     defineICredentialRequest(m, classICredentialRequest);
     defineICredentialRequestBuilder(m, classICredentialRequestBuilder);
-    defineICredentialPayload(m, classICredentialPayload);
 
     defineComponentSearchFilterFactories(m);
 

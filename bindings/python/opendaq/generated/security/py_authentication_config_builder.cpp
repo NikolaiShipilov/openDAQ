@@ -113,13 +113,13 @@ void defineIAuthenticationConfigBuilder(pybind11::module_ m, PyDaqIntf<daq::IAut
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigBuilderPtr::Borrow(object);
-            return baseObjectToPyObject(objectPtr.getSuppliedSecret());
+            return objectPtr.getSuppliedSecret().detach();
         },
-        [](daq::IAuthenticationConfigBuilder *object, const py::object& suppliedSecret)
+        [](daq::IAuthenticationConfigBuilder *object, daq::IPropertyObject* suppliedSecret)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigBuilderPtr::Borrow(object);
-            objectPtr.setSuppliedSecret(pyObjectToBaseObject(suppliedSecret));
+            objectPtr.setSuppliedSecret(suppliedSecret);
         },
         py::return_value_policy::take_ownership,
         "Gets the secret to use directly instead of a credential provider obtaining it. / Sets a secret to use directly instead of a credential provider obtaining it (e.g. by prompting the user).");

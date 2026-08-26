@@ -121,12 +121,18 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
                                    .build();
 
     auto devicePrivateKeyFileConfig = deviceType.getSupportedAuthenticationConfigs().get("PrivateKeyFile");
+
+    // The supplied secret must be shaped like the descriptor's own `createDefaultPayload` template - here
+    // just a single "Secret" property, filled in with the private key's path.
+    auto suppliedSecret = devicePrivateKeyFileConfig.getCredentialPayloadDescriptor().createDefaultPayload();
+    suppliedSecret.setPropertyValue("Secret", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
+
     auto deviceAuthConfig = AuthenticationConfigBuilder()
                                  .setPayloadId(devicePrivateKeyFileConfig.getCredentialPayloadId())
                                  .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
                                  .setConfig(devicePrivateKeyFileConfig.getConfig())
                                  .setCredentialProviderId(credentialProviderId)
-                                 .setSuppliedSecret(String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"))
+                                 .setSuppliedSecret(suppliedSecret)
                                  .addStreamingAuthenticationConfig(streamingType, streamingAuthConfig)
                                  .build();
 

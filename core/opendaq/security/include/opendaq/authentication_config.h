@@ -71,12 +71,12 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IBaseObject)
     /*!
      * @brief Gets the secret supplied directly by the caller, to be used instead of a credential provider
      * obtaining it (e.g. by prompting the user).
-     * @param[out] suppliedSecret The supplied secret, in the format described by `getCredentialPayloadDescriptor`
-     * (see `ICredentialPayload::getSecrets` for the expected concrete type per format), or `nullptr` (the
-     * default) if none was supplied - in which case the module obtains the secret from a credential
-     * provider as usual.
+     * @param[out] suppliedSecret The supplied secret - a property object shaped like
+     * `getCredentialPayloadDescriptor()`'s `createDefaultPayload` template, filled in with the actual
+     * secret value(s) - or `nullptr` (the default) if none was supplied, in which case the module obtains
+     * the secret from a credential provider as usual.
      */
-    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IBaseObject** suppliedSecret) = 0;
+    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** suppliedSecret) = 0;
 
     /*!
      * @brief Gets the authentication configs nested under this one, accumulated via

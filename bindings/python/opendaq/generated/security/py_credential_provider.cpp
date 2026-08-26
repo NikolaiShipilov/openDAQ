@@ -61,14 +61,14 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
         py::arg("request"),
         "Requests credentials for the given request, in the format described by its payload descriptor.");
     cls.def("cache_credentials",
-        [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, const py::object& secret)
+        [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, daq::IPropertyObject* secret)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
-            objectPtr.cacheCredentials(request, pyObjectToBaseObject(secret));
+            objectPtr.cacheCredentials(request, secret);
         },
         py::arg("request"), py::arg("secret"),
-        "Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig::getSuppliedSecret` - so an implementation that would otherwise cache a value it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a credential payload - the caller already has the secret and wraps it directly.");
+        "Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig::getSuppliedSecret` - so an implementation that would otherwise cache a value it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a credential payload - the caller already has the secret and uses it directly.");
     cls.def_property_readonly("supported_payload_formats",
         [](daq::ICredentialProvider *object)
         {
