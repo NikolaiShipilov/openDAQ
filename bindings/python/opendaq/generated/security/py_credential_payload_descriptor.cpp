@@ -74,7 +74,7 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
             return objectPtr.getParameters().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the format's standard parameter set.");
+        "Gets the format's standard parameter set, as a Struct. Its Struct type (and so which fields it has, if any) is determined by the payload format - see the class description above.");
     cls.def_property_readonly("description",
         [](daq::ICredentialPayloadDescriptor *object)
         {

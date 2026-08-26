@@ -17,7 +17,7 @@
 #pragma once
 #include <coretypes/baseobject.h>
 #include <coretypes/string_ptr.h>
-#include <coreobjects/property_object_ptr.h>
+#include <coretypes/struct.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -32,18 +32,18 @@ enum class CredentialPayloadFormat : EnumType
 };
 
 /*#
- * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
+ * [interfaceLibrary(IStruct, CoreTypes)]
  */
 
 /*!
  * @brief Describes the details of the payload required for an authentication method used by the module and produced by credential provider.
  *
  * A descriptor carries the payload's format, its format-specific parameter set, and a human-readable
- * description. In particular, the parameter set carries whether the payload's value(s) should be hidden as
- * they are entered: for a `KeyValuePairs`-format payload, a `"Keys"` dict property maps each expected key to
+ * description. The parameter set is itself a Struct, whose exact Struct type (and so its fields) depends
+ * on the format: for a `KeyValuePairs`-format payload, a `"Keys"` dict field maps each expected key to
  * its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String`-format payload, a
- * single `"Hidden"` bool property applies to the one secret. A `FilePath`-format payload has no parameters.
+ * single `"Hidden"` bool field applies to the one secret. A `FilePath`-format payload's parameters Struct
+ * has no fields at all.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 {
@@ -54,10 +54,11 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) = 0;
 
     /*!
-     * @brief Gets the format's standard parameter set.
+     * @brief Gets the format's standard parameter set, as a Struct. Its Struct type (and so which fields
+     * it has, if any) is determined by the payload format - see the class description above.
      * @param[out] parameters The parameters.
      */
-    virtual ErrCode INTERFACE_FUNC getParameters(IPropertyObject** parameters) = 0;
+    virtual ErrCode INTERFACE_FUNC getParameters(IStruct** parameters) = 0;
 
     /*!
      * @brief Gets the description of the payload, for the user. States how the module interpretes it,

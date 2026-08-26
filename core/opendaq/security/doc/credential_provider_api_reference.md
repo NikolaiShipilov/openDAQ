@@ -13,7 +13,7 @@ Describes the shape and presentation of the payload an authentication method exp
 | Member | Description |
 |---|---|
 | `getFormat(CredentialPayloadFormat*)` | The payload's format — `KeyValuePairs`, `String`, or `FilePath`. |
-| `getParameters(IPropertyObject**)` | The format's standard parameter set — for `KeyValuePairs`, a `"Keys"` dict mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool. |
+| `getParameters(IStruct**)` | The format's standard parameter set, as a Struct whose own Struct type is pinned to the format - for `KeyValuePairs`, a `"Keys"` dict field mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool field; for `FilePath`, no fields at all. |
 | `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
 
 **Factories:** `KeyValuePayloadDescriptor(keys, description)`, `StringPayloadDescriptor(description, hidden)`, `FilePathPayloadDescriptor(description)`

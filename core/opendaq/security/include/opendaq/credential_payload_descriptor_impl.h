@@ -19,19 +19,54 @@
 #include <coretypes/impl.h>
 #include <coretypes/dict_ptr.h>
 #include <coretypes/boolean_factory.h>
-#include <coreobjects/property_object_ptr.h>
+#include <coretypes/struct_impl.h>
 #include <coretypes/serializable.h>
+#include <coretypes/serialized_object_ptr.h>
+#include <coretypes/function_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief `ICredentialPayloadDescriptor` impl for all formats, parameterized by `Format`. Which
- * constructor is used - and so which `parameters` get built - depends on the format: `KeyValuePairs`
- * takes a `"Keys"` dict, `String` takes a `"Hidden"` bool, `FilePath` takes neither. Only one
- * constructor is ever exercised per `Format` alias below; the others are simply unused for that alias.
+ * @brief `IStruct` impl for the parameter set nested inside a `CredentialPayloadDescriptorImpl`,
+ * parameterized by `Format`. Which constructor is used - and so which fields the built Struct has -
+ * depends on the format: `KeyValuePairs` takes a `"Keys"` dict field, `String` takes a `"Hidden"` bool
+ * field, `FilePath` has no fields at all. Only one constructor is ever exercised per `Format` alias
+ * below; the others are simply unused for that alias.
  */
 template <CredentialPayloadFormat Format>
-class CredentialPayloadDescriptorImpl final : public ImplementationOf<ICredentialPayloadDescriptor, ISerializable>
+class CredentialPayloadParametersImpl final : public GenericStructImpl<IStruct>
+{
+public:
+    // KeyValuePairs
+    explicit CredentialPayloadParametersImpl(const DictPtr<IString, IBoolean>& keys);
+    // String
+    explicit CredentialPayloadParametersImpl(Bool hidden);
+    // FilePath
+    CredentialPayloadParametersImpl();
+
+    // ISerializable
+    ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
+    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
+    static ConstCharPtr SerializeId();
+    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
+};
+
+using KeyValuePayloadParametersImpl = CredentialPayloadParametersImpl<CredentialPayloadFormat::KeyValuePairs>;
+using StringPayloadParametersImpl = CredentialPayloadParametersImpl<CredentialPayloadFormat::String>;
+using FilePathPayloadParametersImpl = CredentialPayloadParametersImpl<CredentialPayloadFormat::FilePath>;
+
+OPENDAQ_REGISTER_DESERIALIZE_FACTORY(KeyValuePayloadParametersImpl)
+OPENDAQ_REGISTER_DESERIALIZE_FACTORY(StringPayloadParametersImpl)
+OPENDAQ_REGISTER_DESERIALIZE_FACTORY(FilePathPayloadParametersImpl)
+
+/*!
+ * @brief `ICredentialPayloadDescriptor` impl for all formats, parameterized by `Format`. Which
+ * constructor is used - and so which `Parameters` Struct gets built - depends on the format:
+ * `KeyValuePairs` takes a `"Keys"` dict, `String` takes a `"Hidden"` bool, `FilePath` takes neither. Only
+ * one constructor is ever exercised per `Format` alias below; the others are simply unused for that alias.
+ */
+template <CredentialPayloadFormat Format>
+class CredentialPayloadDescriptorImpl final : public GenericStructImpl<ICredentialPayloadDescriptor, IStruct>
 {
 public:
     // KeyValuePairs
@@ -42,7 +77,7 @@ public:
     explicit CredentialPayloadDescriptorImpl(const StringPtr& description);
 
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
-    ErrCode INTERFACE_FUNC getParameters(IPropertyObject** parameters) override;
+    ErrCode INTERFACE_FUNC getParameters(IStruct** parameters) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
 
     // ISerializable
@@ -52,8 +87,9 @@ public:
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
 private:
-    PropertyObjectPtr parameters;
-    StringPtr description;
+    static DictPtr<IString, IBaseObject> BuildFields(const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
+    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& description, Bool hidden);
+    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& description);
 };
 
 using KeyValuePayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::KeyValuePairs>;

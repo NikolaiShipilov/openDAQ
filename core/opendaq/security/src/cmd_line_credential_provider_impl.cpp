@@ -116,7 +116,7 @@ ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* requ
 
 DictPtr<IString, IBaseObject> CmdLineCredentialProviderImpl::readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor)
 {
-    const DictPtr<IString, IBoolean> keys = descriptor.getParameters().getPropertyValue("Keys");
+    const DictPtr<IString, IBoolean> keys = descriptor.getParameters().get("Keys");
 
     auto secrets = Dict<IString, IString>();
     for (const auto& [key, hidden] : keys)
@@ -129,7 +129,7 @@ StringPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialPayloa
 {
     const StringPtr description = descriptor.getDescription();
     const auto parameters = descriptor.getParameters();
-    const bool hidden = parameters.assigned() && parameters.hasProperty("Hidden") && (bool) parameters.getPropertyValue("Hidden");
+    const bool hidden = parameters.assigned() && parameters.hasField("Hidden") && (bool) parameters.get("Hidden");
 
     auto secret = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
     return String(secret);
