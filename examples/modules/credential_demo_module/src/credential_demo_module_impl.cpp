@@ -7,7 +7,6 @@
 #include <coretypes/version_info_factory.h>
 #include <opendaq/credential_payload_descriptor_factory.h>
 #include <opendaq/authentication_config_factory.h>
-#include <opendaq/authentication_config_private_ptr.h>
 #include <opendaq/component_private_ptr.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -65,15 +64,8 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
     const auto payloadId = authenticationConfig.getCredentialPayloadId();
     const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
 
-    // A config reconstructed while reloading a saved device already carries the request formed the first
-    // time around - reuse it as-is instead of forming a new one from the payload descriptor and the
-    // device's own config.
-    auto credentialRequest = authenticationConfig.asPtr<IAuthenticationConfigPrivate>(true).getCredentialRequest();
-    if (!credentialRequest.assigned())
-    {
-        credentialRequest = authentication::CreateCredentialRequest(
-            payloadId, connectionString, manufacturer, serialNumber, CredentialDemoDeviceImpl::CreateType());
-    }
+    const auto credentialRequest = authentication::CreateCredentialRequest(
+        payloadId, connectionString, manufacturer, serialNumber, CredentialDemoDeviceImpl::CreateType());
 
     // The authenticated path always obtains credentials - the device is never connected to anonymously.
     const auto credentials = ObtainCredentials(authenticationConfig, credentialRequest, context.getCredentialProviders(), payloadDescriptor);
@@ -87,10 +79,9 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
         payloadId,
         credentials);
 
-    // Persisted alongside the device, so a reload can re-request credentials for it without ever having
-    // saved the authentication config or its secrets.
+    // Persisted alongside the device, so a reload can re-request credentials for it.
     if (const auto& componentPrivate = device.asPtrOrNull<IComponentPrivate>(true); componentPrivate.assigned())
-        componentPrivate.setCredentialRequest(credentialRequest);
+        componentPrivate.setAuthenticationConfig(authenticationConfig);
 
     return device.detach();
 }

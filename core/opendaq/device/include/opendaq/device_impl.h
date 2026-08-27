@@ -52,8 +52,6 @@
 #include <opendaq/component_type_private.h>
 #include <opendaq/mirrored_device_ptr.h>
 #include <opendaq/authentication_config_ptr.h>
-#include <opendaq/authentication_config_factory.h>
-#include <opendaq/credential_request_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 template <typename TInterface = IDevice, typename... Interfaces>
@@ -2188,16 +2186,12 @@ void GenericDevice<TInterface, Interfaces...>::updateDevice(const std::string& d
         else if (serializedDevice.hasKey("ComponentConfig"))
             updatetableDeviceConfig.updateInternal(serializedDevice.readSerializedObject("ComponentConfig"), context);
 
-        // A device previously added with authentication carries the credential request it was authenticated
-        // with - never the authentication config or its secrets. Reconstructing it here lets the device be
-        // re-authenticated (the credential provider is asked again for real credentials) instead of silently
-        // reconnecting without any.
+        // A device previously added with authentication carries the whole authentication config it was
+        // authenticated with. Reconstructing it here lets the device be re-authenticated (the credential
+        // provider is asked again for real credentials) instead of silently reconnecting without any.
         AuthenticationConfigPtr authenticationConfig;
-        if (serializedDevice.hasKey("CredentialRequest"))
-        {
-            const CredentialRequestPtr credentialRequest = serializedDevice.readObject("CredentialRequest", context);
-            authenticationConfig = AuthenticationConfigFromCredentialRequest(credentialRequest);
-        }
+        if (serializedDevice.hasKey("AuthenticationConfig"))
+            authenticationConfig = serializedDevice.readObject("AuthenticationConfig", context);
 
         DeviceInfoPtr discoveredDeviceInfo;
         StringPtr manufacturer;

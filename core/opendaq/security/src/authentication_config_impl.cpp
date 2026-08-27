@@ -19,17 +19,9 @@ AuthenticationConfigImpl::AuthenticationConfigImpl(ICredentialPayloadDescriptor*
     initProperties(payloadDescriptors, payloadDescriptorPtr.getId(), credentialProviderId, suppliedSecret);
 }
 
-AuthenticationConfigImpl::AuthenticationConfigImpl(const CredentialRequestPtr& credentialRequest)
+AuthenticationConfigImpl::AuthenticationConfigImpl()
     : Super()
-    , credentialRequest(credentialRequest)
 {
-    if (!credentialRequest.assigned())
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "Credential request must be assigned when reconstructing an authentication config from it");
-
-    const CredentialPayloadDescriptorPtr payloadDescriptor = credentialRequest.getPayloadDescriptor();
-    ListPtr<ICredentialPayloadDescriptor> payloadDescriptors = List<ICredentialPayloadDescriptor>();
-    payloadDescriptors.pushBack(payloadDescriptor);
-    initProperties(payloadDescriptors, payloadDescriptor.getId(), nullptr, nullptr);
 }
 
 AuthenticationConfigImpl::AuthenticationConfigImpl(IList* payloadDescriptors, IString* defaultPayloadId)
@@ -102,12 +94,33 @@ ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
     });
 }
 
-ErrCode AuthenticationConfigImpl::getCredentialRequest(ICredentialRequest** request)
+ErrCode AuthenticationConfigImpl::getSerializeId(ConstCharPtr* id) const
 {
-    OPENDAQ_PARAM_NOT_NULL(request);
-
-    *request = this->credentialRequest.addRefAndReturn();
+    *id = SerializeId();
     return OPENDAQ_SUCCESS;
+}
+
+ConstCharPtr AuthenticationConfigImpl::SerializeId()
+{
+    return "AuthenticationConfig";
+}
+
+ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
+{
+    OPENDAQ_PARAM_NOT_NULL(obj);
+
+    return daqTry([&obj, &serialized, &context, &factoryCallback]
+    {
+        *obj = Super::DeserializePropertyObject(
+                serialized,
+                context,
+                factoryCallback,
+                [](const SerializedObjectPtr& /*serialized*/, const BaseObjectPtr& /*context*/, const StringPtr& /*className*/)
+                {
+                    return createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>();
+                }).detach();
+        return OPENDAQ_SUCCESS;
+    });
 }
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
@@ -117,14 +130,10 @@ OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE_AND_CREATEFUNC(
     LIBRARY_FACTORY, AuthenticationConfig,
-    IAuthenticationConfig, createAuthenticationConfigFromCredentialRequest,
-    ICredentialRequest*, credentialRequest
-)
-
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE_AND_CREATEFUNC(
-    LIBRARY_FACTORY, AuthenticationConfig,
     IAuthenticationConfig, createAuthenticationConfigFromSupportedMethods,
     IList*, payloadDescriptors, IString*, defaultPayloadId
 )
+
+OPENDAQ_REGISTER_DESERIALIZE_FACTORY(AuthenticationConfigImpl)
 
 END_NAMESPACE_OPENDAQ

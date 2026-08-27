@@ -18,7 +18,6 @@
 #include <coretypes/baseobject.h>
 #include <coreobjects/property_object.h>
 #include <opendaq/credential_payload_descriptor.h>
-#include <opendaq/credential_request.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -31,7 +30,9 @@ BEGIN_NAMESPACE_OPENDAQ
  * @brief Carries the authentication settings used for a single connection attempt to a component.
  *
  * Credential settings do not live in the base add-component config or its default - they travel in a
- * dedicated authentication config object that exists alongside base config and is never serialized.
+ * dedicated authentication config object that exists alongside base config. A component created with
+ * authentication may persist the whole config it was authenticated with alongside itself (see
+ * `IComponentPrivate::setAuthenticationConfig`), so a reload can re-request credentials for it.
  *
  * Is itself a Property object (like `IDeviceInfo`) - the payload id and its descriptor are bound
  * together as one `"PayloadDescriptor"` Selection property (its selection value is the
@@ -73,18 +74,6 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
     ICredentialPayloadDescriptor*, payloadDescriptor
-)
-
-/*!
- * @brief Reconstructs an `AuthenticationConfig` from a previously formed, saved `CredentialRequest` - used
- * only when reloading a saved device that had previously been added with authentication. Never exposed to
- * other language bindings; not meant for regular user code, which should use the `AuthenticationConfig`
- * factory above instead.
- */
-//[factory(Hide)]
-OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
-    LIBRARY_FACTORY, AuthenticationConfigFromCredentialRequest, IAuthenticationConfig,
-    ICredentialRequest*, credentialRequest
 )
 
 /*!

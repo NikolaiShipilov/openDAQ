@@ -33,7 +33,7 @@ enum class CredentialPayloadFormat : EnumType
 
 ### `IAuthenticationConfig`
 
-Carries the authentication settings for a single connection attempt. Lives alongside the base add-component config, never serialized as part of it.
+Carries the authentication settings for a single connection attempt. Lives alongside the base add-component config, never serialized as part of it - though a component created with authentication may persist the whole config it was authenticated with alongside itself instead (see `IComponentPrivate::setAuthenticationConfig`, [§7](#7-application-level-usage)).
 
 `IAuthenticationConfig` extends `IPropertyObject` (the same way `IDeviceInfo` does) - the settings below are backed by ordinary properties, so besides the typed getters/builder setters, they can equally be read (and, for a builder-built instance, set) through the generic `IPropertyObject` interface:
 
@@ -53,7 +53,6 @@ There is no "additional config" on `IAuthenticationConfig` itself - settings lik
 
 **Factories:**
 - `AuthenticationConfig(payloadDescriptor)` — normal construction path for a live connection attempt, with none of the builder-only settings below (provider id, supplied secret) set.
-- `AuthenticationConfigFromCredentialRequest(credentialRequest)` — reconstructs a config from a previously saved `CredentialRequest`; used only when reloading a device that was previously added with authentication. Hidden from other language bindings; not for regular user code.
 - `AuthenticationConfigBuilder()` — see `IAuthenticationConfigBuilder` below; the only way to set a provider id or a supplied secret.
 
 ---
@@ -70,14 +69,6 @@ Builds `IAuthenticationConfig` objects, exposing every setting the plain factory
 | `setSuppliedSecret` / `getSuppliedSecret` | Supplies the secret directly - a property object built from `setPayloadDescriptor`'s `createDefaultPayload` template and filled in with the actual secret value(s). `nullptr` (the default) leaves the module to obtain it from a provider. |
 
 **Factory:** `AuthenticationConfigBuilder()` — starts with no values set.
-
----
-
-### `IAuthenticationConfigPrivate`
-
-| Member | Description |
-|---|---|
-| `getCredentialRequest(ICredentialRequest**)` | The previously formed credential request this config was reconstructed from, or `nullptr` for a config built for a live attempt. When assigned, a module reuses this request as-is via `ICredentialProvider::requestCredentials` instead of forming a new one — it already carries the resolved, non-secret shape of the original request. |
 
 ---
 
@@ -427,7 +418,7 @@ See [§4](#4-streaming-authentication) for authenticating a streaming connection
 
 ### Save and reload
 
-Saving an instance persists the connected device's `CredentialRequest` (connection info, payload id and descriptor, metadata) as part of the tree — but never the `AuthenticationConfig`, the actual secrets, a selected provider id, or a supplied secret. Reloading that saved configuration into a new instance re-authenticates the device from scratch: the new instance must have its own compatible credential provider registered, or the reload fails.
+Saving an instance persists the connected device's whole `AuthenticationConfig` (payload descriptor, credential provider id, and - if one was set - the supplied secret itself) as part of the tree. Reloading that saved configuration into a new instance re-authenticates the device from scratch, using the reconstructed config exactly as saved: if it carries a supplied secret, that secret is reused directly (no provider is asked); otherwise the new instance must have its own compatible credential provider registered, or the reload fails.
 
 ---
 
@@ -439,7 +430,7 @@ This section describes what a module does internally when `Module::createAuthent
 
 1. **Resolve the payload to provide.** The module reads the payload id and descriptor off the supplied `IAuthenticationConfig` (`getCredentialPayloadId`, `getCredentialPayloadDescriptor`).
 
-2. **Obtain or reuse the credential request.** If the `IAuthenticationConfig` was reconstructed from a saved device (i.e. this is a reload, not a fresh connection), `IAuthenticationConfigPrivate::getCredentialRequest()` returns the original request as-is, and the module reuses it unchanged. Otherwise, the module builds a new `ICredentialRequest` via `ICredentialRequestBuilder`, populating connection string, manufacturer/serial number (if resolved), and metadata for the provider to present to the user.
+2. **Build the credential request.** The module builds a new `ICredentialRequest` via `ICredentialRequestBuilder`, populating connection string, manufacturer/serial number (if resolved), and metadata for the provider to present to the user - the same way whether this is a fresh connection or a reload, since the whole `IAuthenticationConfig` (not just a request formed from it) is what gets persisted and reconstructed on reload (see step 5).
 
 3. **Resolve the credentials.** The module reads `getCredentialProviderId()` off the authentication config, checks whether a `"SuppliedSecret"` property is present (`hasProperty`/`getPropertyValue` - there is no dedicated getter, since it's the one setting exposed only as a plain property), and branches:
    - **A secret is supplied:** no provider obtains anything — the supplied property object (already shaped like the payload descriptor's `createDefaultPayload` template) is used directly as the credential payload. If a provider id was *also* set, that specific provider is first looked up and handed the secret via `provider.cacheCredentials(request, secret)`, so it can remember it the same way it would one obtained interactively — but the payload used for *this* connection is always the one the caller supplied, regardless of whether caching succeeds.
@@ -447,7 +438,7 @@ This section describes what a module does internally when `Module::createAuthent
 
 4. **Construct the device (or streaming) and authenticate.** The component is constructed and its authentication step runs — reading the credential payload's property values and verifying them against whatever the specific method requires (a fixed value, a signed challenge, etc.). A mismatch throws `AuthenticationFailedException`, and construction fails.
 
-5. **Persist the credential request for later reload (devices only).** On success, the module stores the credential request on the newly created device (`IComponentPrivate::setCredentialRequest`) — this is what step 2 reads back on a future reload, without ever needing to persist the secrets, provider id, or supplied secret themselves.
+5. **Persist the authentication config for later reload (devices only).** On success, the module stores the whole authentication config it was given on the newly created device (`IComponentPrivate::setAuthenticationConfig`) — this is what a future reload reconstructs and passes back in as-is (see [Save and reload](#save-and-reload)), secrets included if any were supplied.
 
 ![Application / Module / Credential Provider — sequence view of the same steps](credential_flow_diagram_sequence.png)
 *Diagram 3 — the same steps as above, as a sequence diagram across the three parties involved: the Application first obtains the self-contained `authConfig` (`createDefaultAuthenticationConfig`) and, if needed, selects a non-default supported method on it; the Module then either resolves credentials through a Credential Provider (querying `getSupportedPayloadFormats()` to find or validate one, then `requestCredentials`/`cacheCredentials`) or uses a supplied secret directly — matching the branching in Diagram 1. As there, the pink notes are prototype-specific policy, not core-mandated behavior.*

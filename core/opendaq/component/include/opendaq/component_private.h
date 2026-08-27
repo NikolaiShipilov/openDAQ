@@ -18,15 +18,15 @@
 
 #include <coretypes/listobject.h>
 #include <opendaq/component.h>
-#include <opendaq/credential_request.h>
+#include <opendaq/authentication_config.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(ICoreEventArgs, "coreobjects")]
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceLibrary(ICredentialRequest, "opendaq")]
- * [interfaceSmartPtr(ICredentialRequest, CredentialRequestPtr, "<opendaq/credential_request_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationConfig, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationConfig, AuthenticationConfigPtr, "<opendaq/authentication_config_ptr.h>")]
  */
 
 /*!
@@ -86,22 +86,23 @@ DECLARE_OPENDAQ_INTERFACE(IComponentPrivate, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getComponentConfig(IPropertyObject** config) = 0;
 
     /*!
-     * @brief Sets the credential request formed by the module when the component was created with
+     * @brief Sets the authentication config the module was given when the component was created with
      * authentication, if any.
-     * @param request The credential request the module formed to authenticate this component.
+     * @param authenticationConfig The authentication config the component was authenticated with.
      *
-     * Carries no secrets - only the non-secret shape (payload id/descriptor, connection details, metadata)
-     * of what was requested from the credential provider. Persisted alongside the component so a reload can
-     * re-request credentials without ever having stored the actual authentication config or its secrets.
+     * Persisted alongside the component so a reload can re-request credentials for it. Note that this
+     * stores the config exactly as given - including a directly-supplied secret (see
+     * `IAuthenticationConfigBuilder::setSuppliedSecret`), if the caller set one.
      */
-    virtual ErrCode INTERFACE_FUNC setCredentialRequest(ICredentialRequest* request) = 0;
+    virtual ErrCode INTERFACE_FUNC setAuthenticationConfig(IAuthenticationConfig* authenticationConfig) = 0;
 
     /*!
-     * @brief Retrieves the credential request formed by the module when the component was created with
+     * @brief Retrieves the authentication config the module was given when the component was created with
      * authentication.
-     * @param request The credential request, or `nullptr` if the component was not created with authentication.
+     * @param authenticationConfig The authentication config, or `nullptr` if the component was not created
+     * with authentication.
      */
-    virtual ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) = 0;
+    virtual ErrCode INTERFACE_FUNC getAuthenticationConfig(IAuthenticationConfig** authenticationConfig) = 0;
 
     /*!
      * @brief Called by parent component to notify this component about parent's active state change.

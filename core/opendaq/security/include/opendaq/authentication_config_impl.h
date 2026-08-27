@@ -16,38 +16,42 @@
 
 #pragma once
 #include <opendaq/authentication_config.h>
-#include <opendaq/authentication_config_private.h>
 #include <coreobjects/property_object_impl.h>
 #include <coretypes/dictobject_factory.h>
 #include <coretypes/listobject_factory.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
-#include <opendaq/credential_request_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
-class AuthenticationConfigImpl : public GenericPropertyObjectImpl<IAuthenticationConfig, IAuthenticationConfigPrivate>
+class AuthenticationConfigImpl : public GenericPropertyObjectImpl<IAuthenticationConfig>
 {
 public:
-    using Super = GenericPropertyObjectImpl<IAuthenticationConfig, IAuthenticationConfigPrivate>;
+    using Super = GenericPropertyObjectImpl<IAuthenticationConfig>;
 
     // `payloadDescriptor`/`payloadDescriptors` are raw interface pointers, not smart pointers, so that
-    // these overloads (and the `ICredentialRequest*`-based one) stay unambiguous - each raw pointer type is
-    // an exact match for its own overload and not implicitly inter-convertible with the others, whereas
-    // sibling smart-pointer parameter types would be (`ObjectPtr`'s generic converting constructor accepts
-    // any interface pointer via a runtime `queryInterface`).
+    // these overloads stay unambiguous - each raw pointer type is an exact match for its own overload and
+    // not implicitly inter-convertible with the other, whereas sibling smart-pointer parameter types would
+    // be (`ObjectPtr`'s generic converting constructor accepts any interface pointer via a runtime
+    // `queryInterface`).
     explicit AuthenticationConfigImpl(ICredentialPayloadDescriptor* payloadDescriptor,
                                       const StringPtr& credentialProviderId = nullptr,
                                       const PropertyObjectPtr& suppliedSecret = nullptr);
-    explicit AuthenticationConfigImpl(const CredentialRequestPtr& credentialRequest);
 
     AuthenticationConfigImpl(IList* payloadDescriptors, IString* defaultPayloadId);
+
+    // Bare - adds no properties of its own. Used only as the empty instance that deserialization then fills
+    // in from the serialized property values (mirroring `AddressInfoImpl`'s pattern) - regular user code
+    // should always go through one of the two constructors above instead, both of which require an actual
+    // payload descriptor.
+    explicit AuthenticationConfigImpl();
 
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
     ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
 
-    // IAuthenticationConfigPrivate
-    ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) override;
+    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
+    static ConstCharPtr SerializeId();
+    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
 private:
     static constexpr const char* PayloadDescriptorPropertyName = "PayloadDescriptor";
@@ -58,8 +62,6 @@ private:
                         const StringPtr& defaultPayloadId,
                         const StringPtr& credentialProviderId,
                         const PropertyObjectPtr& suppliedSecret);
-
-    CredentialRequestPtr credentialRequest;
 };
 
 END_NAMESPACE_OPENDAQ
