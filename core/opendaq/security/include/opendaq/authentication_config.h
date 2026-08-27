@@ -71,23 +71,15 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
     virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
 };
 
+/*!
+ * @brief Builds an `AuthenticationConfig` listing every one of `payloadDescriptors` (keyed by each
+ * descriptor's own `ICredentialPayloadDescriptor::getId()`) as a candidate of its `"PayloadDescriptor"`
+ * selection property, defaulting to the one whose id matches `defaultPayloadId`. A single-method config is
+ * simply the one-candidate case of this - construct `payloadDescriptors` with one entry.
+ */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    ICredentialPayloadDescriptor*, payloadDescriptor
-)
-
-/*!
- * @brief Builds a self-contained `AuthenticationConfig` listing every one of `payloadDescriptors` as a
- * candidate of its `"PayloadDescriptor"` selection property, defaulting to the one whose own
- * `ICredentialPayloadDescriptor::getId()` matches `defaultPayloadId` - used by
- * `IComponentType::createDefaultAuthenticationConfig` to hand the caller one config object covering every
- * authentication method the component type supports, rather than a separate config per method. Never
- * exposed to other language bindings; not meant for regular user code.
- */
-//[factory(Hide)]
-OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
-    LIBRARY_FACTORY, AuthenticationConfigFromSupportedMethods, IAuthenticationConfig,
-    IList*, payloadDescriptors, IString*, defaultPayloadId
+    IDict*, payloadDescriptors, IString*, defaultPayloadId
 )
 
 END_NAMESPACE_OPENDAQ

@@ -1,6 +1,7 @@
 #include <opendaq/authentication_config_builder_impl.h>
 #include <opendaq/authentication_config_impl.h>
 #include <coreobjects/property_object_factory.h>
+#include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -15,9 +16,20 @@ ErrCode AuthenticationConfigBuilderImpl::build(IAuthenticationConfig** authentic
     return daqTry(
         [&]()
         {
+            // A single-descriptor config is just the one-entry case of the underlying dict-keyed
+            // constructor - `payloadDescriptor` left unassigned yields an empty dict, so the constructor's
+            // own "at least one payload descriptor" check reports the error uniformly.
+            auto payloadDescriptors = Dict<IString, ICredentialPayloadDescriptor>();
+            StringPtr defaultPayloadId;
+            if (payloadDescriptor.assigned())
+            {
+                defaultPayloadId = payloadDescriptor.getId();
+                payloadDescriptors.set(defaultPayloadId, payloadDescriptor);
+            }
+
             *authenticationConfig =
                 createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>(
-                    payloadDescriptor, credentialProviderId, suppliedSecret)
+                    payloadDescriptors, defaultPayloadId, credentialProviderId, suppliedSecret)
                     .detach();
             return OPENDAQ_SUCCESS;
         });

@@ -18,7 +18,6 @@
 #include <opendaq/authentication_config.h>
 #include <coreobjects/property_object_impl.h>
 #include <coretypes/dictobject_factory.h>
-#include <coretypes/listobject_factory.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -28,21 +27,19 @@ class AuthenticationConfigImpl : public GenericPropertyObjectImpl<IAuthenticatio
 public:
     using Super = GenericPropertyObjectImpl<IAuthenticationConfig>;
 
-    // `payloadDescriptor`/`payloadDescriptors` are raw interface pointers, not smart pointers, so that
-    // these overloads stay unambiguous - each raw pointer type is an exact match for its own overload and
-    // not implicitly inter-convertible with the other, whereas sibling smart-pointer parameter types would
-    // be (`ObjectPtr`'s generic converting constructor accepts any interface pointer via a runtime
-    // `queryInterface`).
-    explicit AuthenticationConfigImpl(ICredentialPayloadDescriptor* payloadDescriptor,
-                                      const StringPtr& credentialProviderId = nullptr,
-                                      const PropertyObjectPtr& suppliedSecret = nullptr);
-
-    AuthenticationConfigImpl(IList* payloadDescriptors, IString* defaultPayloadId);
+    // `payloadDescriptors` is a raw interface pointer, not a smart pointer, matching the project-wide
+    // convention that a factory macro's declared argument types are exactly what its constructor takes
+    // (factory macros always forward raw C-ABI interface pointers as-is, with no conversion). A single-method
+    // config is just the one-entry case of this - there's no separate single-descriptor constructor, since
+    // it would add nothing this one doesn't already cover.
+    AuthenticationConfigImpl(IDict* payloadDescriptors,
+                             IString* defaultPayloadId,
+                             const StringPtr& credentialProviderId = nullptr,
+                             const PropertyObjectPtr& suppliedSecret = nullptr);
 
     // Bare - adds no properties of its own. Used only as the empty instance that deserialization then fills
     // in from the serialized property values (mirroring `AddressInfoImpl`'s pattern) - regular user code
-    // should always go through one of the two constructors above instead, both of which require an actual
-    // payload descriptor.
+    // should always go through the constructor above instead, which requires at least one payload descriptor.
     explicit AuthenticationConfigImpl();
 
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
@@ -58,7 +55,7 @@ private:
     static constexpr const char* CredentialProviderIdPropertyName = "CredentialProviderId";
     static constexpr const char* SuppliedSecretPropertyName = "SuppliedSecret";
 
-    void initProperties(const ListPtr<ICredentialPayloadDescriptor>& payloadDescriptors,
+    void initProperties(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                         const StringPtr& defaultPayloadId,
                         const StringPtr& credentialProviderId,
                         const PropertyObjectPtr& suppliedSecret);

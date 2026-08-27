@@ -39,7 +39,7 @@ Carries the authentication settings for a single connection attempt. Lives along
 
 | Property | Description |
 |---|---|
-| `"PayloadDescriptor"` (Selection) | The payload id/descriptor pair, bound together as one property so they can never be set out of sync: its selection value is the `ICredentialPayloadDescriptor` Struct itself, and the payload id is simply that Struct's own `getId()`. A config returned by `IComponentType::createDefaultAuthenticationConfig()` (see [§2](#2-extensions-to-existing-interfaces)) is self-contained - every authentication method the component type supports is a selection candidate here, not just one - so the caller switches methods by changing this property's selection, without fetching a different config object. A config built directly via `AuthenticationConfig(descriptor)`/`IAuthenticationConfigBuilder` has exactly one candidate, itself. |
+| `"PayloadDescriptor"` (Selection) | The payload id/descriptor pair, bound together as one property so they can never be set out of sync: its selection value is the `ICredentialPayloadDescriptor` Struct itself, and the payload id is simply that Struct's own `getId()`. A config returned by `IComponentType::createDefaultAuthenticationConfig()` (see [§2](#2-extensions-to-existing-interfaces)) is self-contained - every authentication method the component type supports is a selection candidate here, not just one - so the caller switches methods by changing this property's selection, without fetching a different config object. A config built via `IAuthenticationConfigBuilder` has exactly one candidate, itself. |
 | `"CredentialProviderId"` (String) | The id of a specifically selected credential provider, or empty (the default) if none was chosen — in which case the module auto-selects a registered provider supporting the payload descriptor's format. |
 | `"SuppliedSecret"` (Object, optional) | A secret supplied directly by the caller, to be used instead of a provider obtaining it. Present only when one was actually supplied — check with `hasProperty("SuppliedSecret")` — since an Object-type property cannot itself hold `nullptr`. See [§5](#5-credential-provider-selection--supplied-secrets). |
 
@@ -52,8 +52,8 @@ Carries the authentication settings for a single connection attempt. Lives along
 There is no "additional config" on `IAuthenticationConfig` itself - settings like whether to hide secret input as it's typed travel via the component's own, generic config object instead (the same one `addDevice`/`addStreaming` always take), read by the module from its own `config` parameter alongside the authentication config.
 
 **Factories:**
-- `AuthenticationConfig(payloadDescriptor)` — normal construction path for a live connection attempt, with none of the builder-only settings below (provider id, supplied secret) set.
-- `AuthenticationConfigBuilder()` — see `IAuthenticationConfigBuilder` below; the only way to set a provider id or a supplied secret.
+- `AuthenticationConfig(payloadDescriptors, defaultPayloadId)` — builds a config listing every one of `payloadDescriptors` (a dict keyed by each descriptor's own id) as a `"PayloadDescriptor"` candidate, defaulting to the one named by `defaultPayloadId`. A single-method config is just the one-entry case of this - there's no separate single-descriptor factory, since it would add nothing this one doesn't already cover. None of the builder-only settings below (provider id, supplied secret) are set. This is what `IComponentType::createDefaultAuthenticationConfig()` uses internally to build its self-contained, every-method config.
+- `AuthenticationConfigBuilder()` — see `IAuthenticationConfigBuilder` below; the only way to set a provider id or a supplied secret, for a single-method config.
 
 ---
 

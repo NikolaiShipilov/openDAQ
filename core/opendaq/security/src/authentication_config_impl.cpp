@@ -5,18 +5,14 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-AuthenticationConfigImpl::AuthenticationConfigImpl(ICredentialPayloadDescriptor* payloadDescriptor,
+AuthenticationConfigImpl::AuthenticationConfigImpl(IDict* payloadDescriptors,
+                                                   IString* defaultPayloadId,
                                                    const StringPtr& credentialProviderId,
                                                    const PropertyObjectPtr& suppliedSecret)
     : Super()
 {
-    const CredentialPayloadDescriptorPtr payloadDescriptorPtr = payloadDescriptor;
-    if (!payloadDescriptorPtr.assigned())
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "Payload descriptor must be assigned when creating an authentication config");
-
-    ListPtr<ICredentialPayloadDescriptor> payloadDescriptors = List<ICredentialPayloadDescriptor>();
-    payloadDescriptors.pushBack(payloadDescriptorPtr);
-    initProperties(payloadDescriptors, payloadDescriptorPtr.getId(), credentialProviderId, suppliedSecret);
+    const DictPtr<IString, ICredentialPayloadDescriptor> payloadDescriptorsPtr = payloadDescriptors;
+    initProperties(payloadDescriptorsPtr, defaultPayloadId, credentialProviderId, suppliedSecret);
 }
 
 AuthenticationConfigImpl::AuthenticationConfigImpl()
@@ -24,14 +20,7 @@ AuthenticationConfigImpl::AuthenticationConfigImpl()
 {
 }
 
-AuthenticationConfigImpl::AuthenticationConfigImpl(IList* payloadDescriptors, IString* defaultPayloadId)
-    : Super()
-{
-    const ListPtr<ICredentialPayloadDescriptor> payloadDescriptorsPtr = payloadDescriptors;
-    initProperties(payloadDescriptorsPtr, defaultPayloadId, nullptr, nullptr);
-}
-
-void AuthenticationConfigImpl::initProperties(const ListPtr<ICredentialPayloadDescriptor>& payloadDescriptors,
+void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                                               const StringPtr& defaultPayloadId,
                                               const StringPtr& credentialProviderId,
                                               const PropertyObjectPtr& suppliedSecret)
@@ -41,12 +30,13 @@ void AuthenticationConfigImpl::initProperties(const ListPtr<ICredentialPayloadDe
 
     ListPtr<IStruct> payloadDescriptorOptions = List<IStruct>();
     Int defaultIndex = 0;
-    for (SizeT i = 0; i < payloadDescriptors.getCount(); i++)
+    Int i = 0;
+    for (const auto& [id, descriptor] : payloadDescriptors)
     {
-        const CredentialPayloadDescriptorPtr descriptor = payloadDescriptors[i];
         payloadDescriptorOptions.pushBack(descriptor);
-        if (defaultPayloadId.assigned() && descriptor.getId() == defaultPayloadId)
-            defaultIndex = static_cast<Int>(i);
+        if (defaultPayloadId.assigned() && id == defaultPayloadId)
+            defaultIndex = i;
+        i++;
     }
 
     Super::addProperty(SelectionProperty(PayloadDescriptorPropertyName, payloadDescriptorOptions, defaultIndex));
@@ -125,13 +115,7 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    ICredentialPayloadDescriptor*, payloadDescriptor
-)
-
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE_AND_CREATEFUNC(
-    LIBRARY_FACTORY, AuthenticationConfig,
-    IAuthenticationConfig, createAuthenticationConfigFromSupportedMethods,
-    IList*, payloadDescriptors, IString*, defaultPayloadId
+    IDict*, payloadDescriptors, IString*, defaultPayloadId
 )
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(AuthenticationConfigImpl)

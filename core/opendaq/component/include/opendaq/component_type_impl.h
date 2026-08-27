@@ -165,9 +165,7 @@ ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::createDefaultAuthenticati
 
     return daqTry([&]
     {
-        *authenticationConfig = AuthenticationConfigFromSupportedMethods(this->supportedAuthenticationDescriptors.getValueList(),
-                                                                          this->defaultAuthenticationConfigId)
-                                     .detach();
+        *authenticationConfig = AuthenticationConfig(this->supportedAuthenticationDescriptors, this->defaultAuthenticationConfigId).detach();
         return OPENDAQ_SUCCESS;
     });
 }
