@@ -5,7 +5,6 @@
 #include <opendaq/credential_request_factory.h>
 #include <coreobjects/exceptions.h>
 #include <coreobjects/property_factory.h>
-#include <coretypes/dictobject_factory.h>
 #include <vector>
 #include <memory>
 
@@ -73,21 +72,6 @@ namespace crypto
 namespace authentication
 {
 
-CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor()
-{
-    return KeyValuePayloadDescriptor(UserNamePasswordPayloadId, Dict<IString, IBoolean>({{"UserName", False}, {"Password", True}}), "Username and password");
-}
-
-CredentialPayloadDescriptorPtr BuildPinDescriptor()
-{
-    return StringPayloadDescriptor(PinPayloadId, "PIN code", True);
-}
-
-CredentialPayloadDescriptorPtr BuildPrivateKeyFileDescriptor()
-{
-    return FilePathPayloadDescriptor(PrivateKeyFilePayloadId, "Path to the PEM-encoded private key file");
-}
-
 static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, const ComponentTypePtr& componentType)
 {
     builder.setComponentType(componentType);
@@ -99,13 +83,13 @@ static CredentialRequestPtr CreateUserNamePasswordCredentialRequest(const String
                                                                      const StringPtr& serialNumber,
                                                                      const ComponentTypePtr& componentType)
 {
-    const auto payloadDescriptor = BuildUserNamePasswordDescriptor();
+    const auto payloadDescriptor = StandardUserNamePasswordPayloadDescriptor();
 
     auto builder = CredentialRequestBuilder();
     builder.setConnectionString(connectionString);
     builder.setManufacturer(manufacturer);
     builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(UserNamePasswordPayloadId);
+    builder.setPayloadId(StandardUserNamePasswordPayloadId);
     builder.setPayloadDescriptor(payloadDescriptor);
     PopulateCommonMetaData(builder, componentType);
 
@@ -117,13 +101,13 @@ static CredentialRequestPtr CreatePinCredentialRequest(const StringPtr& connecti
                                                         const StringPtr& serialNumber,
                                                         const ComponentTypePtr& componentType)
 {
-    const auto payloadDescriptor = BuildPinDescriptor();
+    const auto payloadDescriptor = StandardPinPayloadDescriptor();
 
     auto builder = CredentialRequestBuilder();
     builder.setConnectionString(connectionString);
     builder.setManufacturer(manufacturer);
     builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PinPayloadId);
+    builder.setPayloadId(StandardPinPayloadId);
     builder.setPayloadDescriptor(payloadDescriptor);
     PopulateCommonMetaData(builder, componentType);
 
@@ -135,13 +119,13 @@ static CredentialRequestPtr CreatePrivateKeyFileCredentialRequest(const StringPt
                                                                    const StringPtr& serialNumber,
                                                                    const ComponentTypePtr& componentType)
 {
-    const auto payloadDescriptor = BuildPrivateKeyFileDescriptor();
+    const auto payloadDescriptor = StandardPrivateKeyFilePayloadDescriptor();
 
     auto builder = CredentialRequestBuilder();
     builder.setConnectionString(connectionString);
     builder.setManufacturer(manufacturer);
     builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PrivateKeyFilePayloadId);
+    builder.setPayloadId(StandardPrivateKeyFilePayloadId);
     builder.setPayloadDescriptor(payloadDescriptor);
     PopulateCommonMetaData(builder, componentType);
 
@@ -156,13 +140,13 @@ CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
 {
     const std::string payloadIdStr = payloadId.toStdString();
 
-    if (payloadIdStr == PinPayloadId)
+    if (payloadIdStr == StandardPinPayloadId)
         return CreatePinCredentialRequest(connectionString, manufacturer, serialNumber, componentType);
 
-    if (payloadIdStr == PrivateKeyFilePayloadId)
+    if (payloadIdStr == StandardPrivateKeyFilePayloadId)
         return CreatePrivateKeyFileCredentialRequest(connectionString, manufacturer, serialNumber, componentType);
 
-    if (payloadIdStr == UserNamePasswordPayloadId)
+    if (payloadIdStr == StandardUserNamePasswordPayloadId)
         return CreateUserNamePasswordCredentialRequest(connectionString, manufacturer, serialNumber, componentType);
 
     DAQ_THROW_EXCEPTION(InvalidParameterException, "Unknown authentication payload id \"{}\"", payloadId);
@@ -177,7 +161,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
 
     const std::string payloadIdStr = payloadId.toStdString();
 
-    if (payloadIdStr == PinPayloadId)
+    if (payloadIdStr == StandardPinPayloadId)
     {
         const StringPtr pin = credentials.hasProperty("Secret") ? credentials.getPropertyValue("Secret") : nullptr;
         if (!pin.assigned() || pin != "1234")
@@ -185,7 +169,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - wrong pin-code");
         }
     }
-    else if (payloadIdStr == PrivateKeyFilePayloadId)
+    else if (payloadIdStr == StandardPrivateKeyFilePayloadId)
     {
         const StringPtr privateKeyPath = credentials.hasProperty("Secret") ? credentials.getPropertyValue("Secret") : nullptr;
         if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)

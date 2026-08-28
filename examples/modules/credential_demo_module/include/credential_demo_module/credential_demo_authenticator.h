@@ -24,21 +24,8 @@
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
-inline const std::string UserNamePasswordPayloadId = "UserNamePassword";
-inline const std::string PinPayloadId = "Pin";
-inline const std::string PrivateKeyFilePayloadId = "PrivateKeyFile";
-
 namespace authentication
 {
-    /*
-     * Descriptors for the three showcased auth methods - shared between the device's and the streaming
-     * type's supported authentication configs. UserName/Password's "Password" and PIN's single secret are
-     * always hidden as typed - there is no caller-facing way to change that.
-     */
-    CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor();
-    CredentialPayloadDescriptorPtr BuildPinDescriptor();
-    CredentialPayloadDescriptorPtr BuildPrivateKeyFileDescriptor();
-
     /*
      * Verifies credentials for one of the three showcased auth methods (UserName/Password, PIN,
      * PrivateKeyFile). Shared by both the device (authenticating a connection to it) and the streaming

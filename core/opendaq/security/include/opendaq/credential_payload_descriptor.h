@@ -18,6 +18,7 @@
 #include <coretypes/baseobject.h>
 #include <coretypes/string_ptr.h>
 #include <coretypes/struct.h>
+#include <coretypes/type_manager.h>
 #include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -34,6 +35,7 @@ enum class CredentialPayloadFormat : EnumType
 
 /*#
  * [interfaceLibrary(IStruct, CoreTypes)]
+ * [interfaceLibrary(ITypeManager, "coretypes")]
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
  */
@@ -96,17 +98,17 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, id, IDict*, keys, IString*, description
+    IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, id, IString*, description, Bool, hidden
+    IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, id, IString*, description
+    IString*, id, IString*, description, ITypeManager*, typeManager
 )
 
 END_NAMESPACE_OPENDAQ

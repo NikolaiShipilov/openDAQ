@@ -21,6 +21,7 @@
 #include <opendaq/streaming_type_ptr.h>
 #include <opendaq/credential_request_ptr.h>
 #include <coreobjects/property_object_ptr.h>
+#include <coretypes/type_manager_ptr.h>
 
 /*
  * A dummy streaming connection - it never transports any data and its callbacks are no-ops. Authenticates
@@ -38,7 +39,7 @@ public:
                                          const StringPtr& payloadId,
                                          const PropertyObjectPtr& credentials);
 
-    static StreamingTypePtr CreateType();
+    static StreamingTypePtr CreateType(const TypeManagerPtr& typeManager = nullptr);
 
 protected:
     void onSetActive(bool active) override;

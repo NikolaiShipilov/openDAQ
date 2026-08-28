@@ -18,7 +18,7 @@ Describes the shape and presentation of the payload an authentication method exp
 | `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
 | `createDefaultPayload(IPropertyObject**)` | Builds an empty credential payload template matching this format: a property object with one empty (default `""`) String property per secret expected - one per key named in `getParameters()`'s `"Keys"` dict for `KeyValuePairs` (e.g. `"UserName"`, `"Password"`), or a single `"Secret"` property for `String`/`FilePath`. Meant to be filled in with the actual secret value(s) and used as the credential payload itself - see [§5](#5-credential-provider-selection--supplied-secrets). |
 
-**Factories:** `KeyValuePayloadDescriptor(id, keys, description)`, `StringPayloadDescriptor(id, description, hidden)`, `FilePathPayloadDescriptor(id, description)`
+**Factories:** `KeyValuePayloadDescriptor(id, keys, description, typeManager)`, `StringPayloadDescriptor(id, description, hidden, typeManager)`, `FilePathPayloadDescriptor(id, description, typeManager)` - `typeManager` is optional; if assigned and it already has the format's struct type registered, the descriptor is built with that registered type instead of an independently-built, unregistered one. `Context` registers all three formats' struct types up front (`RegisterCredentialPayloadDescriptorTypes`, called from `ContextImpl::registerOpenDaqTypes`), so this is the case for any descriptor built with a real `Context`'s type manager.
 
 ```cpp
 enum class CredentialPayloadFormat : EnumType

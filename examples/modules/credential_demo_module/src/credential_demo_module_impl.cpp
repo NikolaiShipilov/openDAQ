@@ -29,7 +29,7 @@ ListPtr<IDeviceInfo> CredentialDemoModule::onGetAvailableDevices()
 
 DictPtr<IString, IDeviceType> CredentialDemoModule::onGetAvailableDeviceTypes()
 {
-    auto deviceType = CredentialDemoDeviceImpl::CreateType();
+    auto deviceType = CredentialDemoDeviceImpl::CreateType(context.getTypeManager());
     return Dict<IString, IBaseObject>({{deviceType.getId(), deviceType}});
 }
 
@@ -88,7 +88,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
 
 DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTypes()
 {
-    auto streamingType = CredentialDemoStreamingImpl::CreateType();
+    auto streamingType = CredentialDemoStreamingImpl::CreateType(context.getTypeManager());
     return Dict<IString, IBaseObject>({{streamingType.getId(), streamingType}});
 }
 

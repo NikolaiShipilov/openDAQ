@@ -602,7 +602,6 @@ protected:
     }
 
 private:
-
     StringPtr getPrefixFromConnectionString(const StringPtr& connectionString) const
     {
         try

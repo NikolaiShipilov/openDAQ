@@ -23,58 +23,54 @@
 #include <coretypes/serializable.h>
 #include <coretypes/serialized_object_ptr.h>
 #include <coretypes/function_ptr.h>
+#include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief `IStruct` impl for the parameter set nested inside a `CredentialPayloadDescriptorImpl`,
- * parameterized by `Format`. Which constructor is used - and so which fields the built Struct has -
- * depends on the format: `KeyValuePairs` takes a `"Keys"` dict field, `String` takes a `"Hidden"` bool
- * field, `FilePath` has no fields at all. Only one constructor is ever exercised per `Format` alias
- * below; the others are simply unused for that alias.
+ * @brief `IStruct` impl for the parameter set nested inside a `CredentialPayloadDescriptorImpl`. Still
+ * overrides `serialize`/`getSerializeId`/`Deserialize` (rather than relying on `GenericStructImpl<IStruct>`'s
+ * own generic versions) because the generic `Deserialize` requires `context` to directly expose
+ * `ITypeManager` via `queryInterface` - which does not hold for the context used while reloading a
+ * component (verified: a real device reload fails with "Context does not implement ITypeManager interface
+ * for Struct deserialization" otherwise). This one instead reconstructs directly from whichever of
+ * `"Keys"`/`"Hidden"`/neither is present in the serialized data, with no type manager involved at all.
  */
-template <CredentialPayloadFormat Format>
-class CredentialPayloadParametersImpl final : public GenericStructImpl<IStruct>
+class CredentialPayloadDescriptorParametersImpl final : public GenericStructImpl<IStruct>
 {
 public:
-    // KeyValuePairs
-    explicit CredentialPayloadParametersImpl(const DictPtr<IString, IBoolean>& keys);
-    // String
-    explicit CredentialPayloadParametersImpl(Bool hidden);
-    // FilePath
-    CredentialPayloadParametersImpl();
+    CredentialPayloadDescriptorParametersImpl(const StructTypePtr& structType, const DictPtr<IString, IBaseObject>& fields);
 
-    // ISerializable
     ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
     ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
-    static ConstCharPtr SerializeId();
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 };
 
-using KeyValuePayloadParametersImpl = CredentialPayloadParametersImpl<CredentialPayloadFormat::KeyValuePairs>;
-using StringPayloadParametersImpl = CredentialPayloadParametersImpl<CredentialPayloadFormat::String>;
-using FilePathPayloadParametersImpl = CredentialPayloadParametersImpl<CredentialPayloadFormat::FilePath>;
-
-OPENDAQ_REGISTER_DESERIALIZE_FACTORY(KeyValuePayloadParametersImpl)
-OPENDAQ_REGISTER_DESERIALIZE_FACTORY(StringPayloadParametersImpl)
-OPENDAQ_REGISTER_DESERIALIZE_FACTORY(FilePathPayloadParametersImpl)
-
 /*!
- * @brief `ICredentialPayloadDescriptor` impl for all formats, parameterized by `Format`. Which
- * constructor is used - and so which `Parameters` Struct gets built - depends on the format:
- * `KeyValuePairs` takes a `"Keys"` dict, `String` takes a `"Hidden"` bool, `FilePath` takes neither. Only
- * one constructor is ever exercised per `Format` alias below; the others are simply unused for that alias.
+ * @brief `ICredentialPayloadDescriptor` impl for all three payload formats. One non-templated class - the
+ * only thing that genuinely varies per format is which public constructor is used (and so which fields the
+ * built `"Parameters"` Struct has); `format` itself is then just a stored, runtime-checked member, not a
+ * template parameter.
  */
-template <CredentialPayloadFormat Format>
 class CredentialPayloadDescriptorImpl final : public GenericStructImpl<ICredentialPayloadDescriptor, IStruct>
 {
 public:
+    // `id`/`keys`/`description` are raw interface pointers, not smart pointers, so these three overloads
+    // stay unambiguous: flattening away the old per-format template means they now share one overload set,
+    // and `ObjectPtr`'s generic converting constructor (accepting any interface pointer via a runtime
+    // `queryInterface`) would otherwise make a single smart-pointer-typed argument an equally-ranked
+    // candidate for all three. Raw pointers of unrelated interfaces have no such implicit conversion between
+    // them, so each argument is only ever viable for its own overload. `typeManager`, if assigned and it
+    // already has the format's struct type registered (see `RegisterCredentialPayloadDescriptorTypes`), is
+    // used to build the descriptor - and its `createDefaultPayload()` stub for `String`/`FilePath` - with
+    // the registered types instead of building unregistered ones locally.
+
     // KeyValuePairs
-    CredentialPayloadDescriptorImpl(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
+    CredentialPayloadDescriptorImpl(IString* id, IDict* keys, IString* description, ITypeManager* typeManager = nullptr);
     // String
-    CredentialPayloadDescriptorImpl(const StringPtr& id, const StringPtr& description, Bool hidden);
+    CredentialPayloadDescriptorImpl(IString* id, IString* description, Bool hidden, ITypeManager* typeManager = nullptr);
     // FilePath
-    CredentialPayloadDescriptorImpl(const StringPtr& id, const StringPtr& description);
+    CredentialPayloadDescriptorImpl(IString* id, IString* description, ITypeManager* typeManager = nullptr);
 
     ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
@@ -85,21 +81,29 @@ public:
     // ISerializable
     ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
     ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
-    static ConstCharPtr SerializeId();
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
 private:
-    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description);
-    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const StringPtr& description, Bool hidden);
-    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const StringPtr& description);
+    // Same raw-pointer disambiguation rationale as the public constructors above - this is an overloaded
+    // set too.
+    static DictPtr<IString, IBaseObject> BuildFields(IString* id, IDict* keys, IString* description, const TypeManagerPtr& typeManager);
+    static DictPtr<IString, IBaseObject> BuildFields(IString* id, IString* description, Bool hidden, const TypeManagerPtr& typeManager);
+    static DictPtr<IString, IBaseObject> BuildFields(IString* id, IString* description, const TypeManagerPtr& typeManager);
+
+    CredentialPayloadDescriptorImpl(CredentialPayloadFormat format,
+                                    const StructTypePtr& structType,
+                                    const DictPtr<IString, IBaseObject>& fields,
+                                    const TypeManagerPtr& typeManager);
+
+    CredentialPayloadFormat format;
+    TypeManagerPtr typeManager;
 };
 
-using KeyValuePayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::KeyValuePairs>;
-using StringPayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::String>;
-using FilePathPayloadDescriptorImpl = CredentialPayloadDescriptorImpl<CredentialPayloadFormat::FilePath>;
-
-OPENDAQ_REGISTER_DESERIALIZE_FACTORY(KeyValuePayloadDescriptorImpl)
-OPENDAQ_REGISTER_DESERIALIZE_FACTORY(StringPayloadDescriptorImpl)
-OPENDAQ_REGISTER_DESERIALIZE_FACTORY(FilePathPayloadDescriptorImpl)
+// The class factory macros in the .cpp token-paste `<FactoryName>Impl` as the type to construct (e.g.
+// `KeyValuePayloadDescriptorImpl`) - these aliases just point each of the three expected names at the one
+// real class above, picking the matching constructor overload by argument list.
+using KeyValuePayloadDescriptorImpl = CredentialPayloadDescriptorImpl;
+using StringPayloadDescriptorImpl = CredentialPayloadDescriptorImpl;
+using FilePathPayloadDescriptorImpl = CredentialPayloadDescriptorImpl;
 
 END_NAMESPACE_OPENDAQ
