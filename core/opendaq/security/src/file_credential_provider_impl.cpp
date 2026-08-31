@@ -6,18 +6,18 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-static const std::string FileCredentialProviderName = "FileCredentialProvider";
+static const std::string FileCredentialProviderId = "FileCredentialProvider";
 static constexpr int MaxFilePathAttempts = 3;
 
 FileCredentialProviderImpl::FileCredentialProviderImpl()
 {
 }
 
-ErrCode FileCredentialProviderImpl::getName(IString** name)
+ErrCode FileCredentialProviderImpl::getId(IString** id)
 {
-    OPENDAQ_PARAM_NOT_NULL(name);
+    OPENDAQ_PARAM_NOT_NULL(id);
 
-    *name = String(FileCredentialProviderName).detach();
+    *id = String(FileCredentialProviderId).detach();
     return OPENDAQ_SUCCESS;
 }
 

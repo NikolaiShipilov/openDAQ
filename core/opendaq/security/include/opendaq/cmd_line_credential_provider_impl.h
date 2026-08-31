@@ -31,7 +31,7 @@ class CmdLineCredentialProviderImpl : public ImplementationOf<ICredentialProvide
 public:
     explicit CmdLineCredentialProviderImpl();
 
-    ErrCode INTERFACE_FUNC getName(IString** name) override;
+    ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) override;
     ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* secret) override;
     ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) override;

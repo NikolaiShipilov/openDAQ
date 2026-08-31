@@ -235,8 +235,8 @@ void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTyp
     auto reloadedInstanceBuilder = InstanceBuilder();
     reloadedInstanceBuilder.addModulePath(MODULE_PATH);
     reloadedInstanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
-    reloadedInstanceBuilder.addCredentialProvider(reloadedFileCredentialProvider.getName(), reloadedFileCredentialProvider);
-    reloadedInstanceBuilder.addCredentialProvider(reloadedCredentialProvider.getName(), reloadedCredentialProvider);
+    reloadedInstanceBuilder.addCredentialProvider(reloadedFileCredentialProvider.getId(), reloadedFileCredentialProvider);
+    reloadedInstanceBuilder.addCredentialProvider(reloadedCredentialProvider.getId(), reloadedCredentialProvider);
     auto reloadedInstance = reloadedInstanceBuilder.build();
 
     reloadedInstance.loadConfiguration(savedConfiguration);
@@ -259,10 +259,11 @@ int main(int argc, const char* argv[])
     auto instanceBuilder = InstanceBuilder();
     instanceBuilder.addModulePath(MODULE_PATH);
     instanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
+
     // Registered first, so it - not CmdLineCredentialProvider - is the one FindMatchingCredentialProvider
     // picks for FilePath-format requests (e.g. the PrivateKeyFile auth method below).
-    instanceBuilder.addCredentialProvider(fileCredentialProvider.getName(), fileCredentialProvider);
-    instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
+    instanceBuilder.addCredentialProvider(fileCredentialProvider.getId(), fileCredentialProvider);
+    instanceBuilder.addCredentialProvider(credentialProvider.getId(), credentialProvider);
     auto instance = instanceBuilder.build();
 
     // get the type to obtain default authentication settings
@@ -272,9 +273,9 @@ int main(int argc, const char* argv[])
     // demoNoAuthentication(instance);
     demoUserNamePasswordAuthentication(instance, deviceType);
     demoDeviceAndStreamingAuthentication(instance, deviceType);
-    // demoExplicitCredentialProviderSelection(instance, deviceType, credentialProvider.getName());
-    demoAuthenticationConfigAsPropertyObject(instance, deviceType, credentialProvider.getName());
-    demoCachedFilePathCredentialAcrossDeviceAndStreaming(instance, deviceType, credentialProvider.getName());
+    // demoExplicitCredentialProviderSelection(instance, deviceType, credentialProvider.getId());
+    demoAuthenticationConfigAsPropertyObject(instance, deviceType, credentialProvider.getId());
+    demoCachedFilePathCredentialAcrossDeviceAndStreaming(instance, deviceType, credentialProvider.getId());
     demoPinAuthenticationAndReload(instance, deviceType);
 
     std::cout << "Press \"enter\" to exit the application..." << std::endl;

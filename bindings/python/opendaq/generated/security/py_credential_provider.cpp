@@ -43,14 +43,14 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
     m.def("CmdLineCredentialProvider", &daq::CmdLineCredentialProvider_Create);
     m.def("FileCredentialProvider", &daq::FileCredentialProvider_Create);
 
-    cls.def_property_readonly("name",
+    cls.def_property_readonly("id",
         [](daq::ICredentialProvider *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
-            return objectPtr.getName().toStdString();
+            return objectPtr.getId().toStdString();
         },
-        "Gets the name of the credential provider.");
+        "Gets the id that uniquely identifies the credential provider - the same id used to key it within `IInstanceBuilder::addCredentialProvider`/`IContext::getCredentialProviders`, and that `IAuthenticationConfig`'s `\"CredentialProviderId\"` property names when a caller selects one explicitly.");
     cls.def("request_credentials",
         [](daq::ICredentialProvider *object, daq::ICredentialRequest* request)
         {

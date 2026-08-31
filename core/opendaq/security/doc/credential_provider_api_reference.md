@@ -122,7 +122,7 @@ Supplies the secrets requested via an `ICredentialRequest` — by prompting the 
 
 | Member | Description |
 |---|---|
-| `getName(IString**)` | The provider's name. |
+| `getId(IString**)` | The provider's id. |
 | `requestCredentials(ICredentialRequest*, IPropertyObject**)` | Requests credentials for the given request, in the format described by its payload descriptor — obtaining them interactively (prompting, reading a file, etc.) unless a cached value from an earlier `cacheCredentials`/`requestCredentials` call for the same context already covers it. Returns a property object built from the descriptor's `createDefaultPayload` template, filled in with the obtained secret(s). |
 | `cacheCredentials(ICredentialRequest*, IPropertyObject* secret)` | Accepts a secret already known in advance (see `IAuthenticationConfig`'s `"SuppliedSecret"` property), shaped like the request's payload descriptor's `createDefaultPayload` template, so an implementation that would otherwise cache a value obtained interactively caches this one the same way — a later `requestCredentials` call for the same context then reuses it instead of prompting. Produces no payload itself; the caller already has the secret and uses it directly. Implementations for which caching doesn't apply (or doesn't apply to the request's format) may treat this as a no-op. |
 | `getSupportedPayloadFormats(IList**)` | The list of `CredentialPayloadFormat` values this provider can supply — used for format-matching against a device type's supported formats. |
@@ -178,8 +178,8 @@ Supplies the secrets requested via an `ICredentialRequest` — by prompting the 
 
 | New member | Description |
 |---|---|
-| `getCredentialProviders(IDict**)` | The registered providers, keyed by name. |
-| `addCredentialProvider(IString* providerName, ICredentialProvider*)` | Registers a provider under a unique name. |
+| `getCredentialProviders(IDict**)` | The registered providers, keyed by id. |
+| `addCredentialProvider(IString* providerId, ICredentialProvider*)` | Registers a provider under a unique id. |
 
 ### `IContext`
 
@@ -247,7 +247,7 @@ By default, the module auto-selects the first registered provider whose `getSupp
 ```cpp
 auto config = AuthenticationConfigBuilder()
                    .setPayloadDescriptor(privateKeyFileConfig.getCredentialPayloadDescriptor())
-                   .setCredentialProviderId(cmdLineCredentialProvider.getName())
+                   .setCredentialProviderId(cmdLineCredentialProvider.getId())
                    .build();
 ```
 
@@ -258,7 +258,7 @@ Since `IAuthenticationConfig` is itself a property object (like `IDeviceInfo`), 
 ```cpp
 auto config = deviceType.createDefaultAuthenticationConfig();
 SelectAuthenticationMethod(config, "PrivateKeyFile"); // see §7 for this helper
-config.setPropertyValue("CredentialProviderId", cmdLineCredentialProvider.getName());
+config.setPropertyValue("CredentialProviderId", cmdLineCredentialProvider.getId());
 std::cout << config.getPropertyValue("CredentialProviderId") << std::endl;
 ```
 
@@ -294,7 +294,7 @@ devicePayload.setPropertyValue("Secret", "/path/to/private_key.pem");
 
 auto deviceConfig = AuthenticationConfigBuilder()
                          .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                         .setCredentialProviderId(cmdLineCredentialProvider.getName())
+                         .setCredentialProviderId(cmdLineCredentialProvider.getId())
                          .setSuppliedSecret(devicePayload)
                          .build();
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceConfig);
@@ -305,7 +305,7 @@ auto streamingPrivateKeyFileConfig = streamingType.createDefaultAuthenticationCo
 SelectAuthenticationMethod(streamingPrivateKeyFileConfig, "PrivateKeyFile");
 auto streamingConfig = AuthenticationConfigBuilder()
                            .setPayloadDescriptor(streamingPrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                           .setCredentialProviderId(cmdLineCredentialProvider.getName())
+                           .setCredentialProviderId(cmdLineCredentialProvider.getId())
                            .build();
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingConfig);
 ```
@@ -335,7 +335,7 @@ With one, the module manager first confirms the target device type actually supp
 auto credentialProvider = CmdLineCredentialProvider();
 
 auto instanceBuilder = InstanceBuilder();
-instanceBuilder.addCredentialProvider(credentialProvider.getName(), credentialProvider);
+instanceBuilder.addCredentialProvider(credentialProvider.getId(), credentialProvider);
 auto instance = instanceBuilder.build();
 ```
 
@@ -386,7 +386,7 @@ SelectAuthenticationMethod(authConfig, "Pin");
 StructPtr payloadDescriptor = authConfig.getPropertySelectionValue("PayloadDescriptor");
 std::cout << "Payload id: " << payloadDescriptor.get("Id") << std::endl; // "Pin" - no ICredentialPayloadDescriptor cast needed
 
-authConfig.setPropertyValue("CredentialProviderId", credentialProvider.getName());
+authConfig.setPropertyValue("CredentialProviderId", credentialProvider.getId());
 std::cout << "Credential provider id: " << authConfig.getPropertyValue("CredentialProviderId") << std::endl;
 
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, authConfig);
@@ -402,8 +402,8 @@ auto cmdLineCredentialProvider = CmdLineCredentialProvider();
 
 auto instanceBuilder = InstanceBuilder();
 // Registered first, so it — not CmdLineCredentialProvider — is picked for FilePath requests.
-instanceBuilder.addCredentialProvider(fileCredentialProvider.getName(), fileCredentialProvider);
-instanceBuilder.addCredentialProvider(cmdLineCredentialProvider.getName(), cmdLineCredentialProvider);
+instanceBuilder.addCredentialProvider(fileCredentialProvider.getId(), fileCredentialProvider);
+instanceBuilder.addCredentialProvider(cmdLineCredentialProvider.getId(), cmdLineCredentialProvider);
 auto instance = instanceBuilder.build();
 
 auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");

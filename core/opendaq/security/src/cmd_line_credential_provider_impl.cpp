@@ -13,17 +13,17 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-static const std::string CmdLineCredentialProviderName = "CmdLineCredentialProvider";
+static const std::string CmdLineCredentialProviderId = "CmdLineCredentialProvider";
 
 CmdLineCredentialProviderImpl::CmdLineCredentialProviderImpl()
 {
 }
 
-ErrCode CmdLineCredentialProviderImpl::getName(IString** name)
+ErrCode CmdLineCredentialProviderImpl::getId(IString** id)
 {
-    OPENDAQ_PARAM_NOT_NULL(name);
+    OPENDAQ_PARAM_NOT_NULL(id);
 
-    *name = String(CmdLineCredentialProviderName).detach();
+    *id = String(CmdLineCredentialProviderId).detach();
     return OPENDAQ_SUCCESS;
 }
 

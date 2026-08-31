@@ -383,12 +383,12 @@ void defineIInstanceBuilder(pybind11::module_ m, PyDaqIntf<daq::IInstanceBuilder
         py::return_value_policy::take_ownership,
         "");
     cls.def("add_credential_provider",
-        [](daq::IInstanceBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& providerName, daq::ICredentialProvider* provider)
+        [](daq::IInstanceBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& providerId, daq::ICredentialProvider* provider)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::InstanceBuilderPtr::Borrow(object);
-            objectPtr.addCredentialProvider(getVariantValue<daq::IString*>(providerName), provider);
+            objectPtr.addCredentialProvider(getVariantValue<daq::IString*>(providerId), provider);
         },
-        py::arg("provider_name"), py::arg("provider"),
+        py::arg("provider_id"), py::arg("provider"),
         "");
 }

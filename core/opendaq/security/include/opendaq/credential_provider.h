@@ -36,10 +36,12 @@ BEGIN_NAMESPACE_OPENDAQ
 DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 {
     /*!
-     * @brief Gets the name of the credential provider.
-     * @param[out] name The provider name.
+     * @brief Gets the id that uniquely identifies the credential provider - the same id used to key it
+     * within `IInstanceBuilder::addCredentialProvider`/`IContext::getCredentialProviders`, and that
+     * `IAuthenticationConfig`'s `"CredentialProviderId"` property names when a caller selects one explicitly.
+     * @param[out] id The provider id.
      */
-    virtual ErrCode INTERFACE_FUNC getName(IString** name) = 0;
+    virtual ErrCode INTERFACE_FUNC getId(IString** id) = 0;
 
     /*!
      * @brief Requests credentials for the given request, in the format described by its payload descriptor.

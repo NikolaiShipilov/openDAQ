@@ -484,12 +484,12 @@ ErrCode InstanceBuilderImpl::getCredentialProviders(IDict** providers)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode InstanceBuilderImpl::addCredentialProvider(IString* providerName, ICredentialProvider* provider)
+ErrCode InstanceBuilderImpl::addCredentialProvider(IString* providerId, ICredentialProvider* provider)
 {
-    OPENDAQ_PARAM_NOT_NULL(providerName);
+    OPENDAQ_PARAM_NOT_NULL(providerId);
     OPENDAQ_PARAM_NOT_NULL(provider);
 
-    return credentialProviders->set(providerName, provider);
+    return credentialProviders->set(providerId, provider);
 }
 
 /////////////////////

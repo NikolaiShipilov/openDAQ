@@ -383,7 +383,7 @@ DECLARE_OPENDAQ_INTERFACE(IInstanceBuilder, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) = 0;
 
     // [returnSelf]
-    virtual ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerName, ICredentialProvider* provider) = 0;
+    virtual ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) = 0;
 };
 /*!@}*/
 
