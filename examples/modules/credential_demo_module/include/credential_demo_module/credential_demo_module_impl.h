@@ -38,6 +38,7 @@ public:
     ListPtr<IDeviceInfo> onGetAvailableDevices() override;
     DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes() override;
     DevicePtr onCreateDevice(const StringPtr& connectionString, const ComponentPtr& parent, const PropertyObjectPtr& config) override;
+    StringPtr onGetCanonicalConnectionString(const StringPtr& connectionString) override;
     DevicePtr onCreateAuthenticatedDevice(const StringPtr& connectionString,
                                           const StringPtr& manufacturer,
                                           const StringPtr& serialNumber,

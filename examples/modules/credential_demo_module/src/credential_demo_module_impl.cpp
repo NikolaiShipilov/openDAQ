@@ -5,6 +5,7 @@
 #include <credential_demo_module/version.h>
 
 #include <coretypes/version_info_factory.h>
+#include <coretypes/string_factory.h>
 #include <opendaq/credential_payload_descriptor_factory.h>
 #include <opendaq/authentication_config_factory.h>
 #include <opendaq/component_private_ptr.h>
@@ -45,6 +46,24 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
     return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(config, context, parent, info, /*authenticated*/false).detach();
 }
 
+StringPtr CredentialDemoModule::onGetCanonicalConnectionString(const StringPtr& connectionString)
+{
+    // Only the routing prefix ever gets trimmed here - there's nothing left to make explicit beyond that,
+    // since this module's connection strings never leave any parameter (host, port, path, ...) unspecified
+    // in the first place: each type has exactly one, fixed, non-parameterized address.
+    const std::string connStr = connectionString;
+
+    const std::string devicePrefix = CredentialDemoDeviceImpl::CreateType().getConnectionStringPrefix().toStdString() + "://";
+    if (connStr.rfind(devicePrefix, 0) == 0)
+        return String(connStr.substr(devicePrefix.size()));
+
+    const std::string streamingPrefix = CredentialDemoStreamingImpl::CreateType().getConnectionStringPrefix().toStdString() + "://";
+    if (connStr.rfind(streamingPrefix, 0) == 0)
+        return String(connStr.substr(streamingPrefix.size()));
+
+    return connectionString;
+}
+
 DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& connectionString,
                                                             const StringPtr& manufacturer,
                                                             const StringPtr& serialNumber,
@@ -64,8 +83,11 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
     const auto payloadId = authenticationConfig.getCredentialPayloadId();
     const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
 
+    // The canonical form (not the raw, as-typed one) - so a provider that falls back to it as a caching
+    // identifier when no manufacturer/serial is available gets a stable key regardless of how much of the
+    // connection string the caller left implicit.
     const auto credentialRequest = authentication::CreateCredentialRequest(
-        payloadId, connectionString, manufacturer, serialNumber, CredentialDemoDeviceImpl::CreateType());
+        payloadId, onGetCanonicalConnectionString(connectionString), manufacturer, serialNumber, CredentialDemoDeviceImpl::CreateType());
 
     // The authenticated path always obtains credentials - the device is never connected to anonymously.
     const auto credentials = ObtainCredentials(authenticationConfig, credentialRequest, context.getCredentialProviders(), payloadDescriptor);
@@ -108,8 +130,12 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
     const auto payloadId = resolvedAuthenticationConfig.getCredentialPayloadId();
     const auto payloadDescriptor = resolvedAuthenticationConfig.getCredentialPayloadDescriptor();
 
+    // Streaming connections aren't resolved through manufacturer/serial-based discovery the way a device's
+    // `daq://manufacturer_serial` smart string can be, so `manufacturer`/`serialNumber` are typically absent
+    // here - the canonical connection string is what a provider falls back to identifying the connection by
+    // in that case (see `CmdLineCredentialProviderImpl::MakeFilePathCacheKey`).
     const auto credentialRequest = authentication::CreateCredentialRequest(
-        payloadId, connectionString, manufacturer, serialNumber, CredentialDemoStreamingImpl::CreateType());
+        payloadId, onGetCanonicalConnectionString(connectionString), manufacturer, serialNumber, CredentialDemoStreamingImpl::CreateType());
 
     const auto credentials = ObtainCredentials(resolvedAuthenticationConfig, credentialRequest, context.getCredentialProviders(), payloadDescriptor);
 

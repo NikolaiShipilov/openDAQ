@@ -426,6 +426,23 @@ public:
     }
 
     /*!
+     * @brief Returns the canonical form of `connectionString` - the module's own connection-string prefix
+     * trimmed off, and every connection parameter (port, path, etc.) made explicit, even ones the original
+     * string left unspecified and the module fell back to a default for. Meant to be used as a stable
+     * identifier for caching authentication credentials against a specific connection within a credential
+     * provider - two connection strings that differ only in how much they left implicit still resolve
+     * to the exact same canonical string, and so the same cache entry.
+     * @param connectionString The connection string to canonicalize.
+     * @returns The canonical connection string. The base implementation performs no canonicalization at
+     * all - it returns `connectionString` unchanged - so a module that doesn't yet support authentication
+     * (and so has no need for a caching identifier) doesn't need to override this.
+     */
+    virtual StringPtr onGetCanonicalConnectionString(const StringPtr& connectionString)
+    {
+        return connectionString;
+    }
+
+    /*!
      * @brief Creates a device object that can communicate with the device described in the specified connection string,
      * authenticating the connection by obtaining credentials - as specified by the given authentication configuration -
      * from a compatible registered credential provider.

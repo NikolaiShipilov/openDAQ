@@ -127,8 +127,23 @@ CmdLineCredentialProviderImpl::CacheKey CmdLineCredentialProviderImpl::MakeFileP
 {
     const StringPtr manufacturer = request.getManufacturer();
     const StringPtr serialNumber = request.getSerialNumber();
-    return std::make_pair(manufacturer.assigned() ? manufacturer.toStdString() : std::string(),
-                          serialNumber.assigned() ? serialNumber.toStdString() : std::string());
+    const bool hasManufacturer = manufacturer.assigned() && manufacturer.getLength() > 0;
+    const bool hasSerialNumber = serialNumber.assigned() && serialNumber.getLength() > 0;
+
+    if (!hasManufacturer && !hasSerialNumber)
+    {
+        // Neither is available to identify the connection by - e.g. a streaming connection, which (unlike
+        // a device's `daq://manufacturer_serial` smart string) isn't resolved through manufacturer/serial
+        // discovery. Fall back to the connection string itself - the module that formed this request is
+        // expected to have already canonicalized it (routing prefix trimmed, every parameter made explicit;
+        // see `Module::onGetCanonicalConnectionString`), so it stays a stable identifier regardless of how
+        // much of it the caller originally left implicit.
+        const StringPtr connectionString = request.getConnectionString();
+        return std::make_pair(connectionString.assigned() ? connectionString.toStdString() : std::string(), std::string());
+    }
+
+    return std::make_pair(hasManufacturer ? manufacturer.toStdString() : std::string(),
+                          hasSerialNumber ? serialNumber.toStdString() : std::string());
 }
 
 PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialPayloadDescriptorPtr& descriptor)
