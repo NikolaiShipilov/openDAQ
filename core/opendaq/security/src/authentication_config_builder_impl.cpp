@@ -27,9 +27,13 @@ ErrCode AuthenticationConfigBuilderImpl::build(IAuthenticationConfig** authentic
                 payloadDescriptors.set(defaultPayloadId, payloadDescriptor);
             }
 
+            // `AuthenticationConfigBuilder` has no `Context` access to enumerate credential providers, so it
+            // never supplies a provider id list - the built config's "CredentialProviderId" property is
+            // omitted entirely (see `AuthenticationConfigImpl::initProperties`), same as leaving
+            // `credentialProviderId` unset would already mean today.
             *authenticationConfig =
                 createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>(
-                    payloadDescriptors, defaultPayloadId, credentialProviderId, suppliedSecret)
+                    payloadDescriptors, defaultPayloadId, nullptr, credentialProviderId, suppliedSecret)
                     .detach();
             return OPENDAQ_SUCCESS;
         });

@@ -25,8 +25,6 @@
 #include <coreobjects/property_object_internal_ptr.h>
 #include <opendaq/module_info_ptr.h>
 #include <opendaq/component_type_private.h>
-#include <opendaq/authentication_config_ptr.h>
-#include <opendaq/authentication_config_factory.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 #include <coretypes/dictobject_factory.h>
 
@@ -57,8 +55,8 @@ public:
     ErrCode INTERFACE_FUNC getName(IString** name) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) override;
-    ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig) override;
-    ErrCode INTERFACE_FUNC isAuthenticationSupported(Bool* supported) override;
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationDescriptors(IDict** descriptors) override;
+    ErrCode INTERFACE_FUNC getDefaultAuthenticationConfigId(IString** id) override;
     ErrCode INTERFACE_FUNC getModuleInfo(IModuleInfo** moduleInfo) override;
 
     // IComponentTypePrivate
@@ -156,27 +154,20 @@ ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::createDefaultConfig(IProp
 }
 
 template <class Intf, class... Interfaces>
-ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::createDefaultAuthenticationConfig(IAuthenticationConfig** authenticationConfig)
+ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::getSupportedAuthenticationDescriptors(IDict** descriptors)
 {
-    OPENDAQ_PARAM_NOT_NULL(authenticationConfig);
+    OPENDAQ_PARAM_NOT_NULL(descriptors);
 
-    if (!this->defaultAuthenticationConfigId.assigned() || !this->supportedAuthenticationDescriptors.hasKey(this->defaultAuthenticationConfigId))
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED);
-
-    return daqTry([&]
-    {
-        *authenticationConfig = AuthenticationConfig(this->supportedAuthenticationDescriptors, this->defaultAuthenticationConfigId).detach();
-        return OPENDAQ_SUCCESS;
-    });
+    *descriptors = this->supportedAuthenticationDescriptors.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
 }
 
 template <class Intf, class... Interfaces>
-ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::isAuthenticationSupported(Bool* supported)
+ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::getDefaultAuthenticationConfigId(IString** id)
 {
-    OPENDAQ_PARAM_NOT_NULL(supported);
+    OPENDAQ_PARAM_NOT_NULL(id);
 
-    *supported = this->defaultAuthenticationConfigId.assigned() &&
-                 this->supportedAuthenticationDescriptors.hasKey(this->defaultAuthenticationConfigId);
+    *id = this->defaultAuthenticationConfigId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

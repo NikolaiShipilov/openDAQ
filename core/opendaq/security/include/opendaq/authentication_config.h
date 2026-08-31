@@ -37,13 +37,18 @@ BEGIN_NAMESPACE_OPENDAQ
  * Is itself a Property object (like `IDeviceInfo`) - the payload id and its descriptor are bound
  * together as one `"PayloadDescriptor"` Selection property (its selection value is the
  * `ICredentialPayloadDescriptor` Struct itself, so the two can never be set out of sync - the payload id
- * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`), the credential
- * provider id is a plain `"CredentialProviderId"` String property, and a directly-supplied secret (see
- * `IAuthenticationConfigBuilder::setSuppliedSecret`) is carried, when present, as a `"SuppliedSecret"`
- * property (absent when none was supplied). The typed getters below are a convenience layer on top of the
- * first two properties; `"SuppliedSecret"`, `"CredentialProviderId"`, and `"PayloadDescriptor"` can all
- * equally be read (and, via `IAuthenticationConfigBuilder`-built instances, set) through the ordinary
- * `IPropertyObject` interface this object also implements.
+ * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`). A directly-supplied
+ * secret (see `IAuthenticationConfigBuilder::setSuppliedSecret`) is carried, when present, as a
+ * `"SuppliedSecret"` property (absent when none was supplied). The credential provider id is a
+ * `"CredentialProviderId"` property whose shape depends on how the config was built: a Selection over the
+ * available provider ids when the config was built with a list of them (see `AuthenticationConfig`'s
+ * `availableCredentialProviderIds` parameter and `IDevice::createDefaultAuthenticationConfig`); a plain
+ * String when it was built with an explicit provider id but no such list (e.g. via
+ * `IAuthenticationConfigBuilder::setCredentialProviderId`, which has no `Context` access to enumerate
+ * providers); entirely absent when neither was given. The typed getters below are a convenience layer on top of these properties; `"SuppliedSecret"`,
+ * `"CredentialProviderId"`, and `"PayloadDescriptor"` can all equally be read (and, via
+ * `IAuthenticationConfigBuilder`-built instances, set) through the ordinary `IPropertyObject` interface this
+ * object also implements.
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
@@ -63,10 +68,11 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 
     /*!
      * @brief Gets the id of the credential provider to request credentials from - the value of the
-     * `"CredentialProviderId"` String property.
-     * @param[out] providerId The credential provider id, or `nullptr` if none was explicitly selected - in
-     * which case the module auto-selects a registered provider supporting the payload descriptor's format,
-     * same as when this is left unset.
+     * `"CredentialProviderId"` property, however it is currently shaped (Selection or plain String; see
+     * `IAuthenticationConfig`).
+     * @param[out] providerId The credential provider id, or `nullptr` if the config has no
+     * `"CredentialProviderId"` property at all - in which case the module auto-selects a registered provider
+     * supporting the payload descriptor's format.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
 };
@@ -76,10 +82,14 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
  * descriptor's own `ICredentialPayloadDescriptor::getId()`) as a candidate of its `"PayloadDescriptor"`
  * selection property, defaulting to the one whose id matches `defaultPayloadId`. A single-method config is
  * simply the one-candidate case of this - construct `payloadDescriptors` with one entry.
+ * @param availableCredentialProviderIds The credential provider ids to offer as `"CredentialProviderId"`
+ * selection candidates (defaulting to the first one), e.g. from `IContext::getCredentialProviders`. When
+ * `nullptr` or empty (the default), the built config has no `"CredentialProviderId"` property at all - there
+ * is no "auto-select" placeholder candidate.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IDict*, payloadDescriptors, IString*, defaultPayloadId
+    IDict*, payloadDescriptors, IString*, defaultPayloadId, IList*, availableCredentialProviderIds
 )
 
 END_NAMESPACE_OPENDAQ

@@ -56,6 +56,10 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfigBuilder, IBaseObject)
      * @brief Sets the id of the credential provider to request credentials from.
      * @param providerId The credential provider id, or `nullptr` to let the module auto-select a
      * registered provider supporting the payload descriptor's format - the default when left unset.
+     *
+     * The builder has no `Context` access to enumerate registered providers, so the built config's
+     * `"CredentialProviderId"` property (see `IAuthenticationConfig`) is a plain String here rather than a
+     * Selection - there's no candidate list to select from, only this one explicit value (or none at all).
      */
     // [returnSelf]
     virtual ErrCode INTERFACE_FUNC setCredentialProviderId(IString* providerId) = 0;

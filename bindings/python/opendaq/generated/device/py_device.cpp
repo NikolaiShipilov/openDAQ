@@ -184,6 +184,15 @@ void defineIDevice(pybind11::module_ m, PyDaqIntf<daq::IDevice, daq::IFolder> cl
         },
         py::return_value_policy::take_ownership,
         "Get a dictionary of available device types as <IString, IDeviceType> pairs");
+    cls.def("create_default_authentication_config",
+        [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& typeId)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::DevicePtr::Borrow(object);
+            return objectPtr.createDefaultAuthenticationConfig(getVariantValue<daq::IString*>(typeId)).detach();
+        },
+        py::arg("type_id"),
+        "Builds and returns a new, self-contained default authentication config for the component type identified by `typeId` - covering every authentication method that type supports, not just one of them, and offering every credential provider currently registered on this device's `Context` as a `\"CredentialProviderId\"` selection candidate.");
     cls.def("add_device",
         [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config)
         {

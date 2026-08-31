@@ -7,12 +7,14 @@ BEGIN_NAMESPACE_OPENDAQ
 
 AuthenticationConfigImpl::AuthenticationConfigImpl(IDict* payloadDescriptors,
                                                    IString* defaultPayloadId,
+                                                   IList* availableCredentialProviderIds,
                                                    const StringPtr& credentialProviderId,
                                                    const PropertyObjectPtr& suppliedSecret)
     : Super()
 {
     const DictPtr<IString, ICredentialPayloadDescriptor> payloadDescriptorsPtr = payloadDescriptors;
-    initProperties(payloadDescriptorsPtr, defaultPayloadId, credentialProviderId, suppliedSecret);
+    const ListPtr<IString> availableCredentialProviderIdsPtr = availableCredentialProviderIds;
+    initProperties(payloadDescriptorsPtr, defaultPayloadId, availableCredentialProviderIdsPtr, credentialProviderId, suppliedSecret);
 }
 
 AuthenticationConfigImpl::AuthenticationConfigImpl()
@@ -22,6 +24,7 @@ AuthenticationConfigImpl::AuthenticationConfigImpl()
 
 void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                                               const StringPtr& defaultPayloadId,
+                                              const ListPtr<IString>& availableCredentialProviderIds,
                                               const StringPtr& credentialProviderId,
                                               const PropertyObjectPtr& suppliedSecret)
 {
@@ -40,7 +43,35 @@ void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredential
     }
 
     Super::addProperty(SelectionProperty(PayloadDescriptorPropertyName, payloadDescriptorOptions, defaultIndex));
-    Super::addProperty(StringProperty(CredentialProviderIdPropertyName, credentialProviderId.assigned() ? credentialProviderId : ""));
+
+    // A real provider list (see `IDevice::createDefaultAuthenticationConfig`) makes "CredentialProviderId" a
+    // selection over it. Without one - e.g. a config built via `AuthenticationConfigBuilder`, which has no
+    // `Context` access to enumerate providers - it falls back to a plain string, same as before this config
+    // could ever carry a provider list at all; that fallback is itself skipped (the property omitted
+    // entirely) only when there is truly nothing to say - no list and no explicit id either.
+    if (availableCredentialProviderIds.assigned() && availableCredentialProviderIds.getCount() > 0)
+    {
+        Int providerDefaultIndex = 0;
+        if (credentialProviderId.assigned())
+        {
+            Int providerIndex = 0;
+            for (const auto& id : availableCredentialProviderIds)
+            {
+                if (id == credentialProviderId)
+                {
+                    providerDefaultIndex = providerIndex;
+                    break;
+                }
+                providerIndex++;
+            }
+        }
+
+        Super::addProperty(SelectionProperty(CredentialProviderIdPropertyName, availableCredentialProviderIds, providerDefaultIndex));
+    }
+    else if (credentialProviderId.assigned())
+    {
+        Super::addProperty(StringProperty(CredentialProviderIdPropertyName, credentialProviderId));
+    }
 
     // Only added when a secret was actually supplied - its mere presence (checked via `hasProperty`) is
     // what "was a secret supplied" means, since an Object-type property cannot itself hold `nullptr`.
@@ -78,7 +109,20 @@ ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
 
     return daqTry([&]
     {
-        const StringPtr id = objPtr.getPropertyValue(CredentialProviderIdPropertyName);
+        // The property is entirely absent when this config wasn't built with either a provider list or an
+        // explicit id (see `initProperties`) - that absence is itself "no provider explicitly selected".
+        if (!objPtr.hasProperty(CredentialProviderIdPropertyName))
+        {
+            *providerId = nullptr;
+            return OPENDAQ_SUCCESS;
+        }
+
+        // Shape (Selection vs plain String) is read back from the property itself, not tracked separately,
+        // so this works the same whether the object was just built or restored via deserialization.
+        const CoreType valueType = objPtr.getProperty(CredentialProviderIdPropertyName).getValueType();
+        const StringPtr id = valueType == ctInt
+                                  ? objPtr.getPropertySelectionValue(CredentialProviderIdPropertyName)
+                                  : objPtr.getPropertyValue(CredentialProviderIdPropertyName);
         *providerId = (id.assigned() && id.getLength() > 0) ? id.addRefAndReturn() : nullptr;
         return OPENDAQ_SUCCESS;
     });
@@ -115,7 +159,7 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IDict*, payloadDescriptors, IString*, defaultPayloadId
+    IDict*, payloadDescriptors, IString*, defaultPayloadId, IList*, availableCredentialProviderIds
 )
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(AuthenticationConfigImpl)

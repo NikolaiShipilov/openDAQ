@@ -19,6 +19,7 @@
 #include <opendaq/authentication_config_builder_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 #include <coretypes/dictobject_factory.h>
+#include <coretypes/listobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -28,11 +29,15 @@ BEGIN_NAMESPACE_OPENDAQ
  * selection property. A single-method config is simply the one-entry case of this.
  * @param payloadDescriptors The supported payload descriptors, keyed by their own id.
  * @param defaultPayloadId The payload id of the descriptor to select by default.
+ * @param availableCredentialProviderIds The credential provider ids to offer as `"CredentialProviderId"`
+ * selection candidates (defaulting to the first one). When `nullptr` or empty (the default), the built
+ * config has no `"CredentialProviderId"` property at all.
  */
 inline AuthenticationConfigPtr AuthenticationConfig(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
-                                                     const StringPtr& defaultPayloadId)
+                                                     const StringPtr& defaultPayloadId,
+                                                     const ListPtr<IString>& availableCredentialProviderIds = nullptr)
 {
-    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadDescriptors, defaultPayloadId));
+    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadDescriptors, defaultPayloadId, availableCredentialProviderIds));
     return obj;
 }
 

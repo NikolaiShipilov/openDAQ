@@ -539,6 +539,11 @@ ErrCode InstanceImpl::getAvailableDeviceTypes(IDict** deviceTypes)
     return rootDevice->getAvailableDeviceTypes(deviceTypes);
 }
 
+ErrCode InstanceImpl::createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig)
+{
+    return rootDevice->createDefaultAuthenticationConfig(typeId, authenticationConfig);
+}
+
 ErrCode InstanceImpl::addDevice(IDevice** device, IString* connectionString, IPropertyObject* config)
 {
     return rootDevice->addDevice(device, connectionString, config);

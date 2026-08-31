@@ -826,7 +826,10 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
             if (!deviceType.assigned())
                 continue;
 
-            if (authenticated && !deviceType.isAuthenticationSupported())
+            const StringPtr defaultAuthConfigId = deviceType.getDefaultAuthenticationConfigId();
+            const bool authSupported = defaultAuthConfigId.assigned() &&
+                                       deviceType.getSupportedAuthenticationDescriptors().hasKey(defaultAuthConfigId);
+            if (authenticated && !authSupported)
             {
                 deviceTypeFoundButAuthNotSupported = true;
                 continue;

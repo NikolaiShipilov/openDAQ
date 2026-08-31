@@ -18,6 +18,7 @@
 #include <opendaq/authentication_config.h>
 #include <coreobjects/property_object_impl.h>
 #include <coretypes/dictobject_factory.h>
+#include <coretypes/listobject_factory.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -27,13 +28,14 @@ class AuthenticationConfigImpl : public GenericPropertyObjectImpl<IAuthenticatio
 public:
     using Super = GenericPropertyObjectImpl<IAuthenticationConfig>;
 
-    // `payloadDescriptors` is a raw interface pointer, not a smart pointer, matching the project-wide
-    // convention that a factory macro's declared argument types are exactly what its constructor takes
-    // (factory macros always forward raw C-ABI interface pointers as-is, with no conversion). A single-method
-    // config is just the one-entry case of this - there's no separate single-descriptor constructor, since
-    // it would add nothing this one doesn't already cover.
+    // `payloadDescriptors`/`availableCredentialProviderIds` are raw interface pointers, not smart pointers,
+    // matching the project-wide convention that a factory macro's declared argument types are exactly what
+    // its constructor takes (factory macros always forward raw C-ABI interface pointers as-is, with no
+    // conversion). A single-method config is just the one-entry case of this - there's no separate
+    // single-descriptor constructor, since it would add nothing this one doesn't already cover.
     AuthenticationConfigImpl(IDict* payloadDescriptors,
                              IString* defaultPayloadId,
+                             IList* availableCredentialProviderIds = nullptr,
                              const StringPtr& credentialProviderId = nullptr,
                              const PropertyObjectPtr& suppliedSecret = nullptr);
 
@@ -57,6 +59,7 @@ private:
 
     void initProperties(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                         const StringPtr& defaultPayloadId,
+                        const ListPtr<IString>& availableCredentialProviderIds,
                         const StringPtr& credentialProviderId,
                         const PropertyObjectPtr& suppliedSecret);
 };

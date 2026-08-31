@@ -183,6 +183,33 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      */
     virtual ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) = 0;
 
+    /*!
+     * @brief Builds and returns a new, self-contained default authentication config for the component type
+     * identified by `typeId` - covering every authentication method that type supports, not just one of
+     * them, and offering every credential provider currently registered on this device's `Context` as a
+     * `"CredentialProviderId"` selection candidate.
+     * @param typeId The id of the component type to build a default authentication config for - looked up
+     * first among `getAvailableDeviceTypes`, then among the available streaming types, since streaming
+     * connections can support authentication the same way devices do.
+     * @param[out] authenticationConfig Newly created authentication config object. A new object is created
+     * on each call, same as with `IComponentType::createDefaultConfig`.
+     *
+     * The returned config's `"PayloadDescriptor"` property (see `IAuthenticationConfig`) has every payload
+     * descriptor added via `IComponentTypeBuilder::addSupportedAuthenticationDescriptor` as a selection
+     * candidate, defaulting to the one set via `IComponentTypeBuilder::setDefaultAuthenticationConfigId`. Its
+     * `"CredentialProviderId"` property is a selection over every registered credential provider id (no
+     * filtering by payload-format support yet), defaulting to the first one available - there is no "auto
+     * select" option, unlike a plain `AuthenticationConfigBuilder`-built config. The caller tunes the
+     * returned config directly - e.g. selecting a different supported method or provider, or setting
+     * `"SuppliedSecret"` - before handing it to `addAuthenticatedDevice`/`addAuthenticatedStreaming`, all via
+     * plain `IPropertyObject` calls.
+     *
+     * Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available
+     * streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type does not support authentication,
+     * i.e. no default authentication config id was set on the type's builder.
+     */
+    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
+
     // [templateType(device, IDevice)]
     /*!
      * @brief Connects to a device at the given connection string and returns it.

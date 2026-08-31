@@ -37,6 +37,9 @@
 #include <coreobjects/property_object_factory.h>
 #include <opendaq/module_manager_ptr.h>
 #include <opendaq/module_manager_utils_ptr.h>
+#include <opendaq/streaming_type_ptr.h>
+#include <opendaq/authentication_config_factory.h>
+#include <opendaq/credential_payload_descriptor_ptr.h>
 #include <opendaq/sync_component_factory.h>
 #include <opendaq/component_update_context_ptr.h>
 #include <set>
@@ -85,6 +88,7 @@ public:
 
     virtual ListPtr<IDeviceInfo> onGetAvailableDevices();
     virtual DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes();
+    virtual AuthenticationConfigPtr onCreateDefaultAuthenticationConfig(const StringPtr& typeId);
     virtual DevicePtr onAddDevice(const StringPtr& connectionString, const PropertyObjectPtr& config);
     virtual DevicePtr onAddAuthenticatedDevice(const StringPtr& connectionString,
                                                const PropertyObjectPtr& config,
@@ -152,6 +156,7 @@ public:
     // Client devices
     ErrCode INTERFACE_FUNC getAvailableDevices(IList** availableDevices) override;
     ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) override;
+    ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) override;
     ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config = nullptr) override;
     ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
                                                   IString* connectionString,
@@ -1341,6 +1346,49 @@ DictPtr<IString, IDeviceType> GenericDevice<TInterface, Interfaces...>::onGetAva
     auto lock = this->getRecursiveConfigLock2();
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
     return managerUtils.getAvailableDeviceTypes();
+}
+
+template <typename TInterface, typename... Interfaces>
+ErrCode GenericDevice<TInterface, Interfaces...>::createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig)
+{
+    OPENDAQ_PARAM_NOT_NULL(typeId);
+    OPENDAQ_PARAM_NOT_NULL(authenticationConfig);
+
+    if (this->isComponentRemoved)
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_COMPONENT_REMOVED);
+
+    AuthenticationConfigPtr configPtr;
+    const ErrCode errCode = wrapHandlerReturn(this, &Self::onCreateDefaultAuthenticationConfig, configPtr, typeId);
+    OPENDAQ_RETURN_IF_FAILED(errCode);
+
+    *authenticationConfig = configPtr.detach();
+    return errCode;
+}
+
+template <typename TInterface, typename... Interfaces>
+AuthenticationConfigPtr GenericDevice<TInterface, Interfaces...>::onCreateDefaultAuthenticationConfig(const StringPtr& typeId)
+{
+    auto lock = this->getRecursiveConfigLock2();
+    const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
+
+    ComponentTypePtr componentType;
+    if (const auto deviceTypes = managerUtils.getAvailableDeviceTypes(); deviceTypes.hasKey(typeId))
+        componentType = deviceTypes.get(typeId);
+    else if (const auto streamingTypes = managerUtils.getAvailableStreamingTypes(); streamingTypes.hasKey(typeId))
+        componentType = streamingTypes.get(typeId);
+    else
+        DAQ_THROW_EXCEPTION(NotFoundException, "No available device or streaming type with id \"{}\" was found", typeId);
+
+    const DictPtr<IString, ICredentialPayloadDescriptor> descriptors = componentType.getSupportedAuthenticationDescriptors();
+    const StringPtr defaultPayloadId = componentType.getDefaultAuthenticationConfigId();
+    if (!defaultPayloadId.assigned() || !descriptors.hasKey(defaultPayloadId))
+        DAQ_THROW_EXCEPTION(NotSupportedException, "Component type \"{}\" does not support authentication", typeId);
+
+    auto availableCredentialProviderIds = List<IString>();
+    for (const auto& [providerId, provider] : this->context.getCredentialProviders())
+        availableCredentialProviderIds.pushBack(providerId);
+
+    return AuthenticationConfig(descriptors, defaultPayloadId, availableCredentialProviderIds);
 }
 
 template <typename TInterface, typename... Interfaces>

@@ -5,7 +5,8 @@
 #include <credential_demo_module/version.h>
 
 #include <coretypes/version_info_factory.h>
-#include <coretypes/string_factory.h>
+#include <coretypes/stringobject_factory.h>
+#include <coretypes/listobject_factory.h>
 #include <opendaq/credential_payload_descriptor_factory.h>
 #include <opendaq/authentication_config_factory.h>
 #include <opendaq/component_private_ptr.h>
@@ -123,9 +124,21 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
     // The automatic streaming-attach path (`addDevice`'s "PrioritizedStreamingProtocols" config) has no way
     // to supply an authentication config - it always calls through with a null one. Rather than failing, fall
     // back to the streaming type's own default authentication method instead of requiring an explicit one.
+    // `Module` has no `IDevice` reference to call `IDevice::createDefaultAuthenticationConfig` on, only its
+    // own `context` - so the equivalent is built directly here, the same way that method does.
     auto resolvedAuthenticationConfig = authenticationConfig;
     if (!resolvedAuthenticationConfig.assigned())
-        resolvedAuthenticationConfig = CredentialDemoStreamingImpl::CreateType().createDefaultAuthenticationConfig();
+    {
+        const auto streamingType = CredentialDemoStreamingImpl::CreateType();
+
+        auto availableCredentialProviderIds = List<IString>();
+        for (const auto& [providerId, provider] : context.getCredentialProviders())
+            availableCredentialProviderIds.pushBack(providerId);
+
+        resolvedAuthenticationConfig = AuthenticationConfig(streamingType.getSupportedAuthenticationDescriptors(),
+                                                             streamingType.getDefaultAuthenticationConfigId(),
+                                                             availableCredentialProviderIds);
+    }
 
     const auto payloadId = resolvedAuthenticationConfig.getCredentialPayloadId();
     const auto payloadDescriptor = resolvedAuthenticationConfig.getCredentialPayloadDescriptor();
