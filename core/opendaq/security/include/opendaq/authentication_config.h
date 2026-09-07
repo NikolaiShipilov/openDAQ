@@ -18,12 +18,14 @@
 #include <coretypes/baseobject.h>
 #include <coreobjects/property_object.h>
 #include <opendaq/credential_payload_descriptor.h>
+#include <opendaq/context.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceSmartPtr(IPropertyObject, GenericPropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
+ * [interfaceLibrary(IContext, "opendaq")]
  */
 
 /*!
@@ -37,18 +39,29 @@ BEGIN_NAMESPACE_OPENDAQ
  * Is itself a Property object (like `IDeviceInfo`) - the payload id and its descriptor are bound
  * together as one `"PayloadDescriptor"` Selection property (its selection value is the
  * `ICredentialPayloadDescriptor` Struct itself, so the two can never be set out of sync - the payload id
- * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`). A directly-supplied
- * secret (see `IAuthenticationConfigBuilder::setSuppliedSecret`) is carried, when present, as a
- * `"SuppliedSecret"` property (absent when none was supplied). The credential provider id is a
- * `"CredentialProviderId"` property whose shape depends on how the config was built: a Selection over the
- * available provider ids when the config was built with a list of them (see `AuthenticationConfig`'s
- * `availableCredentialProviderIds` parameter and `IDevice::createDefaultAuthenticationConfig`); a plain
- * String when it was built with an explicit provider id but no such list (e.g. via
- * `IAuthenticationConfigBuilder::setCredentialProviderId`, which has no `Context` access to enumerate
- * providers); entirely absent when neither was given. The typed getters below are a convenience layer on top of these properties; `"SuppliedSecret"`,
- * `"CredentialProviderId"`, and `"PayloadDescriptor"` can all equally be read (and, via
- * `IAuthenticationConfigBuilder`-built instances, set) through the ordinary `IPropertyObject` interface this
+ * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`). It is the *master* of
+ * `"CredentialProviderId"`: whenever a config was built with a `Context` (see `AuthenticationConfig`'s
+ * `context` parameter and `IDevice::createDefaultAuthenticationConfig`), `"CredentialProviderId"` is a
+ * Selection over `Context::getCredentialProviders()` filtered live to the *currently selected*
+ * `"PayloadDescriptor"`'s format - re-queried from `Context` and recomputed (candidates added, removed, or
+ * refreshed) every time `"PayloadDescriptor"` is written, never a cached snapshot. The property is entirely
+ * absent whenever no `Context` was given, or no registered provider currently supports the selected format.
+ * A directly-supplied secret is carried, when present, as a `"SuppliedSecret"` property, validated on every
+ * write against whatever `"PayloadDescriptor"` is currently selected (its property names must match
+ * `descriptor.createDefaultPayload()`'s exactly - the blessed workflow is to build from that template, fill
+ * it in, and submit it) - a mismatched write is rejected, and an already-set `"SuppliedSecret"` that a
+ * `"PayloadDescriptor"` change leaves incompatible is silently cleared. The typed getters below are a
+ * convenience layer on top of these properties; `"SuppliedSecret"`, `"CredentialProviderId"`, and
+ * `"PayloadDescriptor"` can all equally be read and set through the ordinary `IPropertyObject` interface this
  * object also implements.
+ *
+ * Serialization is fully custom, not the generic `IPropertyObject` mechanism: only the component type id
+ * (as passed by `IDevice::createDefaultAuthenticationConfig`) and the selected `"PayloadDescriptor"`'s id
+ * are ever written. `"CredentialProviderId"` (not portable across openDAQ runs) and `"SuppliedSecret"` (a
+ * secret) are never serialized, regardless of whether they're currently present. Deserializing re-resolves
+ * the saved type id against the live `Context` and rebuilds everything above fresh - it fails outright if
+ * the type no longer resolves, or the saved payload id is no longer among that type's currently supported
+ * descriptors.
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
@@ -67,9 +80,8 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
     virtual ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
 
     /*!
-     * @brief Gets the id of the credential provider to request credentials from - the value of the
-     * `"CredentialProviderId"` property, however it is currently shaped (Selection or plain String; see
-     * `IAuthenticationConfig`).
+     * @brief Gets the id of the credential provider to request credentials from - the current selection
+     * value of the `"CredentialProviderId"` property (see `IAuthenticationConfig`).
      * @param[out] providerId The credential provider id, or `nullptr` if the config has no
      * `"CredentialProviderId"` property at all - in which case the module auto-selects a registered provider
      * supporting the payload descriptor's format.
@@ -82,14 +94,18 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
  * descriptor's own `ICredentialPayloadDescriptor::getId()`) as a candidate of its `"PayloadDescriptor"`
  * selection property, defaulting to the one whose id matches `defaultPayloadId`. A single-method config is
  * simply the one-candidate case of this - construct `payloadDescriptors` with one entry.
- * @param availableCredentialProviderIds The credential provider ids to offer as `"CredentialProviderId"`
- * selection candidates (defaulting to the first one), e.g. from `IContext::getCredentialProviders`. When
- * `nullptr` or empty (the default), the built config has no `"CredentialProviderId"` property at all - there
- * is no "auto-select" placeholder candidate.
+ * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
+ * `IAuthenticationConfig`) - required, no default; pass `nullptr` explicitly to build a config with no
+ * `"CredentialProviderId"` selection at all (e.g. for a context-less use case).
+ * @param typeId The id of the component type this config was built for - carried through serialization so a
+ * reload can re-resolve `payloadDescriptors`/`context` fresh (see `IAuthenticationConfig`'s serialization
+ * notes) - required, no default; pass `nullptr` explicitly for a config with no type behind it (e.g. one
+ * built for its own sake, not via `IDevice::createDefaultAuthenticationConfig`), which then cannot
+ * meaningfully round-trip through save/reload.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IDict*, payloadDescriptors, IString*, defaultPayloadId, IList*, availableCredentialProviderIds
+    IDict*, payloadDescriptors, IString*, defaultPayloadId, IContext*, context, IString*, typeId
 )
 
 END_NAMESPACE_OPENDAQ

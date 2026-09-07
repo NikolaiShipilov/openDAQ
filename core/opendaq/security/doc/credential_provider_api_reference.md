@@ -1,6 +1,6 @@
 # Credential Provider Framework — API Reference & Authentication Flow
 
-Credentials are modelled by their **payload shape** (`CredentialPayloadFormat`: `KeyValuePairs`, `String`, or `FilePath`) and a **payload descriptor** (`ICredentialPayloadDescriptor`) carrying format-specific parameters and a human description. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object a device hands back via `IDevice::createDefaultAuthenticationConfig(typeId)`, listing every method the named component type supports (added via `IComponentTypeBuilder::addSupportedAuthenticationDescriptor`) as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming` - or one assembled ad hoc via `IAuthenticationConfigBuilder`. Building it through `IDevice` (rather than the component type directly) gives it access to the device's `Context`, so it can also offer every registered credential provider as a `"CredentialProviderId"` selection candidate.
+Credentials are modelled by their **payload shape** (`CredentialPayloadFormat`: `KeyValuePairs`, `String`, or `FilePath`) and a **payload descriptor** (`ICredentialPayloadDescriptor`) carrying format-specific parameters and a human description. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object a device hands back via `IDevice::createDefaultAuthenticationConfig(typeId)`, listing every method the named component type supports (added via `IComponentTypeBuilder::addSupportedAuthenticationDescriptor`) as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming`. Building it through `IDevice` (rather than the component type directly) gives it access to the device's `Context`, so it can also offer registered credential providers as a `"CredentialProviderId"` selection - a live *slave* of the selected method, re-filtered from `Context` to only the providers currently supporting that method's format every time the selection changes.
 
 ---
 
@@ -33,15 +33,15 @@ enum class CredentialPayloadFormat : EnumType
 
 ### `IAuthenticationConfig`
 
-Carries the authentication settings for a single connection attempt. Lives alongside the base add-component config, never serialized as part of it - though a component created with authentication may persist the whole config it was authenticated with alongside itself instead (see `IComponentPrivate::setAuthenticationConfig`, [§7](#7-application-level-usage)).
+Carries the authentication settings for a single connection attempt. Lives alongside the base add-component config, never serialized as part of it - though a component created with authentication may persist a reduced form of the config it was authenticated with alongside itself instead (see [Serialization](#serialization) below and [§7](#7-application-level-usage)).
 
-`IAuthenticationConfig` extends `IPropertyObject` (the same way `IDeviceInfo` does) - the settings below are backed by ordinary properties, so besides the typed getters/builder setters, they can equally be read (and, for a builder-built instance, set) through the generic `IPropertyObject` interface:
+`IAuthenticationConfig` extends `IPropertyObject` (the same way `IDeviceInfo` does) - the settings below are backed by ordinary properties, so besides the typed getters, they can equally be read and set through the generic `IPropertyObject` interface:
 
 | Property | Description |
 |---|---|
-| `"PayloadDescriptor"` (Selection) | The payload id/descriptor pair, bound together as one property so they can never be set out of sync: its selection value is the `ICredentialPayloadDescriptor` Struct itself, and the payload id is simply that Struct's own `getId()`. A config returned by `IDevice::createDefaultAuthenticationConfig(typeId)` (see [§2](#2-extensions-to-existing-interfaces)) is self-contained - every authentication method the component type supports is a selection candidate here, not just one - so the caller switches methods by changing this property's selection, without fetching a different config object. A config built via `IAuthenticationConfigBuilder` has exactly one candidate, itself. |
-| `"CredentialProviderId"` (Selection or String, conditional) | The id of a specifically selected credential provider. A Selection over the available provider ids when the config was built with a list of them (see `AuthenticationConfig`'s `availableCredentialProviderIds` parameter) - `IDevice::createDefaultAuthenticationConfig(typeId)` always builds one this way, over every provider registered on the device's `Context`, defaulting to the first one; there is no "auto" candidate. A plain String when built with an explicit id but no such list, e.g. via `AuthenticationConfigBuilder::setCredentialProviderId` (which has no `Context` access to enumerate providers). Absent entirely (check via `hasProperty`) when neither was given - in which case the module auto-selects a registered provider supporting the payload descriptor's format. |
-| `"SuppliedSecret"` (Object, optional) | A secret supplied directly by the caller, to be used instead of a provider obtaining it. Present only when one was actually supplied — check with `hasProperty("SuppliedSecret")` — since an Object-type property cannot itself hold `nullptr`. See [§5](#5-credential-provider-selection--supplied-secrets). |
+| `"PayloadDescriptor"` (Selection, master) | The payload id/descriptor pair, bound together as one property so they can never be set out of sync: its selection value is the `ICredentialPayloadDescriptor` Struct itself, and the payload id is simply that Struct's own `getId()`. A config returned by `IDevice::createDefaultAuthenticationConfig(typeId)` (see [§2](#2-extensions-to-existing-interfaces)) is self-contained - every authentication method the component type supports is a selection candidate here, not just one - so the caller switches methods by changing this property's selection, without fetching a different config object. Changing this property live-recomputes `"CredentialProviderId"` (see below) and may clear an incompatible `"SuppliedSecret"`. |
+| `"CredentialProviderId"` (Selection, conditional - slave of `"PayloadDescriptor"`) | The id of a specifically selected credential provider. Present only when the config was built with a `Context` (see `AuthenticationConfig`'s `context` parameter - `IDevice::createDefaultAuthenticationConfig(typeId)` always supplies one) and at least one registered provider currently supports the *selected* `"PayloadDescriptor"`'s format - a Selection re-queried from `Context::getCredentialProviders()`, recomputed fresh (never a cached snapshot) every time `"PayloadDescriptor"` changes, defaulting to the first compatible provider. Absent otherwise (no `Context`, or no compatible provider) - absence means the module auto-selects a registered provider supporting the payload descriptor's format. |
+| `"SuppliedSecret"` (Object, optional) | A secret supplied directly by the caller, to be used instead of a provider obtaining it. Present only when one was actually supplied — check with `hasProperty("SuppliedSecret")` — since an Object-type property cannot itself hold `nullptr`. Every write is validated against the *currently selected* `"PayloadDescriptor"`: the object's property names must match `descriptor.createDefaultPayload()`'s exactly (build from that template, fill it in, submit it - the blessed workflow), or the write is rejected. A `"PayloadDescriptor"` change that leaves an already-set `"SuppliedSecret"` incompatible with the new selection silently clears it. See [§5](#5-credential-provider-selection--supplied-secrets). |
 
 | Member | Description |
 |---|---|
@@ -51,24 +51,9 @@ Carries the authentication settings for a single connection attempt. Lives along
 
 There is no "additional config" on `IAuthenticationConfig` itself - settings like whether to hide secret input as it's typed travel via the component's own, generic config object instead (the same one `addDevice`/`addStreaming` always take), read by the module from its own `config` parameter alongside the authentication config.
 
-**Factories:**
-- `AuthenticationConfig(payloadDescriptors, defaultPayloadId, availableCredentialProviderIds = nullptr)` — builds a config listing every one of `payloadDescriptors` (a dict keyed by each descriptor's own id) as a `"PayloadDescriptor"` candidate, defaulting to the one named by `defaultPayloadId`. A single-method config is just the one-entry case of this - there's no separate single-descriptor factory, since it would add nothing this one doesn't already cover. When `availableCredentialProviderIds` is non-empty, it also becomes the `"CredentialProviderId"` selection candidates (defaulting to the first one); left `nullptr`/empty (the default), the built config has no `"CredentialProviderId"` property at all. `SuppliedSecret` is never set here. This is what `IDevice::createDefaultAuthenticationConfig(typeId)` uses internally to build its self-contained, every-method config.
-- `AuthenticationConfigBuilder()` — see `IAuthenticationConfigBuilder` below; the only way to set a supplied secret, for a single-method config. Has no `Context` access, so a `setCredentialProviderId` call on it produces a plain String `"CredentialProviderId"` property rather than a Selection one - see the note in [§2](#2-extensions-to-existing-interfaces).
+**Factory:** `AuthenticationConfig(payloadDescriptors, defaultPayloadId, context, typeId)` — builds a config listing every one of `payloadDescriptors` (a dict keyed by each descriptor's own id) as a `"PayloadDescriptor"` candidate, defaulting to the one named by `defaultPayloadId`. A single-method config is just the one-entry case of this - there's no separate single-descriptor factory, since it would add nothing this one doesn't already cover. Neither `context` nor `typeId` has a default - every caller states explicitly whether it has one, `nullptr` included. `context` drives the live master/slave filtering described above (`nullptr` ⇒ no `"CredentialProviderId"` selection at all). `typeId` is carried through [serialization](#serialization) so a reload can re-resolve everything fresh (`nullptr` ⇒ the built config has no type behind it and can't meaningfully round-trip through save/reload). `"CredentialProviderId"` and `"SuppliedSecret"` are never set by the factory - set them afterward via those properties directly, the same way regardless of who built the config. This is what `IDevice::createDefaultAuthenticationConfig(typeId)` uses internally to build its self-contained, every-method config.
 
----
-
-### `IAuthenticationConfigBuilder`
-
-Builds `IAuthenticationConfig` objects, exposing every setting the plain factory doesn't.
-
-| Member | Description |
-|---|---|
-| `build(IAuthenticationConfig**)` | Builds and returns an `AuthenticationConfig` from the currently configured values. |
-| `setPayloadDescriptor` / `getPayloadDescriptor` | The descriptor of the payload the selected method uses - its own `getId()` becomes the built config's payload id. |
-| `setCredentialProviderId` / `getCredentialProviderId` | Selects a specific registered provider by id, bypassing format-based auto-selection. `nullptr` (the default) leaves auto-selection in place. |
-| `setSuppliedSecret` / `getSuppliedSecret` | Supplies the secret directly - a property object built from `setPayloadDescriptor`'s `createDefaultPayload` template and filled in with the actual secret value(s). `nullptr` (the default) leaves the module to obtain it from a provider. |
-
-**Factory:** `AuthenticationConfigBuilder()` — starts with no values set.
+**Serialization:** fully custom, not the generic `IPropertyObject` mechanism. Only the component type id (as supplied by `IDevice::createDefaultAuthenticationConfig`) and the selected `"PayloadDescriptor"`'s id are ever written - `"CredentialProviderId"` (not portable across openDAQ runs) and `"SuppliedSecret"` (a secret) are never serialized, regardless of whether they're currently present. Deserializing re-resolves the saved type id against the live `Context` (device types, then streaming types) and rebuilds the config fresh, selecting the *saved* payload id - it fails outright if the type no longer resolves, or the saved id is no longer among that type's currently supported descriptors. A config built with `typeId = nullptr` has no type id to save and so cannot meaningfully round-trip this way.
 
 ---
 
@@ -112,7 +97,7 @@ Builds `ICredentialRequest` objects.
 
 ### Credential payload
 
-There is no dedicated payload interface - a credential payload is simply an `IPropertyObject`, built from the payload descriptor's `createDefaultPayload()` template and filled in with the actual secret value(s). For a `KeyValuePairs`-format payload it has one String property per key (e.g. `"UserName"`, `"Password"`); for `String`/`FilePath` it has a single `"Secret"` String property. Both a credential provider's `requestCredentials` and a caller directly supplying a secret (`IAuthenticationConfigBuilder::setSuppliedSecret`) produce/consume this exact same shape - see [§5](#5-credential-provider-selection--supplied-secrets).
+There is no dedicated payload interface - a credential payload is simply an `IPropertyObject`, built from the payload descriptor's `createDefaultPayload()` template and filled in with the actual secret value(s). For a `KeyValuePairs`-format payload it has one String property per key (e.g. `"UserName"`, `"Password"`); for `String`/`FilePath` it has a single `"Secret"` String property. Both a credential provider's `requestCredentials` and a caller directly supplying a secret (`IAuthenticationConfig`'s `"SuppliedSecret"` property) produce/consume this exact same shape - see [§5](#5-credential-provider-selection--supplied-secrets).
 
 ---
 
@@ -159,7 +144,7 @@ Supplies the secrets requested via an `ICredentialRequest` — by prompting the 
 
 | New member | Description |
 |---|---|
-| `createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig**)` | Builds and returns a new, self-contained authentication config for the component type named by `typeId` (looked up among the device's available device types, then its available streaming types); a new object on each call, same as `createDefaultConfig`. Its `"PayloadDescriptor"` property has every payload descriptor added to the type's builder as a selection candidate, defaulting to the one set via `setDefaultAuthenticationConfigId`. Its `"CredentialProviderId"` property is a selection over every credential provider registered on the device's `Context` (no filtering by payload-format support yet), defaulting to the first one - there is no "auto-select" candidate, unlike a config built via a plain `AuthenticationConfigBuilder`. Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type doesn't support authentication (no default authentication config id set on its builder). |
+| `createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig**)` | Builds and returns a new, self-contained authentication config for the component type named by `typeId` (looked up among the device's available device types, then its available streaming types); a new object on each call, same as `createDefaultConfig`. Its `"PayloadDescriptor"` property has every payload descriptor added to the type's builder as a selection candidate, defaulting to the one set via `setDefaultAuthenticationConfigId`. Its `"CredentialProviderId"` property is a live selection over the device's `Context`-registered providers, filtered to those supporting the *selected* method's format (recomputed on every `"PayloadDescriptor"` change), defaulting to the first compatible one - absent entirely when none are compatible. Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type doesn't support authentication (no default authentication config id set on its builder). |
 | `addAuthenticatedDevice(IDevice**, IString* connectionString, IPropertyObject* config = nullptr, IAuthenticationConfig* authenticationConfig = nullptr)` | Connects to a device using the given authentication configuration. |
 | `addStreaming(IStreaming**, IString* connectionString, IPropertyObject* config = nullptr, IAuthenticationConfig* authenticationConfig = nullptr)` | Attaches a streaming connection, optionally authenticated — a `nullptr` config (the default) uses the plain, unauthenticated path. See [§4](#4-streaming-authentication). |
 
@@ -241,22 +226,11 @@ device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nu
 
 ## 5. Credential Provider Selection & Supplied Secrets
 
-Two independent, combinable settings on `IAuthenticationConfig`/`IAuthenticationConfigBuilder` let a caller take over parts of the credential-provider machinery that would otherwise happen automatically.
+Two independent, combinable settings on `IAuthenticationConfig` let a caller take over parts of the credential-provider machinery that would otherwise happen automatically - both set directly on the config as plain properties (`IAuthenticationConfig` is itself a property object, like `IDeviceInfo`).
 
 ### Explicit provider selection
 
-By default, the module auto-selects the first registered provider whose `getSupportedPayloadFormats()` includes the required format. `setCredentialProviderId` overrides this — the module looks the given id up directly among the registered providers instead:
-
-```cpp
-auto config = AuthenticationConfigBuilder()
-                   .setPayloadDescriptor(privateKeyFileConfig.getCredentialPayloadDescriptor())
-                   .setCredentialProviderId(cmdLineCredentialProvider.getId())
-                   .build();
-```
-
-This only makes an observable difference for a format more than one registered provider supports — e.g. `FilePath`, supported by both `FileCredentialProvider` and `CmdLineCredentialProvider`. An id naming no registered provider, or one that doesn't support the required format, fails authentication immediately with a message identifying the problem — it never silently falls back to auto-selection.
-
-Since `IAuthenticationConfig` is itself a property object (like `IDeviceInfo`), the same thing can be done without the builder at all - `setPropertySelectionValue`/`getPropertySelectionValue` work directly on any `IAuthenticationConfig` instance, including the self-contained one `IDevice::createDefaultAuthenticationConfig(typeId)` returns (a new, independent object on every call - safe to mutate directly, nothing else shares it), as long as it has a `"CredentialProviderId"` property at all (it does when built this way - see [§2](#2-extensions-to-existing-interfaces)):
+By default, the module auto-selects the first registered provider whose `getSupportedPayloadFormats()` includes the required format. Setting `"CredentialProviderId"` overrides this — the module looks the given id up directly among the registered providers instead. `setPropertySelectionValue`/`getPropertySelectionValue` work directly on any `IAuthenticationConfig` instance, including the self-contained one `IDevice::createDefaultAuthenticationConfig(typeId)` returns (a new, independent object on every call - safe to mutate directly, nothing else shares it), as long as it currently has a `"CredentialProviderId"` property - which it does whenever at least one registered provider supports the *currently selected* method's format (see [§1](#1-core-interfaces)):
 
 ```cpp
 auto config = instance.createDefaultAuthenticationConfig(deviceType.getId());
@@ -265,21 +239,20 @@ config.setPropertySelectionValue("CredentialProviderId", cmdLineCredentialProvid
 std::cout << config.getPropertySelectionValue("CredentialProviderId") << std::endl;
 ```
 
+This only makes an observable difference for a format more than one registered provider supports — e.g. `FilePath`, supported by both `FileCredentialProvider` and `CmdLineCredentialProvider`. An id naming no registered provider, or one that doesn't support the required format, fails authentication immediately with a message identifying the problem — it never silently falls back to auto-selection.
+
 ### Supplying the secret directly
 
-`setSuppliedSecret` hands the module a secret it already has — a property object built from the config's payload descriptor's `createDefaultPayload()` template and filled in with the actual value(s) — instead of having a provider obtain one interactively:
+Setting `"SuppliedSecret"` hands the module a secret it already has — a property object built from the config's payload descriptor's `createDefaultPayload()` template and filled in with the actual value(s) — instead of having a provider obtain one interactively. The write is validated against the *currently selected* `"PayloadDescriptor"` (see [§1](#1-core-interfaces)), so select the method first:
 
 ```cpp
-auto userNamePasswordConfig = instance.createDefaultAuthenticationConfig(deviceType.getId()); // UserNamePassword is the default method
+auto config = instance.createDefaultAuthenticationConfig(deviceType.getId()); // UserNamePassword is the default method
 
-auto payload = userNamePasswordConfig.getCredentialPayloadDescriptor().createDefaultPayload();
+auto payload = config.getCredentialPayloadDescriptor().createDefaultPayload();
 payload.setPropertyValue("UserName", "user");
 payload.setPropertyValue("Password", "pass");
+config.setPropertyValue("SuppliedSecret", payload);
 
-auto config = AuthenticationConfigBuilder()
-                   .setPayloadDescriptor(userNamePasswordConfig.getCredentialPayloadDescriptor())
-                   .setSuppliedSecret(payload)
-                   .build();
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, config);
 ```
 
@@ -289,27 +262,21 @@ auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, con
 The second combination is what makes it possible for a *later*, ordinary `requestCredentials` call — e.g. authenticating a streaming connection attached to the same device — to be served from the provider's cache instead of prompting, provided the provider actually caches for that format (see `CmdLineCredentialProvider`'s `FilePath` caching) and the two requests share the same `(manufacturer, serialNumber)`:
 
 ```cpp
-auto devicePrivateKeyFileConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
-SelectAuthenticationMethod(devicePrivateKeyFileConfig, "PrivateKeyFile");
+auto deviceConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+SelectAuthenticationMethod(deviceConfig, "PrivateKeyFile");
+deviceConfig.setPropertySelectionValue("CredentialProviderId", cmdLineCredentialProvider.getId());
 
-auto devicePayload = devicePrivateKeyFileConfig.getCredentialPayloadDescriptor().createDefaultPayload();
+auto devicePayload = deviceConfig.getCredentialPayloadDescriptor().createDefaultPayload();
 devicePayload.setPropertyValue("Secret", "/path/to/private_key.pem");
+deviceConfig.setPropertyValue("SuppliedSecret", devicePayload);
 
-auto deviceConfig = AuthenticationConfigBuilder()
-                         .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                         .setCredentialProviderId(cmdLineCredentialProvider.getId())
-                         .setSuppliedSecret(devicePayload)
-                         .build();
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceConfig);
 
 // Same device, same FilePath-format method, same provider - no path prompt this time; the provider
 // serves it from the cache `cacheCredentials` populated above.
-auto streamingPrivateKeyFileConfig = instance.createDefaultAuthenticationConfig(streamingType.getId());
-SelectAuthenticationMethod(streamingPrivateKeyFileConfig, "PrivateKeyFile");
-auto streamingConfig = AuthenticationConfigBuilder()
-                           .setPayloadDescriptor(streamingPrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                           .setCredentialProviderId(cmdLineCredentialProvider.getId())
-                           .build();
+auto streamingConfig = instance.createDefaultAuthenticationConfig(streamingType.getId());
+SelectAuthenticationMethod(streamingConfig, "PrivateKeyFile");
+streamingConfig.setPropertySelectionValue("CredentialProviderId", cmdLineCredentialProvider.getId());
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingConfig);
 ```
 
@@ -380,7 +347,7 @@ auto device2 = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pi
 
 ### Example: manipulating the config as a plain property object
 
-`IAuthenticationConfig` extends `IPropertyObject` (see [§1](#1-core-interfaces)), so the application can equally configure and inspect it with plain property object calls instead of the typed getters/builder setters used elsewhere in this section. No `IAuthenticationConfigBuilder` needed either - `IDevice::createDefaultAuthenticationConfig(typeId)` already returns a fresh, independent, self-contained config, ready to tune directly:
+`IAuthenticationConfig` extends `IPropertyObject` (see [§1](#1-core-interfaces)), so the application can equally configure and inspect it with plain property object calls instead of the typed getters used elsewhere in this section - `IDevice::createDefaultAuthenticationConfig(typeId)` already returns a fresh, independent, self-contained config, ready to tune directly:
 
 ```cpp
 auto authConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
@@ -421,7 +388,7 @@ See [§4](#4-streaming-authentication) for authenticating a streaming connection
 
 ### Save and reload
 
-Saving an instance persists the connected device's `AuthenticationConfig` as part of the tree - which payload method and which credential provider id were selected - but never a secret, whether supplied or obtained interactively; nothing about *how* the credential was produced needing to be saved anywhere is the whole point. Reloading that saved configuration into a new instance re-authenticates the device from scratch, going back through the same provider-resolution path a fresh connection would (see [§8](#8-module-level-implementation)): the new instance must have its own compatible credential provider registered, or the reload fails, and that provider is asked for credentials again exactly like it would for a first-time connection - a prompt-free reload only happens if that specific provider itself already has something cached for this context (see `cacheCredentials`/`requestCredentials` in [§1](#1-core-interfaces)), never because the saved config carried a secret.
+Saving an instance persists the connected device's `AuthenticationConfig` as part of the tree - but only in its reduced, serialized form (see [Serialization](#serialization) in [§1](#1-core-interfaces)): the component type's own id and the selected payload method's id, nothing else. Neither the credential provider id nor any secret (supplied or obtained interactively) is ever saved. Reloading that saved configuration into a new instance re-resolves the type against the new instance's own `Context` and rebuilds a fresh, live config selecting the saved method - `"CredentialProviderId"` is filtered and defaulted exactly as it would be for a brand-new `createDefaultAuthenticationConfig` call, **not** restored to whichever provider the original session happened to use. The device then re-authenticates from scratch through the same provider-resolution path a fresh connection would (see [§8](#8-module-level-implementation)): the new instance must have its own compatible credential provider registered, or the reload fails, and that provider is asked for credentials again exactly like it would for a first-time connection - a prompt-free reload only happens if that specific provider itself already has something cached for this context (see `cacheCredentials`/`requestCredentials` in [§1](#1-core-interfaces)), never because the saved config carried a secret. If the type no longer resolves, or the saved method id is no longer among that type's currently supported descriptors, the reload fails outright.
 
 See "Phase 4" of the sequence diagram in [§8](#8-module-level-implementation) (Diagram 3) for this end to end, alongside the rest of the device's lifecycle.
 
@@ -435,7 +402,7 @@ This section describes what a module does internally when `Module::createAuthent
 
 1. **Resolve the payload to provide.** The module reads the payload id and descriptor off the supplied `IAuthenticationConfig` (`getCredentialPayloadId`, `getCredentialPayloadDescriptor`).
 
-2. **Build the credential request.** The module builds a new `ICredentialRequest` via `ICredentialRequestBuilder`, populating connection string, manufacturer/serial number (if resolved), and metadata for the provider to present to the user - the same way whether this is a fresh connection or a reload, since the whole `IAuthenticationConfig` (not just a request formed from it) is what gets persisted and reconstructed on reload (see step 5).
+2. **Build the credential request.** The module builds a new `ICredentialRequest` via `ICredentialRequestBuilder`, populating connection string, manufacturer/serial number (if resolved), and metadata for the provider to present to the user - the same way whether this is a fresh connection or a reload, since the request is always built fresh from whichever `IAuthenticationConfig` is in hand (a freshly-built one, or one reconstructed from its reduced saved form - see step 5 and [Serialization](#serialization) in [§1](#1-core-interfaces)).
 
 3. **Resolve the credentials.** The module reads `getCredentialProviderId()` off the authentication config, checks whether a `"SuppliedSecret"` property is present (`hasProperty`/`getPropertyValue` - there is no dedicated getter, since it's the one setting exposed only as a plain property), and branches:
    - **A secret is supplied:** no provider obtains anything — the supplied property object (already shaped like the payload descriptor's `createDefaultPayload` template) is used directly as the credential payload. If a provider id was *also* set, that specific provider is first looked up and handed the secret via `provider.cacheCredentials(request, secret)`, so it can remember it the same way it would one obtained interactively — but the payload used for *this* connection is always the one the caller supplied, regardless of whether caching succeeds.
@@ -443,7 +410,7 @@ This section describes what a module does internally when `Module::createAuthent
 
 4. **Construct the device (or streaming) and authenticate.** The component is constructed and its authentication step runs — reading the credential payload's property values and verifying them against whatever the specific method requires (a fixed value, a signed challenge, etc.). A mismatch throws `AuthenticationFailedException`, and construction fails.
 
-5. **Persist the authentication config for later reload (devices only).** On success, the module stores the authentication config it was given on the newly created device (`IComponentPrivate::setAuthenticationConfig`) — payload descriptor and credential provider id, never a secret — so a future reload can repeat this same resolution process (see [Save and reload](#save-and-reload)) rather than needing anything about how the credential was obtained to be saved anywhere.
+5. **Persist the authentication config for later reload (devices only).** On success, the module stores the authentication config it was given on the newly created device (`IComponentPrivate::setAuthenticationConfig`) — its custom serialization then reduces this, on save, to just the component type id and the selected payload method id (see [Serialization](#serialization) in [§1](#1-core-interfaces)) — so a future reload can repeat this same resolution process (see [Save and reload](#save-and-reload)) rather than needing anything about how the credential was obtained, or which specific provider produced it, to be saved anywhere.
 
 ![Application / Module / Credential Provider — sequence view of the same steps](credential_flow_diagram_sequence.png)
 *Diagram 3 — the same steps as above, as a sequence diagram across the three parties involved, now covering the full device lifecycle rather than just the module-level resolution step: the Application creates the self-contained default config (`createDefaultAuthenticationConfig`) and, if needed, tunes it - a different supported method, a different provider, or a supplied secret; the Module then either resolves credentials through a Credential Provider (`requestCredentials`/`cacheCredentials`) or uses a supplied secret directly, matching the branching in Diagram 1; finally the config is saved and reloaded, re-authenticating the device from scratch through the same provider-resolution path - a prompt-free reload only happens if the provider itself already has something cached for this context, never because a secret was saved. Each phase's note names exactly which actors participate in it. `ParentDevice`/`Instance`/`Context` are real hops within `createDefaultAuthenticationConfig` (see [§2](#2-extensions-to-existing-interfaces)) but collapse into the Application here, since they add no branching of their own. As in Diagram 1, the pink/orange notes are prototype-specific policy, not core-mandated behavior.*

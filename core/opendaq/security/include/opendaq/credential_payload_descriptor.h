@@ -89,8 +89,8 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
      * `String` and `FilePath`, a single `"Secret"` property.
      *
      * Meant to be filled in with the actual secret value(s) and used as the credential payload itself -
-     * either by the caller, to supply a secret directly (`IAuthenticationConfigBuilder::setSuppliedSecret`),
-     * or by a credential provider, once it has obtained the secret(s) interactively.
+     * either by the caller, to supply a secret directly (`IAuthenticationConfig`'s `"SuppliedSecret"`
+     * property), or by a credential provider, once it has obtained the secret(s) interactively.
      * @param[out] payload The empty payload template.
      */
     virtual ErrCode INTERFACE_FUNC createDefaultPayload(IPropertyObject** payload) = 0;

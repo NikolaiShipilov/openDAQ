@@ -6,7 +6,6 @@
 
 #include <coretypes/version_info_factory.h>
 #include <coretypes/stringobject_factory.h>
-#include <coretypes/listobject_factory.h>
 #include <opendaq/credential_payload_descriptor_factory.h>
 #include <opendaq/authentication_config_factory.h>
 #include <opendaq/component_private_ptr.h>
@@ -130,14 +129,10 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
     if (!resolvedAuthenticationConfig.assigned())
     {
         const auto streamingType = CredentialDemoStreamingImpl::CreateType();
-
-        auto availableCredentialProviderIds = List<IString>();
-        for (const auto& [providerId, provider] : context.getCredentialProviders())
-            availableCredentialProviderIds.pushBack(providerId);
-
         resolvedAuthenticationConfig = AuthenticationConfig(streamingType.getSupportedAuthenticationDescriptors(),
                                                              streamingType.getDefaultAuthenticationConfigId(),
-                                                             availableCredentialProviderIds);
+                                                             context,
+                                                             streamingType.getId());
     }
 
     const auto payloadId = resolvedAuthenticationConfig.getCredentialPayloadId();

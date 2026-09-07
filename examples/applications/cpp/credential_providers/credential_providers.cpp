@@ -90,22 +90,18 @@ void demoUserNamePasswordAuthentication(const InstancePtr& instance, const Devic
     instance.removeDevice(device);
 }
 
-// Built via `AuthenticationConfigBuilder` (not `createDefaultAuthenticationConfig`) here, so its
-// "CredentialProviderId" is a plain string, explicitly naming a provider rather than selecting one from a
-// list. This only makes an observable difference for a payload format more than one registered provider
-// supports - FilePath is one (both fileCredentialProvider and credentialProvider support it), and
-// fileCredentialProvider - registered first - is the one auto-selection (an unset id) would otherwise pick
-// (see the comment where it's registered, below).
+// Explicitly switches "CredentialProviderId" away from its live default, naming a provider rather than
+// leaving auto-selection to pick one. This only makes an observable difference for a payload format more
+// than one registered provider supports - FilePath is one (both fileCredentialProvider and
+// credentialProvider support it), and fileCredentialProvider - registered first - is the one auto-selection
+// (an unset id) would otherwise pick (see the comment where it's registered, below).
 void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
     auto privateKeyFileConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
     SelectAuthenticationMethod(privateKeyFileConfig, "PrivateKeyFile");
-    auto explicitProviderConfig = AuthenticationConfigBuilder()
-                                       .setPayloadDescriptor(privateKeyFileConfig.getCredentialPayloadDescriptor())
-                                       .setCredentialProviderId(credentialProviderId)
-                                       .build();
+    privateKeyFileConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, explicitProviderConfig);
+    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via the explicitly selected \""
               << credentialProviderId << "\" credential provider. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
@@ -113,14 +109,13 @@ void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const 
 }
 
 // `IAuthenticationConfig` derives from `IPropertyObject` - the same way `IDeviceInfo` does - so besides the
-// typed getters/builder setters used in every other demo, the exact same settings can be read and set with
-// plain property object calls instead. `instance.createDefaultAuthenticationConfig(deviceType.getId())`
-// already returns one self-contained config with every supported method (UserNamePassword, Pin,
-// PrivateKeyFile) as a candidate of its "PayloadDescriptor" selection property, defaulting to
-// UserNamePassword - `SelectAuthenticationMethod` switches that selection to "Pin" via plain property object
-// calls, no separate per-method config fetched anywhere. The credential provider id is likewise a
-// "CredentialProviderId" Selection property (over every provider registered on the instance) - set the same
-// way. No `IAuthenticationConfigBuilder` involved anywhere in this demo.
+// typed getters used in every other demo, the exact same settings can be read and set with plain property
+// object calls instead. `instance.createDefaultAuthenticationConfig(deviceType.getId())` already returns one
+// self-contained config with every supported method (UserNamePassword, Pin, PrivateKeyFile) as a candidate
+// of its "PayloadDescriptor" selection property, defaulting to UserNamePassword -
+// `SelectAuthenticationMethod` switches that selection to "Pin" via plain property object calls, no separate
+// per-method config fetched anywhere. The credential provider id is likewise a "CredentialProviderId"
+// Selection property (over every provider registered on the instance) - set the same way.
 void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
     auto authConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
@@ -153,26 +148,19 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
 void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
     auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-    auto streamingPrivateKeyFileConfig = instance.createDefaultAuthenticationConfig(streamingType.getId());
-    SelectAuthenticationMethod(streamingPrivateKeyFileConfig, "PrivateKeyFile");
-    auto streamingAuthConfig = AuthenticationConfigBuilder()
-                                   .setPayloadDescriptor(streamingPrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                                   .setCredentialProviderId(credentialProviderId)
-                                   .build();
+    auto streamingAuthConfig = instance.createDefaultAuthenticationConfig(streamingType.getId());
+    SelectAuthenticationMethod(streamingAuthConfig, "PrivateKeyFile");
+    streamingAuthConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
 
-    auto devicePrivateKeyFileConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
-    SelectAuthenticationMethod(devicePrivateKeyFileConfig, "PrivateKeyFile");
+    auto deviceAuthConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+    SelectAuthenticationMethod(deviceAuthConfig, "PrivateKeyFile");
+    deviceAuthConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
 
     // The supplied secret must be shaped like the descriptor's own `createDefaultPayload` template - here
     // just a single "Secret" property, filled in with the private key's path.
-    auto suppliedSecret = devicePrivateKeyFileConfig.getCredentialPayloadDescriptor().createDefaultPayload();
+    auto suppliedSecret = deviceAuthConfig.getCredentialPayloadDescriptor().createDefaultPayload();
     suppliedSecret.setPropertyValue("Secret", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
-
-    auto deviceAuthConfig = AuthenticationConfigBuilder()
-                                 .setPayloadDescriptor(devicePrivateKeyFileConfig.getCredentialPayloadDescriptor())
-                                 .setCredentialProviderId(credentialProviderId)
-                                 .setSuppliedSecret(suppliedSecret)
-                                 .build();
+    deviceAuthConfig.setPropertyValue("SuppliedSecret", suppliedSecret);
 
     auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via the \""

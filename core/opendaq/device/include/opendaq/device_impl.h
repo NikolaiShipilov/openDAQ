@@ -1384,11 +1384,7 @@ AuthenticationConfigPtr GenericDevice<TInterface, Interfaces...>::onCreateDefaul
     if (!defaultPayloadId.assigned() || !descriptors.hasKey(defaultPayloadId))
         DAQ_THROW_EXCEPTION(NotSupportedException, "Component type \"{}\" does not support authentication", typeId);
 
-    auto availableCredentialProviderIds = List<IString>();
-    for (const auto& [providerId, provider] : this->context.getCredentialProviders())
-        availableCredentialProviderIds.pushBack(providerId);
-
-    return AuthenticationConfig(descriptors, defaultPayloadId, availableCredentialProviderIds);
+    return AuthenticationConfig(descriptors, defaultPayloadId, this->context, typeId);
 }
 
 template <typename TInterface, typename... Interfaces>

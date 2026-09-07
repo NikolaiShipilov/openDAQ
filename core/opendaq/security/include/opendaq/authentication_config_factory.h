@@ -16,10 +16,9 @@
 
 #pragma once
 #include <opendaq/authentication_config_ptr.h>
-#include <opendaq/authentication_config_builder_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/context_ptr.h>
 #include <coretypes/dictobject_factory.h>
-#include <coretypes/listobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -29,24 +28,19 @@ BEGIN_NAMESPACE_OPENDAQ
  * selection property. A single-method config is simply the one-entry case of this.
  * @param payloadDescriptors The supported payload descriptors, keyed by their own id.
  * @param defaultPayloadId The payload id of the descriptor to select by default.
- * @param availableCredentialProviderIds The credential provider ids to offer as `"CredentialProviderId"`
- * selection candidates (defaulting to the first one). When `nullptr` or empty (the default), the built
- * config has no `"CredentialProviderId"` property at all.
+ * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
+ * `IAuthenticationConfig`) - required, no default. Pass `nullptr` explicitly for a config with no
+ * `"CredentialProviderId"` selection at all.
+ * @param typeId The id of the component type this config was built for, carried through serialization so a
+ * reload can re-resolve everything fresh - required, no default. Pass `nullptr` explicitly for a config with
+ * no type behind it; such a config can't meaningfully round-trip through save/reload.
  */
 inline AuthenticationConfigPtr AuthenticationConfig(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                                                      const StringPtr& defaultPayloadId,
-                                                     const ListPtr<IString>& availableCredentialProviderIds = nullptr)
+                                                     const ContextPtr& context,
+                                                     const StringPtr& typeId)
 {
-    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadDescriptors, defaultPayloadId, availableCredentialProviderIds));
-    return obj;
-}
-
-/*!
- * @brief Creates an `AuthenticationConfigBuilder` with no values set.
- */
-inline AuthenticationConfigBuilderPtr AuthenticationConfigBuilder()
-{
-    AuthenticationConfigBuilderPtr obj(AuthenticationConfigBuilder_Create());
+    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadDescriptors, defaultPayloadId, context, typeId));
     return obj;
 }
 
