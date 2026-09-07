@@ -17,9 +17,6 @@
 #pragma once
 #include <credential_demo_module/common.h>
 #include <opendaq/context_ptr.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
-#include <opendaq/credential_request_ptr.h>
-#include <opendaq/component_type_ptr.h>
 #include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -32,18 +29,6 @@ namespace authentication
      * implementation (authenticating a streaming connection).
      */
     void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& payloadId);
-
-    /*
-     * Builds a credential request for one of the three showcased auth methods. Shared by both the device
-     * and the streaming implementation - `componentType` (the device type or the streaming type, as
-     * returned by their respective `CreateType()`) is the one thing that has to come from the caller, so
-     * the request's "Component type" always reflects which connection is actually being authenticated.
-     */
-    CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
-                                                 const StringPtr& connectionString,
-                                                 const StringPtr& manufacturer,
-                                                 const StringPtr& serialNumber,
-                                                 const ComponentTypePtr& componentType);
 }
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE

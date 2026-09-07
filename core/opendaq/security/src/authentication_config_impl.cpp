@@ -1,11 +1,12 @@
 #include <opendaq/authentication_config_impl.h>
 #include <opendaq/authentication_config_factory.h>
-#include <opendaq/component_deserialize_context.h>
+#include <opendaq/component_deserialize_context_ptr.h>
 #include <opendaq/credential_provider_ptr.h>
 #include <opendaq/module_manager_utils_ptr.h>
 #include <opendaq/streaming_type_ptr.h>
 #include <coreobjects/property_factory.h>
 #include <coretypes/listobject_factory.h>
+#include <coretypes/stringobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -60,7 +61,7 @@ void AuthenticationConfigImpl::rebuildCredentialProviderCandidates(const Credent
         return;
 
     if (objPtr.hasProperty(CredentialProviderIdPropertyName))
-        Super::removeProperty(CredentialProviderIdPropertyName);
+        Super::removeProperty(String(CredentialProviderIdPropertyName));
 
     if (!selectedDescriptor.assigned())
         return;
@@ -106,7 +107,7 @@ void AuthenticationConfigImpl::clearSuppliedSecretIfIncompatible(const Credentia
 
     const PropertyObjectPtr secret = objPtr.getPropertyValue(SuppliedSecretPropertyName);
     if (!IsSuppliedSecretShapeValid(secret, selectedDescriptor))
-        Super::removeProperty(SuppliedSecretPropertyName);
+        Super::removeProperty(String(SuppliedSecretPropertyName));
 }
 
 bool AuthenticationConfigImpl::IsSuppliedSecretShapeValid(const PropertyObjectPtr& secret, const CredentialPayloadDescriptorPtr& selectedDescriptor)

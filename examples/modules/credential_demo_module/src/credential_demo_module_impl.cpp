@@ -1,14 +1,10 @@
 #include <credential_demo_module/credential_demo_device_impl.h>
 #include <credential_demo_module/credential_demo_module_impl.h>
 #include <credential_demo_module/credential_demo_streaming_impl.h>
-#include <credential_demo_module/credential_demo_authenticator.h>
 #include <credential_demo_module/version.h>
 
 #include <coretypes/version_info_factory.h>
 #include <coretypes/stringobject_factory.h>
-#include <opendaq/credential_payload_descriptor_factory.h>
-#include <opendaq/authentication_config_factory.h>
-#include <opendaq/component_private_ptr.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
@@ -65,47 +61,19 @@ StringPtr CredentialDemoModule::onGetCanonicalConnectionString(const StringPtr& 
 }
 
 DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& connectionString,
-                                                            const StringPtr& manufacturer,
-                                                            const StringPtr& serialNumber,
                                                             const ComponentPtr& parent,
                                                             const PropertyObjectPtr& config,
-                                                            const AuthenticationConfigPtr& authenticationConfig)
+                                                            const StringPtr& payloadId,
+                                                            const PropertyObjectPtr& credentials)
 {
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
     CredentialDemoDeviceImpl::ValidateConnectionString(connectionString);
 
-    if (!authenticationConfig.assigned())
-    {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
-    }
-
-    const auto payloadId = authenticationConfig.getCredentialPayloadId();
-    const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
-
-    // The canonical form (not the raw, as-typed one) - so a provider that falls back to it as a caching
-    // identifier when no manufacturer/serial is available gets a stable key regardless of how much of the
-    // connection string the caller left implicit.
-    const auto credentialRequest = authentication::CreateCredentialRequest(
-        payloadId, onGetCanonicalConnectionString(connectionString), manufacturer, serialNumber, CredentialDemoDeviceImpl::CreateType());
-
-    // The authenticated path always obtains credentials - the device is never connected to anonymously.
-    const auto credentials = ObtainCredentials(authenticationConfig, credentialRequest, context.getCredentialProviders(), payloadDescriptor);
-
-    auto device = createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
-        config,
-        context,
-        parent,
-        info,
-        /*authenticated*/true,
-        payloadId,
-        credentials);
-
-    // Persisted alongside the device, so a reload can re-request credentials for it.
-    if (const auto& componentPrivate = device.asPtrOrNull<IComponentPrivate>(true); componentPrivate.assigned())
-        componentPrivate.setAuthenticationConfig(authenticationConfig);
-
-    return device.detach();
+    // `createAuthenticatedDevice` (in `Module`) has already resolved `credentials` - the device is never
+    // connected to anonymously via this path, only ever authenticated with what was already obtained.
+    return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
+        config, context, parent, info, /*authenticated*/true, payloadId, credentials).detach();
 }
 
 DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTypes()
@@ -116,132 +84,14 @@ DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTy
 
 StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connectionString,
                                                      const PropertyObjectPtr& /*config*/,
-                                                     const AuthenticationConfigPtr& authenticationConfig,
-                                                     const StringPtr& manufacturer,
-                                                     const StringPtr& serialNumber)
+                                                     const StringPtr& payloadId,
+                                                     const PropertyObjectPtr& credentials)
 {
-    // The automatic streaming-attach path (`addDevice`'s "PrioritizedStreamingProtocols" config) has no way
-    // to supply an authentication config - it always calls through with a null one. Rather than failing, fall
-    // back to the streaming type's own default authentication method instead of requiring an explicit one.
-    // `Module` has no `IDevice` reference to call `IDevice::createDefaultAuthenticationConfig` on, only its
-    // own `context` - so the equivalent is built directly here, the same way that method does.
-    auto resolvedAuthenticationConfig = authenticationConfig;
-    if (!resolvedAuthenticationConfig.assigned())
-    {
-        const auto streamingType = CredentialDemoStreamingImpl::CreateType();
-        resolvedAuthenticationConfig = AuthenticationConfig(streamingType.getSupportedAuthenticationDescriptors(),
-                                                             streamingType.getDefaultAuthenticationConfigId(),
-                                                             context,
-                                                             streamingType.getId());
-    }
-
-    const auto payloadId = resolvedAuthenticationConfig.getCredentialPayloadId();
-    const auto payloadDescriptor = resolvedAuthenticationConfig.getCredentialPayloadDescriptor();
-
-    // Streaming connections aren't resolved through manufacturer/serial-based discovery the way a device's
-    // `daq://manufacturer_serial` smart string can be, so `manufacturer`/`serialNumber` are typically absent
-    // here - the canonical connection string is what a provider falls back to identifying the connection by
-    // in that case (see `CmdLineCredentialProviderImpl::MakeFilePathCacheKey`).
-    const auto credentialRequest = authentication::CreateCredentialRequest(
-        payloadId, onGetCanonicalConnectionString(connectionString), manufacturer, serialNumber, CredentialDemoStreamingImpl::CreateType());
-
-    const auto credentials = ObtainCredentials(resolvedAuthenticationConfig, credentialRequest, context.getCredentialProviders(), payloadDescriptor);
-
+    // `createStreaming` (in `Module`) has already resolved `credentials` - even when the caller left
+    // authentication unspecified, since this streaming type declares a default authentication method
+    // (`CredentialDemoStreamingImpl::CreateType()::getDefaultAuthenticationConfigId()`), so
+    // `resolveDefaultAuthenticationConfig` falls back to it rather than skipping authentication.
     return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, payloadId, credentials);
-}
-
-static bool SupportsPayloadFormat(const CredentialProviderPtr& provider, const CredentialPayloadDescriptorPtr& payloadDescriptor)
-{
-    for (const auto& format : provider.getSupportedPayloadFormats())
-    {
-        if (static_cast<CredentialPayloadFormat>(static_cast<Int>(format)) == payloadDescriptor.getFormat())
-            return true;
-    }
-
-    return false;
-}
-
-CredentialProviderPtr CredentialDemoModule::FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
-                                                                           const CredentialPayloadDescriptorPtr& payloadDescriptor,
-                                                                           const StringPtr& providerId)
-{
-    // An explicitly selected provider id still has to support the required payload format - it is not used
-    // blindly just because it was named explicitly. An id that names no registered provider at all, or one
-    // that doesn't support the required format, is failed here directly with a message naming the problem,
-    // instead of falling through to the generic "no compatible provider" error below (which only applies to
-    // auto-selection).
-    if (providerId.assigned())
-    {
-        if (!providers.assigned() || !providers.hasKey(providerId))
-        {
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                 "Authentication is required but the explicitly selected credential provider \"{}\" is not registered",
-                                 providerId);
-        }
-
-        auto provider = providers.get(providerId);
-        if (!SupportsPayloadFormat(provider, payloadDescriptor))
-        {
-            DAQ_THROW_EXCEPTION(
-                AuthenticationFailedException,
-                "Authentication is required but the explicitly selected credential provider \"{}\" does not support the required payload format",
-                providerId);
-        }
-
-        return provider;
-    }
-
-    for (const auto& [_, provider] : providers)
-    {
-        if (SupportsPayloadFormat(provider, payloadDescriptor))
-            return provider;
-    }
-
-    return nullptr;
-}
-
-PropertyObjectPtr CredentialDemoModule::ObtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
-                                                            const CredentialRequestPtr& credentialRequest,
-                                                            const DictPtr<IString, ICredentialProvider>& providers,
-                                                            const CredentialPayloadDescriptorPtr& payloadDescriptor)
-{
-    const auto providerId = authenticationConfig.getCredentialProviderId();
-
-    // `IAuthenticationConfig` is itself a property object - a directly-supplied secret has no dedicated
-    // getter, it is simply present (or not) as the "SuppliedSecret" property.
-    const PropertyObjectPtr suppliedSecret =
-        authenticationConfig.hasProperty("SuppliedSecret") ? authenticationConfig.getPropertyValue("SuppliedSecret") : nullptr;
-
-    if (suppliedSecret.assigned())
-    {
-        // A secret was already supplied - already shaped like the payload descriptor's `createDefaultPayload`
-        // template (filled in by the caller), so it is used directly as the credential payload, no provider
-        // asked to obtain anything. If a specific provider was also named, it still gets a chance to cache
-        // the secret (e.g. CmdLineCredentialProvider caching a FilePath one), so a later interactive request
-        // for the same context reuses it.
-        if (providerId.assigned())
-        {
-            auto credentialProvider = FindMatchingCredentialProvider(providers, payloadDescriptor, providerId);
-            if (!credentialProvider.assigned())
-            {
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                     "Authentication is required but no credential provider supporting a compatible payload format is registered");
-            }
-
-            credentialProvider.cacheCredentials(credentialRequest, suppliedSecret);
-        }
-
-        return suppliedSecret;
-    }
-
-    auto credentialProvider = FindMatchingCredentialProvider(providers, payloadDescriptor, providerId);
-    if (!credentialProvider.assigned())
-    {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                             "Authentication is required but no credential provider supporting a compatible payload format is registered");
-    }
-
-    return credentialProvider.requestCredentials(credentialRequest);
 }
 
 DictPtr<IString, IBaseObject> CredentialDemoModule::populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions)

@@ -2,9 +2,7 @@
 #include <credential_demo_module/common.h>
 
 #include <opendaq/credential_payload_descriptor_factory.h>
-#include <opendaq/credential_request_factory.h>
 #include <coreobjects/exceptions.h>
-#include <coreobjects/property_factory.h>
 #include <vector>
 #include <memory>
 
@@ -71,86 +69,6 @@ namespace crypto
 
 namespace authentication
 {
-
-static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, const ComponentTypePtr& componentType)
-{
-    builder.setComponentType(componentType);
-    builder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeName", componentType.getName()).setDescription("The openDAQ component type name").build());
-}
-
-static CredentialRequestPtr CreateUserNamePasswordCredentialRequest(const StringPtr& connectionString,
-                                                                     const StringPtr& manufacturer,
-                                                                     const StringPtr& serialNumber,
-                                                                     const ComponentTypePtr& componentType)
-{
-    const auto payloadDescriptor = StandardUserNamePasswordPayloadDescriptor();
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(StandardUserNamePasswordPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, componentType);
-
-    return builder.build();
-}
-
-static CredentialRequestPtr CreatePinCredentialRequest(const StringPtr& connectionString,
-                                                        const StringPtr& manufacturer,
-                                                        const StringPtr& serialNumber,
-                                                        const ComponentTypePtr& componentType)
-{
-    const auto payloadDescriptor = StandardPinPayloadDescriptor();
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(StandardPinPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, componentType);
-
-    return builder.build();
-}
-
-static CredentialRequestPtr CreatePrivateKeyFileCredentialRequest(const StringPtr& connectionString,
-                                                                   const StringPtr& manufacturer,
-                                                                   const StringPtr& serialNumber,
-                                                                   const ComponentTypePtr& componentType)
-{
-    const auto payloadDescriptor = StandardPrivateKeyFilePayloadDescriptor();
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(StandardPrivateKeyFilePayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, componentType);
-
-    return builder.build();
-}
-
-CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
-                                              const StringPtr& connectionString,
-                                              const StringPtr& manufacturer,
-                                              const StringPtr& serialNumber,
-                                              const ComponentTypePtr& componentType)
-{
-    const std::string payloadIdStr = payloadId.toStdString();
-
-    if (payloadIdStr == StandardPinPayloadId)
-        return CreatePinCredentialRequest(connectionString, manufacturer, serialNumber, componentType);
-
-    if (payloadIdStr == StandardPrivateKeyFilePayloadId)
-        return CreatePrivateKeyFileCredentialRequest(connectionString, manufacturer, serialNumber, componentType);
-
-    if (payloadIdStr == StandardUserNamePasswordPayloadId)
-        return CreateUserNamePasswordCredentialRequest(connectionString, manufacturer, serialNumber, componentType);
-
-    DAQ_THROW_EXCEPTION(InvalidParameterException, "Unknown authentication payload id \"{}\"", payloadId);
-}
 
 void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& payloadId)
 {

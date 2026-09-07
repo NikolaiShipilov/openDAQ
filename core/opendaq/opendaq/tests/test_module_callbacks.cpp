@@ -103,9 +103,8 @@ public:
 
     StreamingPtr onCreateStreaming(const StringPtr& connectionString,
                                    const PropertyObjectPtr& config,
-                                   const AuthenticationConfigPtr& authenticationConfig,
-                                   const StringPtr& manufacturer,
-                                   const StringPtr& serialNumber) override
+                                   const StringPtr& payloadId,
+                                   const PropertyObjectPtr& credentials) override
     {
         configValid(config, obj);
         return {};

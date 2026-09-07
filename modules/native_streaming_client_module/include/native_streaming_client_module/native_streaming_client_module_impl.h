@@ -41,9 +41,8 @@ public:
                              const PropertyObjectPtr& config) override;
     StreamingPtr onCreateStreaming(const StringPtr& connectionString,
                                    const PropertyObjectPtr& config,
-                                   const AuthenticationConfigPtr& authenticationConfig,
-                                   const StringPtr& manufacturer,
-                                   const StringPtr& serialNumber) override;
+                                   const StringPtr& payloadId,
+                                   const PropertyObjectPtr& credentials) override;
     Bool onCompleteServerCapability(const ServerCapabilityPtr& source, const ServerCapabilityConfigPtr& target) override;
 
 private:

@@ -17,8 +17,6 @@
 #pragma once
 #include <credential_demo_module/common.h>
 #include <opendaq/module_impl.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
-#include <opendaq/credential_request_ptr.h>
 #include <coreobjects/property_object_ptr.h>
 #include <opendaq/streaming_type_ptr.h>
 #include <opendaq/streaming_ptr.h>
@@ -40,38 +38,19 @@ public:
     DevicePtr onCreateDevice(const StringPtr& connectionString, const ComponentPtr& parent, const PropertyObjectPtr& config) override;
     StringPtr onGetCanonicalConnectionString(const StringPtr& connectionString) override;
     DevicePtr onCreateAuthenticatedDevice(const StringPtr& connectionString,
-                                          const StringPtr& manufacturer,
-                                          const StringPtr& serialNumber,
                                           const ComponentPtr& parent,
                                           const PropertyObjectPtr& config,
-                                          const AuthenticationConfigPtr& authenticationConfig) override;
+                                          const StringPtr& payloadId,
+                                          const PropertyObjectPtr& credentials) override;
 
     DictPtr<IString, IStreamingType> onGetAvailableStreamingTypes() override;
     StreamingPtr onCreateStreaming(const StringPtr& connectionString,
                                    const PropertyObjectPtr& config,
-                                   const AuthenticationConfigPtr& authenticationConfig,
-                                   const StringPtr& manufacturer,
-                                   const StringPtr& serialNumber) override;
+                                   const StringPtr& payloadId,
+                                   const PropertyObjectPtr& credentials) override;
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);
-    static CredentialProviderPtr FindMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
-                                                                 const CredentialPayloadDescriptorPtr& payloadDescriptor,
-                                                                 const StringPtr& providerId = nullptr);
-
-    // Obtains the credentials for `credentialRequest`, honoring the way an authentication config can supply
-    // the secret directly rather than have a provider obtain it interactively:
-    // - A secret is supplied: it is already shaped like the payload descriptor's `createDefaultPayload`
-    //   template (filled in by the caller), so it is used directly as the credential payload - no provider
-    //   is asked to obtain anything. If a provider id was also supplied, that specific provider is still
-    //   handed the secret via `ICredentialProvider::cacheCredentials`, so it can cache it the same way it
-    //   would one obtained interactively (see `CmdLineCredentialProvider`'s `FilePath` caching).
-    // - No secret supplied: behaves exactly as before - the provider (auto-selected or explicitly chosen by
-    //   id) is asked to obtain the secret itself via `requestCredentials`.
-    static PropertyObjectPtr ObtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
-                                                const CredentialRequestPtr& credentialRequest,
-                                                const DictPtr<IString, ICredentialProvider>& providers,
-                                                const CredentialPayloadDescriptorPtr& payloadDescriptor);
 };
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE
