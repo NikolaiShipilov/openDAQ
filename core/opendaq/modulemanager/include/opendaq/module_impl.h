@@ -159,9 +159,12 @@ public:
      * The credentials are resolved (`requestCredentials`) here before `onCreateAuthenticatedDevice` is called.
      * On success, `authenticationConfig` is persisted on the created device (`IComponentPrivate::setAuthenticationConfig`)
      * so a reload can re-request credentials for it - this, too, is handled here rather than by the module implementation.
-     * `manufacturer`/`serialNumber` are used only for that resolution (as metadata on the credential request/for a
-     * provider's own caching) - `onCreateAuthenticatedDevice` doesn't otherwise need them, so they aren't forwarded to
-     * it either (matching `onCreateDevice`, the plain-path counterpart, which never took them at all).
+     * `manufacturer`/`serialNumber` are used for that resolution (as metadata on the credential request/for a
+     * provider's own caching).
+     *
+     * If either wasn't known at that point, the created device's own info can provide them afterward - if it
+     * supplies both, the already-obtained credentials are handed again (`cacheCredentials`) to the exact same
+     * provider `requestCredentials` resolved originally (never re-searched), against a request rebuilt with them.
      */
     ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
                                                      IString* connectionString,
@@ -194,9 +197,11 @@ public:
 
         const AuthenticationConfigPtr authConfigPtr = AuthenticationConfigPtr::Borrow(authenticationConfig);
 
+        CredentialProviderPtr resolvedProvider;
         PropertyObjectPtr credentials;
-        errCode =
-            wrapHandlerReturn(this, &Module::requestCredentials, credentials, authConfigPtr, connectionString, manufacturer, serialNumber, deviceType);
+
+        errCode = wrapHandlerReturn(
+            this, &Module::requestCredentials, credentials, authConfigPtr, connectionString, manufacturer, serialNumber, deviceType, resolvedProvider);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         const StringPtr payloadId = authConfigPtr.getCredentialPayloadId();
@@ -218,11 +223,34 @@ public:
             {
                 if (const auto& componentPrivate = createdDevice.asPtrOrNull<IComponentPrivate>(true); componentPrivate.assigned())
                     componentPrivate.setAuthenticationConfig(authConfigPtr);
+
+                const DeviceInfoPtr info = createdDevice.getInfo();
+
+                // If manufacturer/serial number weren't known when `requestCredentials` was originally called
+                // above, but the created device's own info now supplies them, hand the already-obtained
+                // credentials to the same provider again, keyed by them too.
+                if ((manufacturer == nullptr || serialNumber == nullptr) && resolvedProvider.assigned() && info.assigned() &&
+                    info.getManufacturer().assigned() && info.getSerialNumber().assigned())
+                {
+                    try
+                    {
+                        const auto enrichedRequest = buildCredentialRequest(
+                            authConfigPtr, connectionString, info.getManufacturer(), info.getSerialNumber(), deviceType);
+                        resolvedProvider.cacheCredentials(enrichedRequest, credentials);
+                    }
+                    catch (const DaqException& e)
+                    {
+                        LOG_W("Failed to re-cache credentials with resolved manufacturer/serial number: {}", e.what())
+                    }
+                    catch (const std::exception& e)
+                    {
+                        LOG_W("Failed to re-cache credentials with resolved manufacturer/serial number: {}", e.what())
+                    }
+                }
+
                 return OPENDAQ_SUCCESS;
             });
             OPENDAQ_RETURN_IF_FAILED(errCode);
-
-            createdDevice.getInfo();
         }
 
         *device = createdDevice.detach();
@@ -396,8 +424,16 @@ public:
         PropertyObjectPtr credentials;
         if (resolvedAuthConfig.assigned())
         {
-            errCode = wrapHandlerReturn(
-                this, &Module::requestCredentials, credentials, resolvedAuthConfig, connectionString, manufacturer, serialNumber, streamingType);
+            CredentialProviderPtr resolvedProvider;
+            errCode = wrapHandlerReturn(this,
+                                        &Module::requestCredentials,
+                                        credentials,
+                                        resolvedAuthConfig,
+                                        connectionString,
+                                        manufacturer,
+                                        serialNumber,
+                                        streamingType,
+                                        resolvedProvider);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
             payloadId = resolvedAuthConfig.getCredentialPayloadId();
@@ -520,129 +556,6 @@ public:
                                                   const PropertyObjectPtr& credentials)
     {
         return nullptr;
-    }
-
-    /*!
-     * @brief Returns `authenticationConfig` unchanged if assigned. Otherwise, if `componentType` declares
-     * default authentication support (`getDefaultAuthenticationConfigId()` assigned), builds and returns its
-     * own default config instead - so a caller connecting to a type that supports authentication but leaving
-     * `authenticationConfig` unspecified still gets authenticated with sensible defaults, rather than
-     * silently connecting without any. Returns unassigned only when `authenticationConfig` was unassigned
-     * and `componentType` is either unassigned or doesn't support authentication at all.
-     */
-    AuthenticationConfigPtr resolveDefaultAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig,
-                                                                const ComponentTypePtr& componentType)
-    {
-        if (authenticationConfig.assigned() || !componentType.assigned())
-            return authenticationConfig;
-
-        const StringPtr defaultPayloadId = componentType.getDefaultAuthenticationConfigId();
-        if (!defaultPayloadId.assigned())
-            return authenticationConfig;
-
-        return AuthenticationConfig(componentType.getSupportedAuthenticationDescriptors(), defaultPayloadId, context, componentType.getId());
-    }
-
-    /*!
-     * @brief Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload -
-     * `connectionString` canonicalized via `onGetCanonicalConnectionString` first, so a provider that falls
-     * back to it as a caching identifier (no manufacturer/serial number resolved) gets a stable key regardless
-     * of how much of the connection string the caller left implicit - then resolves its credentials via
-     * `obtainCredentials`.
-     * @param authenticationConfig The authentication config to request credentials for. Throws
-     * `AuthenticationFailedException` if unassigned.
-     * @param connectionString The (not yet canonicalized) connection string this request is for.
-     * @param manufacturer The manufacturer of the device this request is for, if known.
-     * @param serialNumber The serial number of the device this request is for, if known.
-     * @param componentType The device or streaming type being authenticated - becomes the request's own
-     * component type, and names the "ComponentTypeName" metadata property a provider can present to the user.
-     * @returns The resolved credential payload - a property object shaped like the selected payload
-     * descriptor's own `createDefaultPayload()` template, filled in with the actual secret value(s).
-     *
-     * Shared by every module supporting authentication, since none of the provider-resolution machinery this
-     * (and `obtainCredentials`) implements is module-specific - only interpreting/verifying the resulting
-     * payload is (see `onCreateAuthenticatedDevice`/`onCreateStreaming`).
-     */
-    PropertyObjectPtr requestCredentials(const AuthenticationConfigPtr& authenticationConfig,
-                                        const StringPtr& connectionString,
-                                        const StringPtr& manufacturer,
-                                        const StringPtr& serialNumber,
-                                        const ComponentTypePtr& componentType)
-    {
-        if (!authenticationConfig.assigned())
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
-
-        const auto payloadId = authenticationConfig.getCredentialPayloadId();
-        const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
-
-        auto requestBuilder = CredentialRequestBuilder();
-        requestBuilder.setConnectionString(onGetCanonicalConnectionString(connectionString));
-        requestBuilder.setManufacturer(manufacturer);
-        requestBuilder.setSerialNumber(serialNumber);
-        requestBuilder.setPayloadId(payloadId);
-        requestBuilder.setPayloadDescriptor(payloadDescriptor);
-        requestBuilder.setComponentType(componentType);
-        requestBuilder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeName", componentType.getName())
-                                               .setDescription("The openDAQ component type name")
-                                               .build());
-
-        return obtainCredentials(authenticationConfig, requestBuilder.build(), payloadDescriptor);
-    }
-
-    /*!
-     * @brief Resolves the credential payload for `credentialRequest`, matching a compatible registered
-     * credential provider against `payloadDescriptor` - either the one explicitly named via
-     * `authenticationConfig`'s "CredentialProviderId", or, absent that, the first registered provider whose
-     * `getSupportedPayloadFormats()` includes the descriptor's format. `authenticationConfig`'s
-     * "SuppliedSecret", when present, is used directly instead of asking any provider to obtain one - though a
-     * provider explicitly named alongside it is still handed the secret via `cacheCredentials`, so a later
-     * `requestCredentials`-served connection for the same context can be served from its cache.
-     * @param authenticationConfig The authentication config credentials are being resolved for.
-     * @param credentialRequest The request to resolve credentials for (see `requestCredentials`).
-     * @param payloadDescriptor `authenticationConfig`'s currently selected payload descriptor.
-     * @returns The resolved credential payload.
-     *
-     * Throws `AuthenticationFailedException` if an explicitly named provider isn't registered or doesn't
-     * support the required format, or if auto-selection finds no compatible provider at all.
-     */
-    PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
-                                       const CredentialRequestPtr& credentialRequest,
-                                       const CredentialPayloadDescriptorPtr& payloadDescriptor)
-    {
-        const auto providers = context.getCredentialProviders();
-        const auto providerId = authenticationConfig.getCredentialProviderId();
-
-        // `IAuthenticationConfig` is itself a property object - a directly-supplied secret has no dedicated
-        // getter, it is simply present (or not) as the "SuppliedSecret" property.
-        const PropertyObjectPtr suppliedSecret =
-            authenticationConfig.hasProperty("SuppliedSecret") ? authenticationConfig.getPropertyValue("SuppliedSecret") : nullptr;
-
-        if (suppliedSecret.assigned())
-        {
-            // A secret was already supplied - already shaped like the payload descriptor's `createDefaultPayload`
-            // template (filled in by the caller), so it is used directly as the credential payload, no provider
-            // asked to obtain anything. If a specific provider was also named, it still gets a chance to cache
-            // the secret (e.g. a `FilePath`-caching provider), so a later interactive request for the same
-            // context reuses it.
-            if (providerId.assigned())
-            {
-                auto credentialProvider = findMatchingCredentialProvider(providers, payloadDescriptor, providerId);
-                if (!credentialProvider.assigned())
-                    DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                         "Authentication is required but no credential provider supporting a compatible payload format is registered");
-
-                credentialProvider.cacheCredentials(credentialRequest, suppliedSecret);
-            }
-
-            return suppliedSecret;
-        }
-
-        auto credentialProvider = findMatchingCredentialProvider(providers, payloadDescriptor, providerId);
-        if (!credentialProvider.assigned())
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                 "Authentication is required but no credential provider supporting a compatible payload format is registered");
-
-        return credentialProvider.requestCredentials(credentialRequest);
     }
 
     /*!
@@ -799,6 +712,122 @@ protected:
     }
 
 private:
+    // Returns `authenticationConfig` unchanged if assigned. Otherwise, if `componentType` declares default
+    // authentication support (`getDefaultAuthenticationConfigId()` assigned), builds and returns its own
+    // default config instead - so `createStreaming` (the only caller) still authenticates a connection to a
+    // type that supports it even when the caller left `authenticationConfig` unspecified, rather than silently
+    // connecting without any. Returns unassigned only when `authenticationConfig` was unassigned and
+    // `componentType` is either unassigned or doesn't support authentication at all.
+    AuthenticationConfigPtr resolveDefaultAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig,
+                                                                const ComponentTypePtr& componentType)
+    {
+        if (authenticationConfig.assigned() || !componentType.assigned())
+            return authenticationConfig;
+
+        const StringPtr defaultPayloadId = componentType.getDefaultAuthenticationConfigId();
+        if (!defaultPayloadId.assigned())
+            return authenticationConfig;
+
+        return AuthenticationConfig(componentType.getSupportedAuthenticationDescriptors(), defaultPayloadId, context, componentType.getId());
+    }
+
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload then resolves
+    // credentials via `obtainCredentials`. Throws `AuthenticationFailedException` if `authenticationConfig` is
+    // unassigned. `resolvedProvider` is set to whichever provider this call actually resolved - obtained
+    // credentials from, or handed a supplied secret to - so `createAuthenticatedDevice` can reuse the exact
+    // same one later instead of re-searching; left unassigned if none was involved at all (a supplied secret
+    // with no provider explicitly named).
+    //
+    // Called only from `createAuthenticatedDevice`/`createStreaming`, before either ever invokes the module's
+    // own overridable hook - none of this provider-resolution machinery is module-specific, and a module never
+    // needs to call it itself (only the resolved payload id/credentials reach it, as plain parameters).
+    PropertyObjectPtr requestCredentials(const AuthenticationConfigPtr& authenticationConfig,
+                                        const StringPtr& connectionString,
+                                        const StringPtr& manufacturer,
+                                        const StringPtr& serialNumber,
+                                        const ComponentTypePtr& componentType,
+                                        CredentialProviderPtr& resolvedProvider)
+    {
+        if (!authenticationConfig.assigned())
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
+
+        const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
+        const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, componentType);
+
+        return obtainCredentials(authenticationConfig, credentialRequest, payloadDescriptor, resolvedProvider);
+    }
+
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload id/descriptor,
+    // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`,
+    // and `componentType`. Split out of `requestCredentials` so `createAuthenticatedDevice` can call it a
+    // second time, with manufacturer/serial number resolved from the created device's own info, to re-cache
+    // credentials that were originally obtained without them.
+    CredentialRequestPtr buildCredentialRequest(const AuthenticationConfigPtr& authenticationConfig,
+                                                const StringPtr& connectionString,
+                                                const StringPtr& manufacturer,
+                                                const StringPtr& serialNumber,
+                                                const ComponentTypePtr& componentType)
+    {
+        auto requestBuilder = CredentialRequestBuilder();
+        requestBuilder.setConnectionString(onGetCanonicalConnectionString(connectionString));
+        requestBuilder.setManufacturer(manufacturer);
+        requestBuilder.setSerialNumber(serialNumber);
+        requestBuilder.setPayloadId(authenticationConfig.getCredentialPayloadId());
+        requestBuilder.setPayloadDescriptor(authenticationConfig.getCredentialPayloadDescriptor());
+        requestBuilder.setComponentType(componentType);
+        requestBuilder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeName", componentType.getName())
+                                               .setDescription("The openDAQ component type name")
+                                               .build());
+
+        return requestBuilder.build();
+    }
+
+    // Resolves the credential payload for `credentialRequest`, matching a compatible registered credential
+    // provider against `payloadDescriptor` - either the one explicitly named via `authenticationConfig`'s
+    // "CredentialProviderId", or, absent that, the first registered provider whose `getSupportedPayloadFormats()`
+    // includes the descriptor's format. `authenticationConfig`'s "SuppliedSecret", when present, is used
+    // directly instead of asking any provider to obtain one - though a provider explicitly named alongside it
+    // is still handed the secret via `cacheCredentials`, so a later `requestCredentials`-served connection for
+    // the same context can be served from its cache. `resolvedProvider` is set to whichever provider was
+    // actually resolved, the same way as in `requestCredentials` - left unassigned if none was involved.
+    // Throws `AuthenticationFailedException` if an explicitly named provider isn't registered or doesn't
+    // support the required format, or if auto-selection finds no compatible provider at all.
+    PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
+                                       const CredentialRequestPtr& credentialRequest,
+                                       const CredentialPayloadDescriptorPtr& payloadDescriptor,
+                                       CredentialProviderPtr& resolvedProvider)
+    {
+        const auto providers = context.getCredentialProviders();
+        const auto providerId = authenticationConfig.getCredentialProviderId();
+        const PropertyObjectPtr suppliedSecret = authenticationConfig.getSuppliedSecret();
+
+        if (suppliedSecret.assigned())
+        {
+            // A secret was already supplied - already shaped like the payload descriptor's `createDefaultPayload`
+            // template (filled in by the caller), so it is used directly as the credential payload, no provider
+            // asked to obtain anything. If a specific provider was also named, it still gets a chance to cache
+            // the secret, so a later interactive request for the same context reuses it.
+            if (providerId.assigned())
+            {
+                resolvedProvider = findMatchingCredentialProvider(providers, payloadDescriptor, providerId);
+                if (!resolvedProvider.assigned())
+                    DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                         "Authentication is required but no credential provider supporting a compatible payload format is registered");
+
+                resolvedProvider.cacheCredentials(credentialRequest, suppliedSecret);
+            }
+
+            return suppliedSecret;
+        }
+
+        resolvedProvider = findMatchingCredentialProvider(providers, payloadDescriptor, providerId);
+        if (!resolvedProvider.assigned())
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                 "Authentication is required but no credential provider supporting a compatible payload format is registered");
+
+        return resolvedProvider.requestCredentials(credentialRequest);
+    }
+
     static bool supportsPayloadFormat(const CredentialProviderPtr& provider, const CredentialPayloadDescriptorPtr& payloadDescriptor)
     {
         for (const auto& format : provider.getSupportedPayloadFormats())

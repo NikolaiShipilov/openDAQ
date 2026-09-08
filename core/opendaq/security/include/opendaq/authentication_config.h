@@ -24,7 +24,7 @@ BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceSmartPtr(IPropertyObject, GenericPropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
+ * [interfaceSmartPtr(IPropertyObject, GenericPropertyObjectPtr, "<coreobjects/property_object_ptr.h>", true)]
  * [interfaceLibrary(IContext, "opendaq")]
  */
 
@@ -87,6 +87,13 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
      * supporting the payload descriptor's format.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
+
+    /*!
+     * @brief Gets the secret supplied directly by the caller - the value of the corresponding property.
+     * @param[out] secret The supplied secret, or `nullptr` if the config has no such property
+     * at all - in which case the module obtains one from a credential provider instead.
+     */
+    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) = 0;
 };
 
 /*!

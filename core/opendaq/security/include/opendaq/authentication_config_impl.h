@@ -43,6 +43,7 @@ public:
     ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) override;
     ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
     ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
+    ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) override;
 
     // Intercepted to keep "CredentialProviderId" a live slave of "PayloadDescriptor" (recomputed from
     // `context` on every master write, added/removed as compatibility changes), to remember the user's last

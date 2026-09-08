@@ -175,6 +175,21 @@ ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
     });
 }
 
+ErrCode AuthenticationConfigImpl::getSuppliedSecret(IPropertyObject** secret)
+{
+    OPENDAQ_PARAM_NOT_NULL(secret);
+
+    return daqTry([&]
+    {
+        // Present only when the caller actually set one - an Object-type property cannot itself hold
+        // `nullptr`, so absence of the property is the only way to represent "none supplied".
+        *secret = objPtr.hasProperty(SuppliedSecretPropertyName)
+                      ? PropertyObjectPtr(objPtr.getPropertyValue(SuppliedSecretPropertyName)).detach()
+                      : nullptr;
+        return OPENDAQ_SUCCESS;
+    });
+}
+
 ErrCode AuthenticationConfigImpl::setPropertySelectionValue(IString* propertyName, IBaseObject* value)
 {
     const ErrCode errCode = Super::setPropertySelectionValue(propertyName, value);
