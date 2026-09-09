@@ -775,9 +775,6 @@ private:
         requestBuilder.setPayloadId(authenticationConfig.getCredentialPayloadId());
         requestBuilder.setPayloadDescriptor(authenticationConfig.getCredentialPayloadDescriptor());
         requestBuilder.setComponentType(componentType);
-        requestBuilder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeName", componentType.getName())
-                                               .setDescription("The openDAQ component type name")
-                                               .build());
 
         return requestBuilder.build();
     }
