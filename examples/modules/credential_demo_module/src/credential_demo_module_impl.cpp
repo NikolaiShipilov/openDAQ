@@ -5,6 +5,8 @@
 
 #include <coretypes/version_info_factory.h>
 #include <coretypes/stringobject_factory.h>
+#include <coretypes/dictobject_factory.h>
+#include <opendaq/credential_payload_descriptor_factory.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
@@ -26,7 +28,7 @@ ListPtr<IDeviceInfo> CredentialDemoModule::onGetAvailableDevices()
 
 DictPtr<IString, IDeviceType> CredentialDemoModule::onGetAvailableDeviceTypes()
 {
-    auto deviceType = CredentialDemoDeviceImpl::CreateType(context.getTypeManager());
+    auto deviceType = CredentialDemoDeviceImpl::CreateType();
     return Dict<IString, IBaseObject>({{deviceType.getId(), deviceType}});
 }
 
@@ -78,7 +80,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
 
 DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTypes()
 {
-    auto streamingType = CredentialDemoStreamingImpl::CreateType(context.getTypeManager());
+    auto streamingType = CredentialDemoStreamingImpl::CreateType();
     return Dict<IString, IBaseObject>({{streamingType.getId(), streamingType}});
 }
 
@@ -91,6 +93,30 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
     // `payloadId`/`credentials` are always assigned here, even for a caller that left authentication
     // unspecified.
     return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, payloadId, credentials);
+}
+
+DictPtr<IString, ICredentialPayloadDescriptor> CredentialDemoModule::onGetSupportedAuthenticationMethods(const StringPtr& typeId)
+{
+    if (typeId != CredentialDemoDeviceImpl::CreateType().getId() && typeId != CredentialDemoStreamingImpl::CreateType().getId())
+        return Dict<IString, ICredentialPayloadDescriptor>();
+
+    auto userNamePasswordDescriptor = StandardUserNamePasswordPayloadDescriptor(context.getTypeManager());
+    auto pinDescriptor = StandardPinPayloadDescriptor(context.getTypeManager());
+    auto privateKeyDescriptor = StandardPrivateKeyFilePayloadDescriptor(context.getTypeManager());
+
+    return Dict<IString, ICredentialPayloadDescriptor>({{userNamePasswordDescriptor.getId(), userNamePasswordDescriptor},
+                                                        {pinDescriptor.getId(), pinDescriptor},
+                                                        {privateKeyDescriptor.getId(), privateKeyDescriptor}});
+}
+
+StringPtr CredentialDemoModule::onGetDefaultAuthenticationMethodId(const StringPtr& typeId)
+{
+    if (typeId == CredentialDemoDeviceImpl::CreateType().getId())
+        return StandardUserNamePasswordPayloadId;
+    if (typeId == CredentialDemoStreamingImpl::CreateType().getId())
+        return StandardPinPayloadId;
+
+    return nullptr;
 }
 
 DictPtr<IString, IBaseObject> CredentialDemoModule::populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions)

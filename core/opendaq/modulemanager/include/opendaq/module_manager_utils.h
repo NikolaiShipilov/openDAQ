@@ -23,6 +23,8 @@ BEGIN_NAMESPACE_OPENDAQ
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceSmartPtr(IInteger, IntegerPtr, "<coretypes/integer.h>")]
  * [interfaceSmartPtr(IErrorInfo, ObjectPtr<IErrorInfo>, "<coretypes/errorinfo.h>")]
+ * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
  */
 
 /*!
@@ -138,6 +140,28 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
                                                    IString* serialNumber = nullptr) = 0;
     // [templateType(streamingTypes, IString, IStreamingType)]
     virtual ErrCode INTERFACE_FUNC getAvailableStreamingTypes(IDict** streamingTypes) = 0;
+
+    /*!
+     * @brief Returns the payload descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
+     * @param[out] descriptors The supported authentication payload descriptors, keyed by their own id. Empty
+     * if no loaded module recognizes `typeId` as supporting authentication.
+     *
+     * Tries each loaded module in turn, returning the first that recognizes `typeId`.
+     */
+    // [templateType(descriptors, IString, ICredentialPayloadDescriptor)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) = 0;
+
+    /*!
+     * @brief Returns the id of the payload descriptor the type identified by `typeId` supports authenticating with by default (see
+     * `getSupportedAuthenticationMethods`).
+     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
+     * @param[out] defaultPayloadId The id of the payload descriptor to select by default, or `nullptr` if no
+     * loaded module recognizes `typeId` as supporting authentication.
+     *
+     * Tries each loaded module in turn, returning the first that recognizes `typeId`.
+     */
+    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultPayloadId) = 0;
 
     virtual ErrCode INTERFACE_FUNC createDefaultAddDeviceConfig(IPropertyObject** defaultConfig) = 0;
 

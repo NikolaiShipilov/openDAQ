@@ -14,10 +14,10 @@ Before ever prompting a user or attempting a connection, an application needs to
 
 As an application developer, I want to check whether a given device/streaming type supports authentication, so I can decide whether to offer an "authenticated connect" option in my UI at all.
 
-- **Given** a type id that has supported authentication descriptors and a default id set on its builder (e.g. `"CredentialDemoDevice"`)
+- **Given** a type id whose module declares supported authentication descriptors and a default one for it (e.g. `"CredentialDemoDevice"`)
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
   **Then** it succeeds and returns a config whose `"PayloadDescriptor"` selection has at least one candidate.
-- **Given** a type id that never had `addSupportedAuthenticationDescriptor`/`setDefaultAuthenticationConfigId` called on its builder
+- **Given** a type id whose module declares no authentication support for it
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
   **Then** it fails with `OPENDAQ_ERR_NOT_SUPPORTED` - not a crash, not an empty-but-successful config.
 - **Given** a type id that names neither an available device type nor an available streaming type

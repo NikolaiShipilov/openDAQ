@@ -25,8 +25,6 @@
 #include <coreobjects/property_object_internal_ptr.h>
 #include <opendaq/module_info_ptr.h>
 #include <opendaq/component_type_private.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
-#include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -38,25 +36,19 @@ public:
                                       const StringPtr& id,
                                       const StringPtr& name,
                                       const StringPtr& description,
-                                      const PropertyObjectPtr& defaultConfig,
-                                      const DictPtr<IString, ICredentialPayloadDescriptor>& supportedAuthenticationDescriptors = Dict<IString, ICredentialPayloadDescriptor>(),
-                                      const StringPtr& defaultAuthenticationConfigId = nullptr);
+                                      const PropertyObjectPtr& defaultConfig);
 
     explicit GenericComponentTypeImpl(const StructTypePtr& type,
                                       const StringPtr& id,
                                       const StringPtr& name,
                                       const StringPtr& description,
                                       const StringPtr& prefix,
-                                      const PropertyObjectPtr& defaultConfig,
-                                      const DictPtr<IString, ICredentialPayloadDescriptor>& supportedAuthenticationDescriptors = Dict<IString, ICredentialPayloadDescriptor>(),
-                                      const StringPtr& defaultAuthenticationConfigId = nullptr);
+                                      const PropertyObjectPtr& defaultConfig);
 
     ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC getName(IString** name) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) override;
-    ErrCode INTERFACE_FUNC getSupportedAuthenticationDescriptors(IDict** descriptors) override;
-    ErrCode INTERFACE_FUNC getDefaultAuthenticationConfigId(IString** id) override;
     ErrCode INTERFACE_FUNC getModuleInfo(IModuleInfo** moduleInfo) override;
 
     // IComponentTypePrivate
@@ -68,8 +60,6 @@ protected:
     StringPtr description;
     StringPtr prefix;
     PropertyObjectPtr defaultConfig;
-    DictPtr<IString, ICredentialPayloadDescriptor> supportedAuthenticationDescriptors;
-    StringPtr defaultAuthenticationConfigId;
     ModuleInfoPtr moduleInfo;
 };
 
@@ -78,9 +68,7 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
                                                                         const StringPtr& id,
                                                                         const StringPtr& name,
                                                                         const StringPtr& description,
-                                                                        const PropertyObjectPtr& defaultConfig,
-                                                                        const DictPtr<IString, ICredentialPayloadDescriptor>& supportedAuthenticationDescriptors,
-                                                                        const StringPtr& defaultAuthenticationConfigId)
+                                                                        const PropertyObjectPtr& defaultConfig)
     : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(
           type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}}))
     , id(id)
@@ -88,8 +76,6 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
     , description(description)
     , prefix("")
     , defaultConfig(defaultConfig)
-    , supportedAuthenticationDescriptors(supportedAuthenticationDescriptors)
-    , defaultAuthenticationConfigId(defaultAuthenticationConfigId)
 {
 }
 
@@ -99,9 +85,7 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
                                                                         const StringPtr& name,
                                                                         const StringPtr& description,
                                                                         const StringPtr& prefix,
-                                                                        const PropertyObjectPtr& defaultConfig,
-                                                                        const DictPtr<IString, ICredentialPayloadDescriptor>& supportedAuthenticationDescriptors,
-                                                                        const StringPtr& defaultAuthenticationConfigId)
+                                                                        const PropertyObjectPtr& defaultConfig)
     : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(
           type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}, {"Prefix", prefix}}))
     , id(id)
@@ -109,8 +93,6 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
     , description(description)
     , prefix(prefix)
     , defaultConfig(defaultConfig)
-    , supportedAuthenticationDescriptors(supportedAuthenticationDescriptors)
-    , defaultAuthenticationConfigId(defaultAuthenticationConfigId)
 {
 }
 
@@ -150,24 +132,6 @@ ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::createDefaultConfig(IProp
         return this->defaultConfig.template asPtr<IPropertyObjectInternal>()->clone(defaultConfig);
 
     *defaultConfig = PropertyObject().detach();
-    return OPENDAQ_SUCCESS;
-}
-
-template <class Intf, class... Interfaces>
-ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::getSupportedAuthenticationDescriptors(IDict** descriptors)
-{
-    OPENDAQ_PARAM_NOT_NULL(descriptors);
-
-    *descriptors = this->supportedAuthenticationDescriptors.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
-template <class Intf, class... Interfaces>
-ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::getDefaultAuthenticationConfigId(IString** id)
-{
-    OPENDAQ_PARAM_NOT_NULL(id);
-
-    *id = this->defaultAuthenticationConfigId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

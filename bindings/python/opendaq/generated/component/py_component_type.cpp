@@ -72,23 +72,6 @@ void defineIComponentType(pybind11::module_ m, PyDaqIntf<daq::IComponentType, da
             return objectPtr.createDefaultConfig().detach();
         },
         "The function clones and returns default configuration. On each call, we need to create new object, because we want that each instance of the component has its own configuration object.");
-    cls.def_property_readonly("supported_authentication_descriptors",
-        [](daq::IComponentType *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::ComponentTypePtr::Borrow(object);
-            return objectPtr.getSupportedAuthenticationDescriptors().detach();
-        },
-        py::return_value_policy::take_ownership,
-        "Gets the payload descriptors this component type supports authenticating with, keyed by their own id.");
-    cls.def_property_readonly("default_authentication_config_id",
-        [](daq::IComponentType *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::ComponentTypePtr::Borrow(object);
-            return objectPtr.getDefaultAuthenticationConfigId().toStdString();
-        },
-        "Gets the id of the payload descriptor to select by default when building an authentication config for this component type.");
     cls.def_property_readonly("module_info",
         [](daq::IComponentType *object)
         {

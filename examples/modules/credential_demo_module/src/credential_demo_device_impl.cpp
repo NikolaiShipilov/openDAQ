@@ -5,7 +5,6 @@
 #include <opendaq/device_type_factory.h>
 #include <opendaq/component_type_builder_factory.h>
 #include <opendaq/credential_request_factory.h>
-#include <opendaq/credential_payload_descriptor_factory.h>
 #include <opendaq/server_capability_config.h>
 #include <opendaq/device_info_internal.h>
 #include <opendaq/streaming_ptr.h>
@@ -75,21 +74,13 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
     return devInfo;
 }
 
-DeviceTypePtr CredentialDemoDeviceImpl::CreateType(const TypeManagerPtr& typeManager)
+DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
-    auto userNamePasswordDescriptor = StandardUserNamePasswordPayloadDescriptor(typeManager);
-    auto pinDescriptor = StandardPinPayloadDescriptor(typeManager);
-    auto privateKeyDescriptor = StandardPrivateKeyFilePayloadDescriptor(typeManager);
-
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix("daq.credential_demo")
-        .addSupportedAuthenticationDescriptor(userNamePasswordDescriptor)
-        .addSupportedAuthenticationDescriptor(pinDescriptor)
-        .addSupportedAuthenticationDescriptor(privateKeyDescriptor)
-        .setDefaultAuthenticationConfigId(StandardUserNamePasswordPayloadId)
         .build();
 }
 

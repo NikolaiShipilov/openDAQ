@@ -147,6 +147,16 @@ daq::ErrCode MockFunctionBlockModuleImpl::getAvailableStreamingTypes(daq::IDict*
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }
 
+daq::ErrCode MockFunctionBlockModuleImpl::getSupportedAuthenticationMethods(daq::IString* /*typeId*/, daq::IDict** /*descriptors*/)
+{
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+}
+
+daq::ErrCode MockFunctionBlockModuleImpl::getDefaultAuthenticationMethodId(daq::IString* /*typeId*/, daq::IString** /*defaultPayloadId*/)
+{
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+}
+
 daq::ErrCode MockFunctionBlockModuleImpl::loadLicense(Bool* /*succeeded*/, IDict* /*licenseConfig*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);

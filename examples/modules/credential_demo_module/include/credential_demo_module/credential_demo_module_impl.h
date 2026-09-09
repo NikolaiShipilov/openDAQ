@@ -49,6 +49,9 @@ public:
                                    const StringPtr& payloadId,
                                    const PropertyObjectPtr& credentials) override;
 
+    DictPtr<IString, ICredentialPayloadDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId) override;
+    StringPtr onGetDefaultAuthenticationMethodId(const StringPtr& typeId) override;
+
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);
 };

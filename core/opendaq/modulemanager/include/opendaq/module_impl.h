@@ -371,18 +371,15 @@ public:
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
      * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. If
-     * unassigned and the resolved streaming type supports authentication (`getDefaultAuthenticationConfigId()` is
-     * assigned), the type's own default config is used instead (see `resolveDefaultAuthenticationConfig`) - the
-     * streaming is connected to without authentication only if the type doesn't support it at all.
+     * unassigned and the resolved streaming type supports authentication, its own default config is used instead
+     * - the streaming is connected to without authentication only if the type doesn't support it at all.
      * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
      * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @param[out] streaming The created streaming object.
      *
-     * The credentials are resolved (`requestCredentials`) before `onCreateStreaming` is ever called -
-     * `authenticationConfig` itself never reaches the module's own implementation, only the resolved payload id
-     * and credentials do (both left unassigned when the connection ends up unauthenticated). `manufacturer`/
-     * `serialNumber` are used only for that resolution (as metadata on the credential request/for a provider's
-     * own caching) - `onCreateStreaming` doesn't otherwise need them, so they aren't forwarded to it either.
+     * The credentials are resolved (`requestCredentials`) before `onCreateStreaming` is called -
+     * `authenticationConfig` itself never reaches the final module's own implementation, only the
+     * credentials and the resolved payload id (to enable correct authentication method) do.
      */
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                            IString* connectionString,
@@ -398,7 +395,7 @@ public:
         ErrCode errCode = wrapHandlerReturn(this, &Module::onGetAvailableStreamingTypes, types);
         OPENDAQ_RETURN_IF_FAILED_EXCEPT(errCode, OPENDAQ_ERR_NOTIMPLEMENTED);
 
-        ComponentTypePtr streamingType;
+        StreamingTypePtr streamingType;
         const StringPtr prefix = getPrefixFromConnectionString(connectionString);
         if (prefix.assigned() && prefix.getLength() != 0)
         {
@@ -412,12 +409,17 @@ public:
             }
         }
 
+        if (!streamingType.assigned())
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND,
+                                        "No streaming type matching connection string \"{}\" was found",
+                                        connectionString);
+
         AuthenticationConfigPtr resolvedAuthConfig;
         errCode = wrapHandlerReturn(this,
                                     &Module::resolveDefaultAuthenticationConfig,
                                     resolvedAuthConfig,
                                     AuthenticationConfigPtr::Borrow(authenticationConfig),
-                                    streamingType);
+                                    streamingType.getId());
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         StringPtr payloadId;
@@ -483,6 +485,41 @@ public:
         return errCode;
     }
 
+    /*!
+     * @brief Returns the payload descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @param[out] descriptors The supported authentication payload descriptors, keyed by their own id.
+     */
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) override
+    {
+        OPENDAQ_PARAM_NOT_NULL(typeId);
+        OPENDAQ_PARAM_NOT_NULL(descriptors);
+
+        DictPtr<IString, ICredentialPayloadDescriptor> descriptorsPtr;
+        const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetSupportedAuthenticationMethods, descriptorsPtr, typeId);
+        OPENDAQ_RETURN_IF_FAILED(errCode);
+
+        *descriptors = descriptorsPtr.detach();
+        return errCode;
+    }
+
+    /*!
+     * @brief Returns the id of the payload descriptor the type identified by `typeId` supports authenticating with by default.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @param[out] defaultPayloadId The id of the payload descriptor to select by default.
+     */
+    ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultPayloadId) override
+    {
+        OPENDAQ_PARAM_NOT_NULL(typeId);
+        OPENDAQ_PARAM_NOT_NULL(defaultPayloadId);
+
+        StringPtr defaultPayloadIdPtr;
+        const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetDefaultAuthenticationMethodId, defaultPayloadIdPtr, typeId);
+        OPENDAQ_RETURN_IF_FAILED(errCode);
+
+        *defaultPayloadId = defaultPayloadIdPtr.detach();
+        return errCode;
+    }
 
     // Helpers
 
@@ -624,6 +661,32 @@ public:
         return false;
     }
 
+    /*!
+     * @brief Returns the payload descriptors the type identified by `typeId` supports authenticating with,
+     * keyed by their own id. A concrete module overrides this for each device/streaming type id it declares
+     * authentication support for. The base implementation declares no authentication support for any type.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @returns The supported authentication payload descriptors, keyed by their own id. Empty if `typeId`
+     * isn't recognized or doesn't support authentication.
+     */
+    virtual DictPtr<IString, ICredentialPayloadDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId)
+    {
+        return Dict<IString, ICredentialPayloadDescriptor>();
+    }
+
+    /*!
+     * @brief Returns the id of the payload descriptor the type identified by `typeId` supports authenticating with by default.
+     * A concrete module overrides this for each device/streaming type id it declares authentication support for. The base
+     * implementation declares no authentication support for any type.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @returns The default payload id, or unassigned if `typeId` isn't recognized or doesn't support
+     * authentication.
+     */
+    virtual StringPtr onGetDefaultAuthenticationMethodId(const StringPtr& typeId)
+    {
+        return nullptr;
+    }
+
     virtual ErrCode INTERFACE_FUNC loadLicense(Bool* succeded, IDict* licenseConfig) override
     {
         OPENDAQ_PARAM_NOT_NULL(succeded);
@@ -712,23 +775,23 @@ protected:
     }
 
 private:
-    // Returns `authenticationConfig` unchanged if assigned. Otherwise, if `componentType` declares default
-    // authentication support (`getDefaultAuthenticationConfigId()` assigned), builds and returns its own
+    // Returns `authenticationConfig` unchanged if assigned. Otherwise, if `typeId` declares default
+    // authentication support (`onGetDefaultAuthenticationMethodId` returns one), builds and returns its own
     // default config instead - so `createStreaming` (the only caller) still authenticates a connection to a
-    // type that supports it even when the caller left `authenticationConfig` unspecified, rather than silently
-    // connecting without any. Returns unassigned only when `authenticationConfig` was unassigned and
-    // `componentType` is either unassigned or doesn't support authentication at all.
-    AuthenticationConfigPtr resolveDefaultAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig,
-                                                                const ComponentTypePtr& componentType)
+    // type that supports it even when the caller left `authenticationConfig` unspecified, rather than
+    // silently connecting without any. Returns unassigned only when `authenticationConfig` was unassigned and
+    // `typeId` is either unassigned or doesn't support authentication at all.
+    AuthenticationConfigPtr resolveDefaultAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig, const StringPtr& typeId)
     {
-        if (authenticationConfig.assigned() || !componentType.assigned())
+        if (authenticationConfig.assigned() || !typeId.assigned())
             return authenticationConfig;
 
-        const StringPtr defaultPayloadId = componentType.getDefaultAuthenticationConfigId();
+        const StringPtr defaultPayloadId = onGetDefaultAuthenticationMethodId(typeId);
         if (!defaultPayloadId.assigned())
             return authenticationConfig;
 
-        return AuthenticationConfig(componentType.getSupportedAuthenticationDescriptors(), defaultPayloadId, context, componentType.getId());
+        const auto descriptors = onGetSupportedAuthenticationMethods(typeId);
+        return AuthenticationConfig(descriptors, defaultPayloadId, context, typeId);
     }
 
     // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload, then resolves

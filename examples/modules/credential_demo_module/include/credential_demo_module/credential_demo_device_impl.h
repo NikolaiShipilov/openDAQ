@@ -22,7 +22,6 @@
 #include <opendaq/credential_request_ptr.h>
 #include <opendaq/credential_payload_descriptor_ptr.h>
 #include <coreobjects/property_object_ptr.h>
-#include <coretypes/type_manager_ptr.h>
 
 /*
  * Minimal mirrored device implementation with no signals or channels. When connected to via the
@@ -46,7 +45,7 @@ public:
                                       const PropertyObjectPtr& credentials = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
-    static DeviceTypePtr CreateType(const TypeManagerPtr& typeManager = nullptr);
+    static DeviceTypePtr CreateType();
     static void ValidateConnectionString(const StringPtr& connectionString);
 
 protected:

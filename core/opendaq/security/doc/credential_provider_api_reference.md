@@ -1,6 +1,6 @@
 # Credential Provider Framework — API Reference & Authentication Flow
 
-Credentials are modelled by their **payload shape** (`CredentialPayloadFormat`: `KeyValuePairs`, `String`, or `FilePath`) and a **payload descriptor** (`ICredentialPayloadDescriptor`) carrying format-specific parameters and a human description. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object a device hands back via `IDevice::createDefaultAuthenticationConfig(typeId)`, listing every method the named component type supports (added via `IComponentTypeBuilder::addSupportedAuthenticationDescriptor`) as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming`. Building it through `IDevice` (rather than the component type directly) gives it access to the device's `Context`, so it can also offer registered credential providers as a `"CredentialProviderId"` selection - a live selection that depends on the selected method, re-filtered from `Context` to only the providers currently supporting that method's format every time the selection changes.
+Credentials are modelled by their **payload shape** (`CredentialPayloadFormat`: `KeyValuePairs`, `String`, or `FilePath`) and a **payload descriptor** (`ICredentialPayloadDescriptor`) carrying format-specific parameters and a human description. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object a device hands back via `IDevice::createDefaultAuthenticationConfig(typeId)`, listing every method the named component type's module declares supporting as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming`. Building it through `IDevice` (rather than the component type directly) gives it access to the device's `Context`, so it can also offer registered credential providers as a `"CredentialProviderId"` selection - a live selection that depends on the selected method, re-filtered from `Context` to only the providers currently supporting that method's format every time the selection changes.
 
 ---
 
@@ -12,7 +12,7 @@ Describes the shape and presentation of the payload an authentication method exp
 
 | Member | Description |
 |---|---|
-| `getId(IString**)` | The id that uniquely identifies this authentication method within the module that offers it - the same id `IComponentTypeBuilder::setDefaultAuthenticationConfigId` targets, and that a caller matches against when selecting this method out of an `IAuthenticationConfig`'s `"PayloadDescriptor"` candidates (see below). |
+| `getId(IString**)` | The id that uniquely identifies this authentication method within the module that offers it - the same id the module declares as its default, and that a caller matches against when selecting this method out of an `IAuthenticationConfig`'s `"PayloadDescriptor"` candidates (see below). |
 | `getFormat(CredentialPayloadFormat*)` | The payload's format — `KeyValuePairs`, `String`, or `FilePath`. |
 | `getParameters(IStruct**)` | The format's standard parameter set, as a Struct whose own Struct type is pinned to the format - for `KeyValuePairs`, a `"Keys"` dict field mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool field; for `FilePath`, no fields at all. |
 | `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
@@ -121,31 +121,13 @@ Supplies the secrets requested via an `ICredentialRequest` — by prompting the 
 
 ## 2. Extensions to Existing Interfaces
 
-### `IComponentType`
-
-`IComponentType` itself has no `Context` access, so it cannot build a self-contained `IAuthenticationConfig` (which needs the registered credential providers, see [`IDevice`](#idevice) below) - it only exposes the raw data a context-aware caller needs to do so:
-
-| New member | Description |
-|---|---|
-| `getSupportedAuthenticationDescriptors(IDict**)` | The payload descriptors accumulated via the type's builder, keyed by their own id. Empty if the type doesn't support authentication. |
-| `getDefaultAuthenticationConfigId(IString**)` | The default payload id set via `setDefaultAuthenticationConfigId`, or `nullptr` if the type doesn't support authentication. |
-
-### `IComponentTypeBuilder`
-
-| New member | Description |
-|---|---|
-| `setDefaultAuthenticationConfigId(IString*)` | Sets which added method (by payload id) is selected by default in the config `createDefaultAuthenticationConfig` returns. Left unset ⇒ the built type doesn't support authentication. |
-| `getDefaultAuthenticationConfigId(IString**)` | Gets the id set above, or `nullptr`. |
-| `addSupportedAuthenticationDescriptor(ICredentialPayloadDescriptor*)` | Adds a supported authentication method's payload descriptor - its own `getId()` is the id it's known by. Every descriptor added this way becomes a selection candidate of the one, self-contained config `createDefaultAuthenticationConfig` returns - there is no separate config built per method. |
-| `getSupportedAuthenticationDescriptors(IList**)` | The payload descriptors accumulated so far. |
-
-**Validation on build:** if descriptors were added but no default id was set (or vice versa), or the default id doesn't match any added descriptor's own id, `build()` fails with `OPENDAQ_ERR_INVALIDPARAMETER`.
+Component types (`IComponentType` and everything derived from it, including `IDeviceType`/`IStreamingType`) carry no authentication data themselves - they're Struct-convertible, and attaching authentication data to them would break that conversion. A module that wants a device or streaming type to support authentication instead declares the supported payload descriptors and the default one internally, keyed by that type's own id - not through any public interface.
 
 ### `IDevice`
 
 | New member | Description |
 |---|---|
-| `createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig**)` | Builds and returns a new, self-contained authentication config for the component type named by `typeId` (looked up among the device's available device types, then its available streaming types); a new object on each call, same as `createDefaultConfig`. Its `"PayloadDescriptor"` property has every payload descriptor added to the type's builder as a selection candidate, defaulting to the one set via `setDefaultAuthenticationConfigId`. Its `"CredentialProviderId"` property is a live selection over the device's `Context`-registered providers, filtered to those supporting the *selected* method's format (recomputed on every `"PayloadDescriptor"` change), defaulting to the first compatible one - absent entirely when none are compatible. Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type doesn't support authentication (no default authentication config id set on its builder). |
+| `createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig**)` | Builds and returns a new, self-contained authentication config for the component type named by `typeId` (looked up among the device's available device types, then its available streaming types); a new object on each call, same as `createDefaultConfig`. Its `"PayloadDescriptor"` property has every payload descriptor the type's module declares supporting as a selection candidate, defaulting to the one it declares as the default. Its `"CredentialProviderId"` property is a live selection over the device's `Context`-registered providers, filtered to those supporting the *selected* method's format (recomputed on every `"PayloadDescriptor"` change), defaulting to the first compatible one - absent entirely when none are compatible. Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type doesn't support authentication. |
 | `addAuthenticatedDevice(IDevice**, IString* connectionString, IPropertyObject* config = nullptr, IAuthenticationConfig* authenticationConfig = nullptr)` | Connects to a device using the given authentication configuration. |
 | `addStreaming(IStreaming**, IString* connectionString, IPropertyObject* config = nullptr, IAuthenticationConfig* authenticationConfig = nullptr)` | Attaches a streaming connection, optionally authenticated — a `nullptr` config (the default) uses the plain, unauthenticated path. See [§4](#4-streaming-authentication). |
 

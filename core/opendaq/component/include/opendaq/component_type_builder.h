@@ -17,8 +17,6 @@
 #pragma once
 #include <coreobjects/property_object.h>
 #include <opendaq/component_type.h>
-#include <opendaq/credential_payload_descriptor.h>
-#include <opendaq/authentication_config.h>
 #include <coretypes/stringobject.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -41,10 +39,6 @@ enum class ComponentTypeSort
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceLibrary(IComponentType, "opendaq")]
- * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
- * [interfaceLibrary(IAuthenticationConfig, "opendaq")]
- * [interfaceSmartPtr(IAuthenticationConfig, AuthenticationConfigPtr, "<opendaq/authentication_config_ptr.h>")]
  */
 
 /*!
@@ -170,44 +164,6 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
      * For example: Port=1000, OutputRate=5000, ...
      */
     virtual ErrCode INTERFACE_FUNC getDefaultConfig(IPropertyObject** defaultConfig) = 0;
-
-    // [returnSelf]
-    /*!
-     * @brief Sets the payload id of the authentication method (see `addSupportedAuthenticationDescriptor`) to
-     * select by default in the self-contained config `IDevice::createDefaultAuthenticationConfig` returns for
-     * this type.
-     * @param id The default payload id. Must match one of the payload descriptors' own ids added via
-     * `addSupportedAuthenticationDescriptor`.
-     *
-     * When left unset, the built Component type is considered to not support authentication, and
-     * `IDevice::createDefaultAuthenticationConfig` will fail with `OPENDAQ_ERR_NOT_SUPPORTED` for this type.
-     */
-    virtual ErrCode INTERFACE_FUNC setDefaultAuthenticationConfigId(IString* id) = 0;
-
-    /*!
-     * @brief Gets the default payload id set via `setDefaultAuthenticationConfigId`.
-     * @param[out] id The default payload id, or `nullptr` if none was set.
-     */
-    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationConfigId(IString** id) = 0;
-
-    // [returnSelf]
-    /*!
-     * @brief Adds a supported authentication method's payload descriptor - its own
-     * `ICredentialPayloadDescriptor::getId()` is the id it's known by (see `setDefaultAuthenticationConfigId`).
-     * Every descriptor added this way becomes a selection candidate of the single, self-contained
-     * authentication config `IDevice::createDefaultAuthenticationConfig` returns for this type - there is no
-     * separate config built per method.
-     * @param payloadDescriptor The descriptor of the supported method.
-     */
-    virtual ErrCode INTERFACE_FUNC addSupportedAuthenticationDescriptor(ICredentialPayloadDescriptor* payloadDescriptor) = 0;
-
-    /*!
-     * @brief Gets the payload descriptors accumulated via `addSupportedAuthenticationDescriptor`, keyed by
-     * their own id (`ICredentialPayloadDescriptor::getId()`).
-     * @param[out] payloadDescriptors The payload id -> payload descriptor dictionary.
-     */
-    // [templateType(payloadDescriptors, IString, ICredentialPayloadDescriptor)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationDescriptors(IDict** payloadDescriptors) = 0;
 };
 /*!@}*/
 

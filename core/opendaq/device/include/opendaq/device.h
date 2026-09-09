@@ -195,17 +195,16 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      * on each call, same as with `IComponentType::createDefaultConfig`.
      *
      * The returned config's `"PayloadDescriptor"` property (see `IAuthenticationConfig`) has every payload
-     * descriptor added via `IComponentTypeBuilder::addSupportedAuthenticationDescriptor` as a selection
-     * candidate, defaulting to the one set via `IComponentTypeBuilder::setDefaultAuthenticationConfigId`. Its
-     * `"CredentialProviderId"` property is a live selection over registered credential providers filtered to
-     * those supporting the currently selected payload format, recomputed on every `"PayloadDescriptor"`
-     * change, and entirely absent when none are compatible. The caller tunes the returned config directly -
-     * e.g. selecting a different supported method or provider, or setting `"SuppliedSecret"` - before handing
-     * it to `addAuthenticatedDevice`/`addAuthenticatedStreaming`, all via plain `IPropertyObject` calls.
+     * descriptor the type's module declares supporting as a selection candidate, defaulting to the one it
+     * declares as the default. Its `"CredentialProviderId"` property is a live selection over registered
+     * credential providers filtered to those supporting the currently selected payload format, recomputed on
+     * every `"PayloadDescriptor"` change, and entirely absent when none are compatible. The caller tunes the
+     * returned config directly - e.g. selecting a different supported method or provider, or setting
+     * `"SuppliedSecret"` - before handing it to `addAuthenticatedDevice`/`addAuthenticatedStreaming`, all via
+     * plain `IPropertyObject` calls.
      *
      * Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available
-     * streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type does not support authentication,
-     * i.e. no default authentication config id was set on the type's builder.
+     * streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type does not support authentication.
      */
     virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
 

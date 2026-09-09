@@ -18,7 +18,6 @@
 #include <coreobjects/property_object.h>
 #include <coretypes/stringobject.h>
 #include <opendaq/module_info.h>
-#include <opendaq/authentication_config.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -26,8 +25,6 @@ BEGIN_NAMESPACE_OPENDAQ
  * [templated(defaultAliasName: ComponentTypePtr)]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr)]
  * [interfaceLibrary(IPropertyObject, CoreObjects)]
- * [interfaceLibrary(IAuthenticationConfig, "opendaq")]
- * [interfaceSmartPtr(IAuthenticationConfig, AuthenticationConfigPtr, "<opendaq/authentication_config_ptr.h>")]
  */
 
 /*!
@@ -78,29 +75,6 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
      * For example: Port=1000, OutputRate=5000, ...
      */
     virtual ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) = 0;
-
-    /*!
-     * @brief Gets the payload descriptors this component type supports authenticating with, keyed by their
-     * own id.
-     * @param[out] descriptors The supported authentication payload descriptors, as accumulated via
-     * `IComponentTypeBuilder::addSupportedAuthenticationDescriptor`. Empty if the type does not support
-     * authentication.
-     *
-     * These are the raw building blocks a context-aware caller (see `IDevice::createDefaultAuthenticationConfig`)
-     * uses to build a self-contained `IAuthenticationConfig` for this type - the type itself has no `Context`
-     * access, so it cannot build one directly.
-     */
-    // [templateType(descriptors, IString, ICredentialPayloadDescriptor)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationDescriptors(IDict** descriptors) = 0;
-
-    /*!
-     * @brief Gets the id of the payload descriptor to select by default when building an authentication
-     * config for this component type.
-     * @param[out] id The default authentication payload id, as set via
-     * `IComponentTypeBuilder::setDefaultAuthenticationConfigId`. `nullptr` if the type does not support
-     * authentication.
-     */
-    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationConfigId(IString** id) = 0;
 
     /*!
      * @brief Retrieves the module information.

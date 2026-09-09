@@ -30,6 +30,7 @@
 #include <opendaq/io_folder_factory.h>
 #include <coreobjects/property_object_impl.h>
 #include <coretypes/validation.h>
+#include <coretypes/ctutils.h>
 #include <opendaq/device_private.h>
 #include <tsl/ordered_set.h>
 #include <opendaq/component_keys.h>
@@ -1371,17 +1372,19 @@ AuthenticationConfigPtr GenericDevice<TInterface, Interfaces...>::onCreateDefaul
     auto lock = this->getRecursiveConfigLock2();
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
 
-    ComponentTypePtr componentType;
-    if (const auto deviceTypes = managerUtils.getAvailableDeviceTypes(); deviceTypes.hasKey(typeId))
-        componentType = deviceTypes.get(typeId);
-    else if (const auto streamingTypes = managerUtils.getAvailableStreamingTypes(); streamingTypes.hasKey(typeId))
-        componentType = streamingTypes.get(typeId);
-    else
+    const bool typeExists =
+        managerUtils.getAvailableDeviceTypes().hasKey(typeId) || managerUtils.getAvailableStreamingTypes().hasKey(typeId);
+    if (!typeExists)
         DAQ_THROW_EXCEPTION(NotFoundException, "No available device or streaming type with id \"{}\" was found", typeId);
 
-    const DictPtr<IString, ICredentialPayloadDescriptor> descriptors = componentType.getSupportedAuthenticationDescriptors();
-    const StringPtr defaultPayloadId = componentType.getDefaultAuthenticationConfigId();
-    if (!defaultPayloadId.assigned() || !descriptors.hasKey(defaultPayloadId))
+    StringPtr defaultPayloadId;
+    checkErrorInfo(managerUtils->getDefaultAuthenticationMethodId(typeId, &defaultPayloadId));
+
+    DictPtr<IString, ICredentialPayloadDescriptor> descriptors;
+    if (defaultPayloadId.assigned())
+        checkErrorInfo(managerUtils->getSupportedAuthenticationMethods(typeId, &descriptors));
+
+    if (!defaultPayloadId.assigned() || !descriptors.assigned() || !descriptors.hasKey(defaultPayloadId))
         DAQ_THROW_EXCEPTION(NotSupportedException, "Component type \"{}\" does not support authentication", typeId);
 
     return AuthenticationConfig(descriptors, defaultPayloadId, this->context, typeId);

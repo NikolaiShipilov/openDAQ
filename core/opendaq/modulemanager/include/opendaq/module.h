@@ -24,11 +24,14 @@
 #include <coretypes/stringobject.h>
 #include <opendaq/server_capability_config.h>
 #include <opendaq/module_info.h>
+#include <opendaq/credential_payload_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
+ * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
  */
 
 /*!
@@ -159,6 +162,23 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      */
     // [templateType(streamingTypes, IString, IStreamingType)]
     virtual ErrCode INTERFACE_FUNC getAvailableStreamingTypes(IDict** streamingTypes) = 0;
+
+    /*!
+     * @brief Returns the payload descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @param[out] descriptors The supported authentication payload descriptors, keyed by their own id. Empty
+     * if `typeId` is unrecognized or does not support authentication.
+     */
+    // [templateType(descriptors, IString, ICredentialPayloadDescriptor)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) = 0;
+
+    /*!
+     * @brief Returns the id of the payload descriptor the type identified by `typeId` supports authenticating with by default.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @param[out] defaultPayloadId The id of the payload descriptor to select by default, or `nullptr` if
+     * `typeId` is unrecognized or does not support authentication.
+     */
+    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultPayloadId) = 0;
 
     // [templateType(licenseConfig, IString, IString)]
     /*!

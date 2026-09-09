@@ -45,9 +45,8 @@ enum class CredentialPayloadFormat : EnumType
  *
  * A descriptor carries the payload's id, format, its format-specific parameter set, and a human-readable
  * description. The id uniquely identifies the authentication method within the module that offers it
- * (e.g. `"UserNamePassword"`, `"Pin"`) - the same id used to key the method within
- * `IComponentTypeBuilder::addSupportedAuthenticationDescriptor`/`IComponentTypeBuilder::getSupportedAuthenticationDescriptors`.
- * The parameter set is itself a Struct, whose exact Struct type (and so its fields) depends
+ * (e.g. `"UserNamePassword"`, `"Pin"`) - the same id the module's `IModule::getSupportedAuthenticationMethods`
+ * uses to key the method. The parameter set is itself a Struct, whose exact Struct type (and so its fields) depends
  * on the format: for a `KeyValuePairs`-format payload, a `"Keys"` dict field maps each expected key to
  * its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String`-format payload, a
  * single `"Hidden"` bool field applies to the one secret. A `FilePath`-format payload's parameters Struct

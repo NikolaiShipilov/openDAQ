@@ -1,7 +1,6 @@
 #include <credential_demo_module/credential_demo_streaming_impl.h>
 
 #include <opendaq/streaming_type_factory.h>
-#include <opendaq/credential_payload_descriptor_factory.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
@@ -17,22 +16,14 @@ CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connec
     authentication::Authenticate(ctx, credentials, payloadId);
 }
 
-StreamingTypePtr CredentialDemoStreamingImpl::CreateType(const TypeManagerPtr& typeManager)
+StreamingTypePtr CredentialDemoStreamingImpl::CreateType()
 {
-    auto userNamePasswordDescriptor = StandardUserNamePasswordPayloadDescriptor(typeManager);
-    auto pinDescriptor = StandardPinPayloadDescriptor(typeManager);
-    auto privateKeyDescriptor = StandardPrivateKeyFilePayloadDescriptor(typeManager);
-
     return StreamingTypeBuilder()
         .setId(CredentialDemoStreamingTypeId)
         .setName("Credential demo streaming")
         .setDescription("Dummy streaming connection, authenticated via the same credential framework and "
                          "auth methods as the device")
         .setConnectionStringPrefix(CredentialDemoStreamingPrefix)
-        .addSupportedAuthenticationDescriptor(userNamePasswordDescriptor)
-        .addSupportedAuthenticationDescriptor(pinDescriptor)
-        .addSupportedAuthenticationDescriptor(privateKeyDescriptor)
-        .setDefaultAuthenticationConfigId(StandardPinPayloadId)
         .build();
 }
 

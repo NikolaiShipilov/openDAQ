@@ -3,10 +3,10 @@
 #include <opendaq/component_deserialize_context_ptr.h>
 #include <opendaq/credential_provider_ptr.h>
 #include <opendaq/module_manager_utils_ptr.h>
-#include <opendaq/streaming_type_ptr.h>
 #include <coreobjects/property_factory.h>
 #include <coretypes/listobject_factory.h>
 #include <coretypes/stringobject_factory.h>
+#include <coretypes/ctutils.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -286,16 +286,16 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
         const ContextPtr realContext = deserializeContext.getContext();
 
         const ModuleManagerUtilsPtr managerUtils = realContext.getModuleManager().asPtr<IModuleManagerUtils>();
-        ComponentTypePtr componentType;
-        if (const auto deviceTypes = managerUtils.getAvailableDeviceTypes(); deviceTypes.hasKey(savedTypeId))
-            componentType = deviceTypes.get(savedTypeId);
-        else if (const auto streamingTypes = managerUtils.getAvailableStreamingTypes(); streamingTypes.hasKey(savedTypeId))
-            componentType = streamingTypes.get(savedTypeId);
-        else
+
+        const bool typeExists =
+            managerUtils.getAvailableDeviceTypes().hasKey(savedTypeId) || managerUtils.getAvailableStreamingTypes().hasKey(savedTypeId);
+        if (!typeExists)
             DAQ_THROW_EXCEPTION(NotFoundException, "No available device or streaming type with id \"{}\" was found", savedTypeId);
 
-        const DictPtr<IString, ICredentialPayloadDescriptor> descriptors = componentType.getSupportedAuthenticationDescriptors();
-        if (!descriptors.hasKey(savedPayloadId))
+        DictPtr<IString, ICredentialPayloadDescriptor> descriptors;
+        checkErrorInfo(managerUtils->getSupportedAuthenticationMethods(savedTypeId, &descriptors));
+
+        if (!descriptors.assigned() || !descriptors.hasKey(savedPayloadId))
             DAQ_THROW_EXCEPTION(NotSupportedException,
                                  "Saved payload id \"{}\" is no longer supported by type \"{}\"",
                                  savedPayloadId,
