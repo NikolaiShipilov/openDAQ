@@ -70,8 +70,8 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
     CredentialDemoDeviceImpl::ValidateConnectionString(connectionString);
 
-    // `createAuthenticatedDevice` (in `Module`) has already resolved `credentials` - the device is never
-    // connected to anonymously via this path, only ever authenticated with what was already obtained.
+    // The device is never connected to anonymously via this path, only ever authenticated with the given
+    // credentials.
     return createWithImplementation<IDevice, CredentialDemoDeviceImpl>(
         config, context, parent, info, /*authenticated*/true, payloadId, credentials).detach();
 }
@@ -87,10 +87,9 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
                                                      const StringPtr& payloadId,
                                                      const PropertyObjectPtr& credentials)
 {
-    // `createStreaming` (in `Module`) has already resolved `credentials` - even when the caller left
-    // authentication unspecified, since this streaming type declares a default authentication method
-    // (`CredentialDemoStreamingImpl::CreateType()::getDefaultAuthenticationConfigId()`), so
-    // `resolveDefaultAuthenticationConfig` falls back to it rather than skipping authentication.
+    // This streaming type always declares a default authentication method (see `CreateType()`), so
+    // `payloadId`/`credentials` are always assigned here, even for a caller that left authentication
+    // unspecified.
     return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, payloadId, credentials);
 }
 

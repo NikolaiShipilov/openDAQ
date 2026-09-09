@@ -33,7 +33,7 @@ As an application developer, I want to know not just whether a type *supports* a
 
 - **Given** a type supporting only a `String`-format method (e.g. `"Pin"`), and only a `FileCredentialProvider` (FilePath-only) registered
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)` and check `hasProperty("CredentialProviderId")`
-  **Then** its absence tells me, entirely client-side and without attempting a connection, that authentication would fail before ever calling `addAuthenticatedDevice` - `"CredentialProviderId"`'s live, format-filtered candidates (see the API reference, §1) mean this check no longer needs a separate hand-rolled cross-reference of `context.getCredentialProviders()` against the type's descriptors; the config itself already reflects the answer for whichever `"PayloadDescriptor"` is currently selected. For a *non-default* method, select it first (`SelectAuthenticationMethod`, §7) and re-check `hasProperty` - the live master/slave relationship recomputes it for whatever is currently selected, not just the default.
+  **Then** its absence tells me, entirely client-side and without attempting a connection, that authentication would fail before ever calling `addAuthenticatedDevice` - `"CredentialProviderId"`'s live, format-filtered candidates (see the API reference, §1) mean this check no longer needs a separate hand-rolled cross-reference of `context.getCredentialProviders()` against the type's descriptors; the config itself already reflects the answer for whichever `"PayloadDescriptor"` is currently selected. For a *non-default* method, select it first (`SelectAuthenticationMethod`, §7) and re-check `hasProperty` - the live dependency between the two properties recomputes it for whatever is currently selected, not just the default.
 - **Given** zero credential providers registered on the instance at all
   **When** I build the default config and call `addAuthenticatedDevice`
   **Then** it fails with `AuthenticationFailedException` ("no credential provider supporting a compatible payload format is registered") - a good negative-path example distinct from 1.1's "type doesn't support auth" case: here the *type* supports it, the *instance* just can't currently serve it.
@@ -116,13 +116,13 @@ As an application developer, I want the unmodified default config to just work: 
 - **Given** two providers registered, `FileCredentialProvider` (FilePath-only) registered before `CmdLineCredentialProvider` (all formats)
   **And** the type's default payload method is `KeyValuePairs` or `String` (not `FilePath`)
   **When** I use `instance.createDefaultAuthenticationConfig(typeId)` completely unmodified and call `addAuthenticatedDevice`
-  **Then** it succeeds - `"CredentialProviderId"` defaulted to `CmdLineCredentialProvider` (the only one supporting the default method's format), not `FileCredentialProvider` just because it happened to register first. Worth keeping as a regression example: an earlier, unfiltered design genuinely broke this way (`demoUserNamePasswordAuthentication` failed with "the explicitly selected credential provider ... does not support the required payload format" before the slave became live-filtered) - this scenario is what confirms it can't recur.
+  **Then** it succeeds - `"CredentialProviderId"` defaulted to `CmdLineCredentialProvider` (the only one supporting the default method's format), not `FileCredentialProvider` just because it happened to register first. Worth keeping as a regression example: an earlier, unfiltered design genuinely broke this way (`demoUserNamePasswordAuthentication` failed with "the explicitly selected credential provider ... does not support the required payload format" before `"CredentialProviderId"` became live-filtered) - this scenario is what confirms it can't recur.
 
 ### 4.2 — Selecting a non-default payload method live-refilters the provider candidates
 
 - **Given** the default config lists more than one `"PayloadDescriptor"` candidate, each needing a different format, with providers registered that don't all support every format
   **When** I switch the selection to a non-default one (matching by candidate `Id`, the pattern already in `credential_providers.cpp`'s `SelectAuthenticationMethod`) and then inspect `"CredentialProviderId"`'s current candidates (`getProperty("CredentialProviderId").getSelectionValues()`)
-  **Then** the candidate list reflects the *new* method's format, not the old one - confirming the master/slave relationship is genuinely live (re-queried from `Context`), not just correct at construction. Calling `addAuthenticatedDevice` afterward requests/verifies the *new* method's credentials, not the default's.
+  **Then** the candidate list reflects the *new* method's format, not the old one - confirming the dependency between the two properties is genuinely live (re-queried from `Context`), not just correct at construction. Calling `addAuthenticatedDevice` afterward requests/verifies the *new* method's credentials, not the default's.
   **And**, if no registered provider supports the newly-selected format, `hasProperty("CredentialProviderId")` becomes `false` - the property is removed, not left present with a stale or empty candidate list.
 
 ### 4.3 — Selecting a non-default credential provider explicitly
@@ -137,7 +137,7 @@ As an application developer, I want the unmodified default config to just work: 
 `"CredentialProviderId"`'s candidates are always pre-filtered live to providers compatible with the currently-selected `"PayloadDescriptor"` (see §4.1/§4.2) - there is no longer any config shape through which a caller can select a format-incompatible or nonexistent provider id at all, so `FindMatchingCredentialProvider`'s corresponding "explicit id names no compatible/no registered provider" failure paths are module-internal defensive code only, not something an application-level scenario can still exercise.
 
 - **Given** the removal of `IAuthenticationConfigBuilder` (which previously exposed a plain-string `"CredentialProviderId"` with no such filtering)
-  **Then** these two failure paths have no remaining application-reachable trigger - worth a code-level note (not a runnable example) so a future change to the master/slave filtering doesn't silently reopen this gap without matching test coverage.
+  **Then** these two failure paths have no remaining application-reachable trigger - worth a code-level note (not a runnable example) so a future change to this filtering doesn't silently reopen this gap without matching test coverage.
 
 ### 4.6 — An incompatible `"SuppliedSecret"` write is rejected
 
@@ -145,7 +145,7 @@ As an application developer, I want the unmodified default config to just work: 
   **When** I call `setPropertyValue("SuppliedSecret", ...)` with an object shaped for a *different* format (e.g. a single `"Secret"` property, matching `String`/`FilePath` instead)
   **Then** the write throws and `"SuppliedSecret"` is not set - confirming validation happens against the object's actual property names/count, not just "any object goes."
 
-### 4.7 — Changing the master selection silently clears an incompatible `"SuppliedSecret"`
+### 4.7 — Changing the selected authentication method silently clears an incompatible `"SuppliedSecret"`
 
 - **Given** a config with a valid `"SuppliedSecret"` set for the currently-selected `"PayloadDescriptor"`
   **When** I switch `"PayloadDescriptor"` to a different method whose `createDefaultPayload()` shape doesn't match the existing secret

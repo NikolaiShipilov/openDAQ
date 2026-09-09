@@ -30,11 +30,9 @@ public:
     using Super = GenericPropertyObjectImpl<IAuthenticationConfig>;
 
     // `context` and `typeId` have no default - every caller states explicitly whether it has one (`nullptr`
-    // included), rather than a config silently ending up context-less or type-less by omission. `typeId` is
-    // what lets a saved config re-resolve `payloadDescriptors`/`context` fresh on reload (see
-    // `serialize`/`Deserialize`) - a config built with no type behind it can't meaningfully round-trip
-    // through save/reload. This is the class's one real constructor (no overloads compete for its
-    // arguments), so plain smart pointers are used, matching impl ctors elsewhere in openDAQ.
+    // included), rather than a config silently ending up context-less or type-less by omission. `typeId` lets
+    // a saved config re-resolve `payloadDescriptors`/`context` fresh on reload (see `serialize`/`Deserialize`)
+    // - a config built with no type behind it can't meaningfully round-trip through save/reload.
     AuthenticationConfigImpl(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                              const StringPtr& defaultPayloadId,
                              const ContextPtr& context,
@@ -45,10 +43,10 @@ public:
     ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
     ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) override;
 
-    // Intercepted to keep "CredentialProviderId" a live slave of "PayloadDescriptor" (recomputed from
-    // `context` on every master write, added/removed as compatibility changes), to remember the user's last
-    // explicit provider choice, and to validate/auto-clear "SuppliedSecret" against whichever descriptor is
-    // currently selected.
+    // Intercepted to keep "CredentialProviderId" live and dependent on "PayloadDescriptor" (recomputed from
+    // `context` on every "PayloadDescriptor" write, added/removed as compatibility changes), to remember the
+    // user's last explicit provider choice, and to validate/auto-clear "SuppliedSecret" against whichever
+    // descriptor is currently selected.
     ErrCode INTERFACE_FUNC setPropertyValue(IString* propertyName, IBaseObject* value) override;
     ErrCode INTERFACE_FUNC setPropertySelectionValue(IString* propertyName, IBaseObject* value) override;
 

@@ -731,16 +731,9 @@ private:
         return AuthenticationConfig(componentType.getSupportedAuthenticationDescriptors(), defaultPayloadId, context, componentType.getId());
     }
 
-    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload then resolves
-    // credentials via `obtainCredentials`. Throws `AuthenticationFailedException` if `authenticationConfig` is
-    // unassigned. `resolvedProvider` is set to whichever provider this call actually resolved - obtained
-    // credentials from, or handed a supplied secret to - so `createAuthenticatedDevice` can reuse the exact
-    // same one later instead of re-searching; left unassigned if none was involved at all (a supplied secret
-    // with no provider explicitly named).
-    //
-    // Called only from `createAuthenticatedDevice`/`createStreaming`, before either ever invokes the module's
-    // own overridable hook - none of this provider-resolution machinery is module-specific, and a module never
-    // needs to call it itself (only the resolved payload id/credentials reach it, as plain parameters).
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload, then resolves
+    // credentials for it via `obtainCredentials` (see it for details on `resolvedProvider`). Throws
+    // `AuthenticationFailedException` if `authenticationConfig` is unassigned.
     PropertyObjectPtr requestCredentials(const AuthenticationConfigPtr& authenticationConfig,
                                         const StringPtr& connectionString,
                                         const StringPtr& manufacturer,
@@ -779,16 +772,17 @@ private:
         return requestBuilder.build();
     }
 
-    // Resolves the credential payload for `credentialRequest`, matching a compatible registered credential
-    // provider against `payloadDescriptor` - either the one explicitly named via `authenticationConfig`'s
-    // "CredentialProviderId", or, absent that, the first registered provider whose `getSupportedPayloadFormats()`
-    // includes the descriptor's format. `authenticationConfig`'s "SuppliedSecret", when present, is used
-    // directly instead of asking any provider to obtain one - though a provider explicitly named alongside it
-    // is still handed the secret via `cacheCredentials`, so a later `requestCredentials`-served connection for
-    // the same context can be served from its cache. `resolvedProvider` is set to whichever provider was
-    // actually resolved, the same way as in `requestCredentials` - left unassigned if none was involved.
-    // Throws `AuthenticationFailedException` if an explicitly named provider isn't registered or doesn't
-    // support the required format, or if auto-selection finds no compatible provider at all.
+    // Resolves the credential payload for `credentialRequest`. Consumes whichever provider id
+    // `authenticationConfig.getCredentialProviderId()` currently returns. If `authenticationConfig.getSuppliedSecret()`
+    // returns one, it is used directly instead of asking a provider to obtain one - though the currently-selected
+    // provider, if any, is still handed the secret via `cacheCredentials`, so a later request for the same
+    // context can be served from its cache. `resolvedProvider` receives whichever provider was actually
+    // involved, or stays unassigned if none was.
+    //
+    // Throws `AuthenticationFailedException` if:
+    // - `getCredentialProviderId()` returns nothing at all,
+    // - the returned provider id no longer names a registered provider, or
+    // - the returned provider no longer supports the required payload format.
     PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
                                        const CredentialRequestPtr& credentialRequest,
                                        const CredentialPayloadDescriptorPtr& payloadDescriptor,
@@ -802,7 +796,7 @@ private:
         {
             // A secret was already supplied - already shaped like the payload descriptor's `createDefaultPayload`
             // template (filled in by the caller), so it is used directly as the credential payload, no provider
-            // asked to obtain anything. If a specific provider was also named, it still gets a chance to cache
+            // asked to obtain anything. If a provider is currently selected too, it still gets a chance to cache
             // the secret, so a later interactive request for the same context reuses it.
             if (providerId.assigned())
             {
@@ -836,43 +830,38 @@ private:
         return false;
     }
 
-    // An explicitly selected provider id still has to support the required payload format - it is not used
-    // blindly just because it was named explicitly. An id that names no registered provider at all, or one
-    // that doesn't support the required format, is failed here directly with a message naming the problem,
-    // instead of falling through to the generic "no compatible provider" error (which only applies to
-    // auto-selection).
+    // Looks up `providerId` among the registered `providers` and validates it supports `payloadDescriptor`'s
+    // format. `providerId` is expected to already be whatever `authenticationConfig.getCredentialProviderId()`
+    // currently returns, pre-filtered to compatible providers. An unassigned `providerId` simply returns
+    // unassigned; it is the caller's job (`obtainCredentials`) to treat that as a failure.
+    //
+    // Throws `AuthenticationFailedException` if `providerId` is assigned but:
+    // - names no registered provider, or
+    // - names a provider that no longer supports the required format.
     static CredentialProviderPtr findMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
                                                                 const CredentialPayloadDescriptorPtr& payloadDescriptor,
                                                                 const StringPtr& providerId = nullptr)
     {
-        if (providerId.assigned())
+        if (!providerId.assigned())
+            return nullptr;
+
+        if (!providers.assigned() || !providers.hasKey(providerId))
         {
-            if (!providers.assigned() || !providers.hasKey(providerId))
-            {
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                     "Authentication is required but the explicitly selected credential provider \"{}\" is not registered",
-                                     providerId);
-            }
-
-            auto provider = providers.get(providerId);
-            if (!supportsPayloadFormat(provider, payloadDescriptor))
-            {
-                DAQ_THROW_EXCEPTION(
-                    AuthenticationFailedException,
-                    "Authentication is required but the explicitly selected credential provider \"{}\" does not support the required payload format",
-                    providerId);
-            }
-
-            return provider;
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                 "Authentication is required but the selected credential provider \"{}\" is not registered",
+                                 providerId);
         }
 
-        for (const auto& [_, provider] : providers)
+        auto provider = providers.get(providerId);
+        if (!supportsPayloadFormat(provider, payloadDescriptor))
         {
-            if (supportsPayloadFormat(provider, payloadDescriptor))
-                return provider;
+            DAQ_THROW_EXCEPTION(
+                AuthenticationFailedException,
+                "Authentication is required but the selected credential provider \"{}\" does not support the required payload format",
+                providerId);
         }
 
-        return nullptr;
+        return provider;
     }
 
     StringPtr getPrefixFromConnectionString(const StringPtr& connectionString) const

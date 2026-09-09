@@ -138,7 +138,7 @@ inline void RegisterCredentialPayloadDescriptorTypes(const TypeManagerPtr& typeM
  * @param typeManager If assigned and it already has a `"KeyValuePayloadDescriptor"` type registered (see
  * `RegisterCredentialPayloadDescriptorTypes`), the descriptor is built with that registered type instead of
  * building its own - the usual case once `Context` has registered it up front. Left unassigned (the
- * default), the descriptor builds its own, unregistered type, exactly as before.
+ * default), the descriptor builds its own, unregistered type.
  */
 inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const StringPtr& id,
                                                                 const DictPtr<IString, IBoolean>& keys,
@@ -158,7 +158,7 @@ inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const StringPtr&
  * @param typeManager If assigned and it already has a `"StringPayloadDescriptor"` type registered (see
  * `RegisterCredentialPayloadDescriptorTypes`), the descriptor is built with that registered type instead of
  * building its own - the usual case once `Context` has registered it up front. Left unassigned (the
- * default), the descriptor builds its own, unregistered type, exactly as before.
+ * default), the descriptor builds its own, unregistered type.
  */
 inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& id,
                                                                const StringPtr& description,
@@ -177,7 +177,7 @@ inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& i
  * @param typeManager If assigned and it already has a `"FilePathPayloadDescriptor"` type registered (see
  * `RegisterCredentialPayloadDescriptorTypes`), the descriptor is built with that registered type instead of
  * building its own - the usual case once `Context` has registered it up front. Left unassigned (the
- * default), the descriptor builds its own, unregistered type, exactly as before.
+ * default), the descriptor builds its own, unregistered type.
  */
 inline CredentialPayloadDescriptorPtr FilePathPayloadDescriptor(const StringPtr& id,
                                                                  const StringPtr& description,

@@ -39,8 +39,8 @@ BEGIN_NAMESPACE_OPENDAQ
  * Is itself a Property object (like `IDeviceInfo`) - the payload id and its descriptor are bound
  * together as one `"PayloadDescriptor"` Selection property (its selection value is the
  * `ICredentialPayloadDescriptor` Struct itself, so the two can never be set out of sync - the payload id
- * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`). It is the *master* of
- * `"CredentialProviderId"`: whenever a config was built with a `Context` (see `AuthenticationConfig`'s
+ * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`). Its current selection
+ * drives `"CredentialProviderId"`'s own candidates: whenever a config was built with a `Context` (see `AuthenticationConfig`'s
  * `context` parameter and `IDevice::createDefaultAuthenticationConfig`), `"CredentialProviderId"` is a
  * Selection over `Context::getCredentialProviders()` filtered live to the *currently selected*
  * `"PayloadDescriptor"`'s format - re-queried from `Context` and recomputed (candidates added, removed, or
@@ -83,8 +83,8 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
      * @brief Gets the id of the credential provider to request credentials from - the current selection
      * value of the `"CredentialProviderId"` property (see `IAuthenticationConfig`).
      * @param[out] providerId The credential provider id, or `nullptr` if the config has no
-     * `"CredentialProviderId"` property at all - in which case the module auto-selects a registered provider
-     * supporting the payload descriptor's format.
+     * `"CredentialProviderId"` property at all - which only happens when no registered provider supports the
+     * currently selected payload's format; so authentication simply fails.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
 

@@ -52,12 +52,12 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
     virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) = 0;
 
     /*!
-     * @brief Accepts a secret already known in advance - e.g. supplied directly via
-     * `IAuthenticationConfig`'s `"SuppliedSecret"` property - so an implementation that would otherwise cache a value
-     * it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format
-     * secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive
-     * `requestCredentials` call for the same context then reuses it instead of prompting again. Does not
-     * itself produce a credential payload - the caller already has the secret and uses it directly.
+     * @brief Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s
+     * `"SuppliedSecret"` property - so an implementation that caches values it obtains interactively caches
+     * this one the same way. A later interactive `requestCredentials` call for the same context then reuses
+     * it instead of prompting again. Does not itself produce a credential payload - the caller already has
+     * the secret and uses it directly. Implementations for which caching doesn't apply may treat this as a
+     * no-op.
      * @param request The credential request the secret is being supplied for.
      * @param secret The secret, shaped like the request's payload descriptor's `createDefaultPayload`
      * template - a property object filled in with the actual secret value(s).

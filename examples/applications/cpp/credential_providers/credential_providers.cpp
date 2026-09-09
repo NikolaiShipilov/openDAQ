@@ -90,11 +90,12 @@ void demoUserNamePasswordAuthentication(const InstancePtr& instance, const Devic
     instance.removeDevice(device);
 }
 
-// Explicitly switches "CredentialProviderId" away from its live default, naming a provider rather than
-// leaving auto-selection to pick one. This only makes an observable difference for a payload format more
-// than one registered provider supports - FilePath is one (both fileCredentialProvider and
-// credentialProvider support it), and fileCredentialProvider - registered first - is the one auto-selection
-// (an unset id) would otherwise pick (see the comment where it's registered, below).
+// Explicitly switches "CredentialProviderId" away from its live default (the config's own selection, not
+// something the module chooses - it only ever consumes whichever id is currently selected here), naming a
+// provider instead of leaving the default in place. This only makes an observable difference for a payload
+// format more than one registered provider supports - FilePath is one (both fileCredentialProvider and
+// credentialProvider support it), and fileCredentialProvider - registered first - is the one the live
+// default (an unset id) would otherwise pick (see the comment where it's registered, below).
 void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
     auto privateKeyFileConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
@@ -141,8 +142,8 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
 // (manufacturer, serialNumber) - so authenticating a second connection to the very same device via the
 // same FilePath-format method reuses the path already entered instead of prompting again. Demonstrated
 // here across two different connections to the same device - first the device itself, then a streaming
-// connection attached to it - both explicitly using the caching provider (FilePath is otherwise
-// auto-selected to fileCredentialProvider, which does not cache). The device's own path is supplied
+// connection attached to it - both explicitly using the caching provider (FilePath's own live default is
+// otherwise fileCredentialProvider, which does not cache). The device's own path is supplied
 // directly via `setSuppliedSecret` rather than typed interactively - the specified provider still caches
 // it (see `ICredentialProvider::cacheCredentials`), so no user prompt is needed anywhere in this demo.
 void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
@@ -257,8 +258,8 @@ int main(int argc, const char* argv[])
     instanceBuilder.addModulePath(MODULE_PATH);
     instanceBuilder.addConfigProvider(JsonConfigProvider(JSON_CONFIG_FILE_NAME));
 
-    // Registered first, so it - not CmdLineCredentialProvider - is the one FindMatchingCredentialProvider
-    // picks for FilePath-format requests (e.g. the PrivateKeyFile auth method below).
+    // Registered first, so it - not CmdLineCredentialProvider - becomes the live default "CredentialProviderId"
+    // selection for FilePath-format requests (e.g. the PrivateKeyFile auth method below), unless overridden.
     instanceBuilder.addCredentialProvider(fileCredentialProvider.getId(), fileCredentialProvider);
     instanceBuilder.addCredentialProvider(credentialProvider.getId(), credentialProvider);
     auto instance = instanceBuilder.build();
