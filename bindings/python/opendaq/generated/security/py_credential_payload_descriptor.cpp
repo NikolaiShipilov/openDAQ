@@ -45,17 +45,17 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
 {
     cls.doc() = "Describes the details of the payload required for an authentication method used by the module and produced by credential provider.";
 
-    m.def("KeyValuePayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IDict*, py::dict>& keys, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager){
-        return daq::KeyValuePayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IDict*>(keys), getVariantValue<daq::IString*>(description), typeManager);
-    }, py::arg("id"), py::arg("keys"), py::arg("description"), py::arg("type_manager"));
+    m.def("KeyValuePayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IDict*, py::dict>& keys, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager, std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadClassName){
+        return daq::KeyValuePayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IDict*>(keys), getVariantValue<daq::IString*>(description), typeManager, getVariantValue<daq::IString*>(payloadClassName));
+    }, py::arg("id"), py::arg("keys"), py::arg("description"), py::arg("type_manager"), py::arg("payload_class_name"));
 
-    m.def("StringPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, const bool hidden, daq::ITypeManager* typeManager){
-        return daq::StringPayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), hidden, typeManager);
-    }, py::arg("id"), py::arg("description"), py::arg("hidden"), py::arg("type_manager"));
+    m.def("StringPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, const bool hidden, daq::ITypeManager* typeManager, std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadClassName){
+        return daq::StringPayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), hidden, typeManager, getVariantValue<daq::IString*>(payloadClassName));
+    }, py::arg("id"), py::arg("description"), py::arg("hidden"), py::arg("type_manager"), py::arg("payload_class_name"));
 
-    m.def("FilePathPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager){
-        return daq::FilePathPayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), typeManager);
-    }, py::arg("id"), py::arg("description"), py::arg("type_manager"));
+    m.def("FilePathPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager, std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadClassName){
+        return daq::FilePathPayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), typeManager, getVariantValue<daq::IString*>(payloadClassName));
+    }, py::arg("id"), py::arg("description"), py::arg("type_manager"), py::arg("payload_class_name"));
 
 
     cls.def_property_readonly("id",

@@ -81,7 +81,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
 
     if (payloadIdStr == StandardPinPayloadId)
     {
-        const StringPtr pin = credentials.hasProperty("Secret") ? credentials.getPropertyValue("Secret") : nullptr;
+        const StringPtr pin = credentials.hasProperty("Pin") ? credentials.getPropertyValue("Pin") : nullptr;
         if (!pin.assigned() || pin != "1234")
         {
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - wrong pin-code");
@@ -89,7 +89,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
     }
     else if (payloadIdStr == StandardPrivateKeyFilePayloadId)
     {
-        const StringPtr privateKeyPath = credentials.hasProperty("Secret") ? credentials.getPropertyValue("Secret") : nullptr;
+        const StringPtr privateKeyPath = credentials.hasProperty("PrivateKeyFilePath") ? credentials.getPropertyValue("PrivateKeyFilePath") : nullptr;
         if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)
         {
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no private key file path provided");

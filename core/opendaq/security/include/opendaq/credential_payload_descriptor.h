@@ -85,7 +85,8 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
      * @brief Builds an empty payload template matching this descriptor's shape - a property object with
      * one empty (default `""`) String property per secret the format expects: for `KeyValuePairs`, one
      * property per key named in `getParameters()`'s `"Keys"` dict (e.g. `"UserName"`, `"Password"`); for
-     * `String` and `FilePath`, a single `"Secret"` property.
+     * `String` and `FilePath`, a single property, named and described by the descriptor's own registered
+     * payload class.
      *
      * Meant to be filled in with the actual secret value(s) and used as the credential payload itself -
      * either by the caller, to supply a secret directly (`IAuthenticationConfig`'s `"SuppliedSecret"`
@@ -97,17 +98,17 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager
+    IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, payloadClassName
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager
+    IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, payloadClassName
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor,
-    IString*, id, IString*, description, ITypeManager*, typeManager
+    IString*, id, IString*, description, ITypeManager*, typeManager, IString*, payloadClassName
 )
 
 END_NAMESPACE_OPENDAQ

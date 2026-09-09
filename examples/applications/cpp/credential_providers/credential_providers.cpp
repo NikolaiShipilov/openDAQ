@@ -158,9 +158,9 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
     deviceAuthConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
 
     // The supplied secret must be shaped like the descriptor's own `createDefaultPayload` template - here
-    // just a single "Secret" property, filled in with the private key's path.
+    // just a single "PrivateKeyFilePath" property, filled in with the private key's path.
     auto suppliedSecret = deviceAuthConfig.getCredentialPayloadDescriptor().createDefaultPayload();
-    suppliedSecret.setPropertyValue("Secret", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
+    suppliedSecret.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
     deviceAuthConfig.setPropertyValue("SuppliedSecret", suppliedSecret);
 
     auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);

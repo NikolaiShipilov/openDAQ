@@ -29,20 +29,43 @@
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief Name of the `IPropertyObjectClass` (see `CredentialSecretPayloadClass`) backing the default
- * payload template `createDefaultPayload()` builds for `String`/`FilePath`-format descriptors - both
- * formats need only a single `"Secret"` string property, so they share this one class rather than each
- * descriptor instance building its own ad hoc property object.
+ * @brief Name of the `IPropertyObjectClass` backing the default payload `createDefaultPayload()` builds for
+ * `StandardUserNamePasswordPayloadDescriptor`.
  */
-inline constexpr const char* CredentialSecretPayloadClassName = "CredentialSecretPayload";
+inline constexpr const char* UserNamePasswordCredentialSecretPayloadClassName = "UserNamePasswordCredentialSecretPayload";
+
+inline PropertyObjectClassPtr UserNamePasswordCredentialSecretPayloadClass()
+{
+    return PropertyObjectClassBuilder(UserNamePasswordCredentialSecretPayloadClassName)
+        .addProperty(StringPropertyBuilder("UserName", "").setDescription("The username.").build())
+        .addProperty(StringPropertyBuilder("Password", "").setDescription("The password.").build())
+        .build();
+}
 
 /*!
- * @brief The `IPropertyObjectClass` backing the default payload template for `String`/`FilePath`-format
- * descriptors - a single `"Secret"` string property.
+ * @brief Name of the `IPropertyObjectClass` backing the default payload `createDefaultPayload()` builds for
+ * `StandardPinPayloadDescriptor`.
  */
-inline PropertyObjectClassPtr CredentialSecretPayloadClass()
+inline constexpr const char* PinCredentialSecretPayloadClassName = "PinCredentialSecretPayload";
+
+inline PropertyObjectClassPtr PinCredentialSecretPayloadClass()
 {
-    return PropertyObjectClassBuilder(CredentialSecretPayloadClassName).addProperty(StringProperty("Secret", "")).build();
+    return PropertyObjectClassBuilder(PinCredentialSecretPayloadClassName)
+        .addProperty(StringPropertyBuilder("Pin", "").setDescription("The PIN code.").build())
+        .build();
+}
+
+/*!
+ * @brief Name of the `IPropertyObjectClass` backing the default payload `createDefaultPayload()` builds for
+ * `StandardPrivateKeyFilePayloadDescriptor`.
+ */
+inline constexpr const char* PrivateKeyFileCredentialSecretPayloadClassName = "PrivateKeyFileCredentialSecretPayload";
+
+inline PropertyObjectClassPtr PrivateKeyFileCredentialSecretPayloadClass()
+{
+    return PropertyObjectClassBuilder(PrivateKeyFileCredentialSecretPayloadClassName)
+        .addProperty(StringPropertyBuilder("PrivateKeyFilePath", "").setDescription("Path to the PEM-encoded private key file.").build())
+        .build();
 }
 
 /*!
@@ -104,14 +127,8 @@ inline StructTypePtr FilePathPayloadDescriptorStructType()
 }
 
 /*!
- * @brief Registers the three payload formats' backing `IStructType`s (and their nested `Parameters` struct
- * types), plus the `CredentialSecretPayloadClass` used for `createDefaultPayload()`, with `typeManager` -
- * covers every `CredentialPayloadDescriptor`, standard or module-custom, since all descriptors of a given
- * format share that one format's struct type. Called once by `Context` itself, before any module is loaded
- * (see `ContextImpl::registerOpenDaqTypes`) - the same "framework registers its well-known types up front"
- * pattern already used there for `ComponentStatusType`/`ConnectionStatusType`/etc. Idempotent (tolerates
- * `OPENDAQ_ERR_ALREADYEXISTS`), so it's harmless to call again from anywhere that isn't certain
- * registration already happened.
+ * @brief Registers the three payload formats' backing `IStructType`s, plus the standard descriptors' own
+ * default-payload `IPropertyObjectClass`es, with `typeManager`. Called once by `Context` up front.
  * @param typeManager The type manager to register the payload descriptor types with.
  */
 inline void RegisterCredentialPayloadDescriptorTypes(const TypeManagerPtr& typeManager)
@@ -126,7 +143,12 @@ inline void RegisterCredentialPayloadDescriptorTypes(const TypeManagerPtr& typeM
         checkErrorInfoExcept(typeManager->addType(type), OPENDAQ_ERR_ALREADYEXISTS);
     }
 
-    checkErrorInfoExcept(typeManager->addType(CredentialSecretPayloadClass()), OPENDAQ_ERR_ALREADYEXISTS);
+    for (const auto& payloadClass : {UserNamePasswordCredentialSecretPayloadClass(),
+                                     PinCredentialSecretPayloadClass(),
+                                     PrivateKeyFileCredentialSecretPayloadClass()})
+    {
+        checkErrorInfoExcept(typeManager->addType(payloadClass), OPENDAQ_ERR_ALREADYEXISTS);
+    }
 }
 
 /*!
@@ -135,17 +157,19 @@ inline void RegisterCredentialPayloadDescriptorTypes(const TypeManagerPtr& typeM
  * @param keys The expected keys, mapped to whether the corresponding value should be hidden as it is
  * entered (e.g. `{"UserName": False, "Password": True}`).
  * @param description A human-readable description of the payload, for the user.
- * @param typeManager If assigned and it already has a `"KeyValuePayloadDescriptor"` type registered (see
- * `RegisterCredentialPayloadDescriptorTypes`), the descriptor is built with that registered type instead of
- * building its own - the usual case once `Context` has registered it up front. Left unassigned (the
- * default), the descriptor builds its own, unregistered type.
+ * @param typeManager Must already have a `"KeyValuePayloadDescriptor"` type registered (see
+ * `RegisterCredentialPayloadDescriptorTypes`) - a real `Context` always registers it up front. Throws
+ * otherwise.
+ * @param payloadClassName Must be assigned and registered with `typeManager` - `createDefaultPayload()`
+ * builds the returned payload from this `IPropertyObjectClass`. Throws otherwise.
  */
 inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const StringPtr& id,
                                                                 const DictPtr<IString, IBoolean>& keys,
                                                                 const StringPtr& description,
-                                                                const TypeManagerPtr& typeManager = nullptr)
+                                                                const TypeManagerPtr& typeManager,
+                                                                const StringPtr& payloadClassName)
 {
-    CredentialPayloadDescriptorPtr obj(KeyValuePayloadDescriptor_Create(id, keys, description, typeManager));
+    CredentialPayloadDescriptorPtr obj(KeyValuePayloadDescriptor_Create(id, keys, description, typeManager, payloadClassName));
     return obj;
 }
 
@@ -155,17 +179,19 @@ inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const StringPtr&
  * @param id The id that uniquely identifies this authentication method within the module that offers it.
  * @param description A human-readable description of the payload, for the user.
  * @param hidden Whether the secret should be hidden as it is entered.
- * @param typeManager If assigned and it already has a `"StringPayloadDescriptor"` type registered (see
- * `RegisterCredentialPayloadDescriptorTypes`), the descriptor is built with that registered type instead of
- * building its own - the usual case once `Context` has registered it up front. Left unassigned (the
- * default), the descriptor builds its own, unregistered type.
+ * @param typeManager Must already have a `"StringPayloadDescriptor"` type registered (see
+ * `RegisterCredentialPayloadDescriptorTypes`) - a real `Context` always registers it up front. Throws
+ * otherwise.
+ * @param payloadClassName Must be assigned and registered with `typeManager` - `createDefaultPayload()`
+ * builds the returned payload from this `IPropertyObjectClass`. Throws otherwise.
  */
 inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& id,
                                                                const StringPtr& description,
-                                                               Bool hidden = True,
-                                                               const TypeManagerPtr& typeManager = nullptr)
+                                                               Bool hidden,
+                                                               const TypeManagerPtr& typeManager,
+                                                               const StringPtr& payloadClassName)
 {
-    CredentialPayloadDescriptorPtr obj(StringPayloadDescriptor_Create(id, description, hidden, typeManager));
+    CredentialPayloadDescriptorPtr obj(StringPayloadDescriptor_Create(id, description, hidden, typeManager, payloadClassName));
     return obj;
 }
 
@@ -174,16 +200,18 @@ inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& i
  * stating that the secret is a path to a file (e.g. a private key) rather than the value itself.
  * @param id The id that uniquely identifies this authentication method within the module that offers it.
  * @param description A human-readable description of the payload, for the user.
- * @param typeManager If assigned and it already has a `"FilePathPayloadDescriptor"` type registered (see
- * `RegisterCredentialPayloadDescriptorTypes`), the descriptor is built with that registered type instead of
- * building its own - the usual case once `Context` has registered it up front. Left unassigned (the
- * default), the descriptor builds its own, unregistered type.
+ * @param typeManager Must already have a `"FilePathPayloadDescriptor"` type registered (see
+ * `RegisterCredentialPayloadDescriptorTypes`) - a real `Context` always registers it up front. Throws
+ * otherwise.
+ * @param payloadClassName Must be assigned and registered with `typeManager` - `createDefaultPayload()`
+ * builds the returned payload from this `IPropertyObjectClass`. Throws otherwise.
  */
 inline CredentialPayloadDescriptorPtr FilePathPayloadDescriptor(const StringPtr& id,
                                                                  const StringPtr& description,
-                                                                 const TypeManagerPtr& typeManager = nullptr)
+                                                                 const TypeManagerPtr& typeManager,
+                                                                 const StringPtr& payloadClassName)
 {
-    CredentialPayloadDescriptorPtr obj(FilePathPayloadDescriptor_Create(id, description, typeManager));
+    CredentialPayloadDescriptorPtr obj(FilePathPayloadDescriptor_Create(id, description, typeManager, payloadClassName));
     return obj;
 }
 
@@ -201,10 +229,13 @@ inline constexpr const char* StandardPrivateKeyFilePayloadId = "PrivateKeyFile";
  * `KeyValuePairs`-format payload with the password hidden as typed.
  * @param typeManager See `KeyValuePayloadDescriptor`.
  */
-inline CredentialPayloadDescriptorPtr StandardUserNamePasswordPayloadDescriptor(const TypeManagerPtr& typeManager = nullptr)
+inline CredentialPayloadDescriptorPtr StandardUserNamePasswordPayloadDescriptor(const TypeManagerPtr& typeManager)
 {
-    return KeyValuePayloadDescriptor(
-        StandardUserNamePasswordPayloadId, Dict<IString, IBoolean>({{"UserName", False}, {"Password", True}}), "Username and password", typeManager);
+    return KeyValuePayloadDescriptor(StandardUserNamePasswordPayloadId,
+                                     Dict<IString, IBoolean>({{"UserName", False}, {"Password", True}}),
+                                     "Username and password",
+                                     typeManager,
+                                     UserNamePasswordCredentialSecretPayloadClassName);
 }
 
 /*!
@@ -212,9 +243,9 @@ inline CredentialPayloadDescriptorPtr StandardUserNamePasswordPayloadDescriptor(
  * payload, hidden as typed.
  * @param typeManager See `StringPayloadDescriptor`.
  */
-inline CredentialPayloadDescriptorPtr StandardPinPayloadDescriptor(const TypeManagerPtr& typeManager = nullptr)
+inline CredentialPayloadDescriptorPtr StandardPinPayloadDescriptor(const TypeManagerPtr& typeManager)
 {
-    return StringPayloadDescriptor(StandardPinPayloadId, "PIN code", True, typeManager);
+    return StringPayloadDescriptor(StandardPinPayloadId, "PIN code", True, typeManager, PinCredentialSecretPayloadClassName);
 }
 
 /*!
@@ -222,9 +253,10 @@ inline CredentialPayloadDescriptorPtr StandardPinPayloadDescriptor(const TypeMan
  * `FilePath`-format payload.
  * @param typeManager See `FilePathPayloadDescriptor`.
  */
-inline CredentialPayloadDescriptorPtr StandardPrivateKeyFilePayloadDescriptor(const TypeManagerPtr& typeManager = nullptr)
+inline CredentialPayloadDescriptorPtr StandardPrivateKeyFilePayloadDescriptor(const TypeManagerPtr& typeManager)
 {
-    return FilePathPayloadDescriptor(StandardPrivateKeyFilePayloadId, "Path to the PEM-encoded private key file", typeManager);
+    return FilePathPayloadDescriptor(
+        StandardPrivateKeyFilePayloadId, "Path to the PEM-encoded private key file", typeManager, PrivateKeyFileCredentialSecretPayloadClassName);
 }
 
 END_NAMESPACE_OPENDAQ

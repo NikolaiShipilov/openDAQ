@@ -89,10 +89,11 @@ ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* requ
     if (descriptor.getFormat() == CredentialPayloadFormat::FilePath)
     {
         const auto secretObj = PropertyObjectPtr::Borrow(secret);
-        if (!secretObj.hasProperty("Secret"))
+        const StringPtr propertyName = descriptor.createDefaultPayload().getAllProperties()[0].getName();
+        if (!secretObj.hasProperty(propertyName))
             return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDTYPE, "Provided secret is not shaped like a FilePath-format payload");
 
-        const StringPtr path = secretObj.getPropertyValue("Secret");
+        const StringPtr path = secretObj.getPropertyValue(propertyName);
         filePathSecretCache[MakeFilePathCacheKey(requestPtr)] = path.assigned() ? path.toStdString() : std::string();
     }
 
@@ -119,7 +120,7 @@ PropertyObjectPtr CmdLineCredentialProviderImpl::readStringSecret(const Credenti
     auto secret = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
 
     auto payload = descriptor.createDefaultPayload();
-    payload.setPropertyValue("Secret", String(secret));
+    payload.setPropertyValue(payload.getAllProperties()[0].getName(), String(secret));
     return payload;
 }
 
@@ -153,13 +154,13 @@ PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const 
     if (const auto it = filePathSecretCache.find(cacheKey); it != filePathSecretCache.end())
     {
         auto payload = descriptor.createDefaultPayload();
-        payload.setPropertyValue("Secret", String(it->second));
+        payload.setPropertyValue(payload.getAllProperties()[0].getName(), String(it->second));
         return payload;
     }
 
     printRequestDetails(request);
     const auto payload = readStringSecret(descriptor);
-    const StringPtr secret = payload.getPropertyValue("Secret");
+    const StringPtr secret = payload.getPropertyValue(payload.getAllProperties()[0].getName());
     filePathSecretCache[cacheKey] = secret.toStdString();
     return payload;
 }

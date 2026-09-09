@@ -16,9 +16,9 @@ Describes the shape and presentation of the payload an authentication method exp
 | `getFormat(CredentialPayloadFormat*)` | The payload's format — `KeyValuePairs`, `String`, or `FilePath`. |
 | `getParameters(IStruct**)` | The format's standard parameter set, as a Struct whose own Struct type is pinned to the format - for `KeyValuePairs`, a `"Keys"` dict field mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool field; for `FilePath`, no fields at all. |
 | `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
-| `createDefaultPayload(IPropertyObject**)` | Builds an empty credential payload template matching this format: a property object with one empty (default `""`) String property per secret expected - one per key named in `getParameters()`'s `"Keys"` dict for `KeyValuePairs` (e.g. `"UserName"`, `"Password"`), or a single `"Secret"` property for `String`/`FilePath`. Meant to be filled in with the actual secret value(s) and used as the credential payload itself - see [§5](#5-credential-provider-selection--supplied-secrets). |
+| `createDefaultPayload(IPropertyObject**)` | Builds an empty credential payload template matching this format: a property object with one empty (default `""`) String property per secret expected - one per key named in `getParameters()`'s `"Keys"` dict for `KeyValuePairs` (e.g. `"UserName"`, `"Password"`), or a single property for `String`/`FilePath`, named and described by the descriptor's own registered payload class (e.g. `"Pin"`, `"PrivateKeyFilePath"`). Meant to be filled in with the actual secret value(s) and used as the credential payload itself - see [§5](#5-credential-provider-selection--supplied-secrets). |
 
-**Factories:** `KeyValuePayloadDescriptor(id, keys, description, typeManager)`, `StringPayloadDescriptor(id, description, hidden, typeManager)`, `FilePathPayloadDescriptor(id, description, typeManager)` - `typeManager` is optional; if assigned and it already has the format's struct type registered, the descriptor is built with that registered type instead of an independently-built, unregistered one. `Context` registers all three formats' struct types up front (`RegisterCredentialPayloadDescriptorTypes`, called from `ContextImpl::registerOpenDaqTypes`), so this is the case for any descriptor built with a real `Context`'s type manager.
+**Factories:** `KeyValuePayloadDescriptor(id, keys, description, typeManager)`, `StringPayloadDescriptor(id, description, hidden, typeManager)`, `FilePathPayloadDescriptor(id, description, typeManager)` - `typeManager` must already have the format's struct type registered; these throw otherwise. `Context` registers all three formats' struct types up front (`RegisterCredentialPayloadDescriptorTypes`, called from `ContextImpl::registerOpenDaqTypes`), so any descriptor built with a real `Context`'s type manager already satisfies this.
 
 ```cpp
 enum class CredentialPayloadFormat : EnumType
@@ -98,7 +98,7 @@ Builds `ICredentialRequest` objects.
 
 ### Credential payload
 
-There is no dedicated payload interface - a credential payload is simply an `IPropertyObject`, built from the payload descriptor's `createDefaultPayload()` template and filled in with the actual secret value(s). For a `KeyValuePairs`-format payload it has one String property per key (e.g. `"UserName"`, `"Password"`); for `String`/`FilePath` it has a single `"Secret"` String property. Both a credential provider's `requestCredentials` and a caller directly supplying a secret (`IAuthenticationConfig`'s `"SuppliedSecret"` property) produce/consume this exact same shape - see [§5](#5-credential-provider-selection--supplied-secrets).
+There is no dedicated payload interface - a credential payload is simply an `IPropertyObject`, built from the payload descriptor's `createDefaultPayload()` template and filled in with the actual secret value(s). For a `KeyValuePairs`-format payload it has one String property per key (e.g. `"UserName"`, `"Password"`); for `String`/`FilePath` it has a single String property, named and described by the descriptor's own registered payload class (e.g. `"Pin"`, `"PrivateKeyFilePath"`). Both a credential provider's `requestCredentials` and a caller directly supplying a secret (`IAuthenticationConfig`'s `"SuppliedSecret"` property) produce/consume this exact same shape - see [§5](#5-credential-provider-selection--supplied-secrets).
 
 ---
 
@@ -250,7 +250,7 @@ SelectAuthenticationMethod(deviceConfig, "PrivateKeyFile");
 deviceConfig.setPropertySelectionValue("CredentialProviderId", cmdLineCredentialProvider.getId());
 
 auto devicePayload = deviceConfig.getCredentialPayloadDescriptor().createDefaultPayload();
-devicePayload.setPropertyValue("Secret", "/path/to/private_key.pem");
+devicePayload.setPropertyValue("PrivateKeyFilePath", "/path/to/private_key.pem");
 deviceConfig.setPropertyValue("SuppliedSecret", devicePayload);
 
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceConfig);

@@ -82,7 +82,7 @@ PropertyObjectPtr FileCredentialProviderImpl::readFilePath(const CredentialPaylo
         if (isFileAccessible(value))
         {
             auto payload = descriptor.createDefaultPayload();
-            payload.setPropertyValue("Secret", String(value));
+            payload.setPropertyValue(payload.getAllProperties()[0].getName(), String(value));
             return payload;
         }
 

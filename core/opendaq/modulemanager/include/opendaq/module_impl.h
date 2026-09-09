@@ -844,8 +844,10 @@ private:
     //
     // Throws `AuthenticationFailedException` if:
     // - `getCredentialProviderId()` returns nothing at all,
-    // - the returned provider id no longer names a registered provider, or
-    // - the returned provider no longer supports the required payload format.
+    // - the returned provider id no longer names a registered provider,
+    // - the returned provider no longer supports the required payload format, or
+    // - the resolved payload (supplied by the caller, or obtained from a provider) doesn't match
+    //   `payloadDescriptor`'s expected shape.
     PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
                                        const CredentialRequestPtr& credentialRequest,
                                        const CredentialPayloadDescriptorPtr& payloadDescriptor,
@@ -857,10 +859,13 @@ private:
 
         if (suppliedSecret.assigned())
         {
-            // A secret was already supplied - already shaped like the payload descriptor's `createDefaultPayload`
-            // template (filled in by the caller), so it is used directly as the credential payload, no provider
-            // asked to obtain anything. If a provider is currently selected too, it still gets a chance to cache
-            // the secret, so a later interactive request for the same context reuses it.
+            if (!payloadShapeMatches(suppliedSecret, payloadDescriptor))
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret does not match the expected payload shape");
+
+            // Already shaped like the payload descriptor's `createDefaultPayload` template (filled in by the
+            // caller), so it is used directly as the credential payload, no provider asked to obtain anything.
+            // If a provider is currently selected too, it still gets a chance to cache the secret, so a later
+            // interactive request for the same context reuses it.
             if (providerId.assigned())
             {
                 resolvedProvider = findMatchingCredentialProvider(providers, payloadDescriptor, providerId);
@@ -879,7 +884,35 @@ private:
             DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                                  "Authentication is required but no credential provider supporting a compatible payload format is registered");
 
-        return resolvedProvider.requestCredentials(credentialRequest);
+        const PropertyObjectPtr credentials = resolvedProvider.requestCredentials(credentialRequest);
+        if (!payloadShapeMatches(credentials, payloadDescriptor))
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                 "Credential provider \"{}\" returned credentials that do not match the expected payload shape",
+                                 resolvedProvider.getId());
+
+        return credentials;
+    }
+
+    // Structural check: does `payload` have exactly the property names `payloadDescriptor.createDefaultPayload()`
+    // would produce? Doesn't check provenance, only shape.
+    static bool payloadShapeMatches(const PropertyObjectPtr& payload, const CredentialPayloadDescriptorPtr& payloadDescriptor)
+    {
+        if (!payload.assigned() || !payloadDescriptor.assigned())
+            return false;
+
+        const PropertyObjectPtr templateObj = payloadDescriptor.createDefaultPayload();
+        const auto templateProps = templateObj.getAllProperties();
+
+        if (templateProps.getCount() != payload.getAllProperties().getCount())
+            return false;
+
+        for (const auto& prop : templateProps)
+        {
+            if (!payload.hasProperty(prop.getName()))
+                return false;
+        }
+
+        return true;
     }
 
     static bool supportsPayloadFormat(const CredentialProviderPtr& provider, const CredentialPayloadDescriptorPtr& payloadDescriptor)

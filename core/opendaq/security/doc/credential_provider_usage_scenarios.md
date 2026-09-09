@@ -142,7 +142,7 @@ As an application developer, I want the unmodified default config to just work: 
 ### 4.6 — An incompatible `"SuppliedSecret"` write is rejected
 
 - **Given** a config with `"PayloadDescriptor"` selected to a `KeyValuePairs`-format method (e.g. `UserNamePassword`)
-  **When** I call `setPropertyValue("SuppliedSecret", ...)` with an object shaped for a *different* format (e.g. a single `"Secret"` property, matching `String`/`FilePath` instead)
+  **When** I call `setPropertyValue("SuppliedSecret", ...)` with an object shaped for a *different* format (e.g. a single `"Pin"` property, matching `String`/`FilePath` instead)
   **Then** the write throws and `"SuppliedSecret"` is not set - confirming validation happens against the object's actual property names/count, not just "any object goes."
 
 ### 4.7 — Changing the selected authentication method silently clears an incompatible `"SuppliedSecret"`
