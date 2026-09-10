@@ -29,6 +29,7 @@
 
 #include "py_opendaq/py_opendaq.h"
 #include "py_core_types/py_converter.h"
+#include "py_core_objects/py_variant_extractor.h"
 
 
 PyDaqIntf<daq::IAuthenticationConfig, daq::IPropertyObject> declareIAuthenticationConfig(pybind11::module_ m)
@@ -40,7 +41,9 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
 {
     cls.doc() = "Carries the authentication settings used for a single connection attempt to a component.";
 
-    m.def("AuthenticationConfig", &daq::AuthenticationConfig_Create);
+    m.def("AuthenticationConfig", [](std::variant<daq::IDict*, py::dict>& payloadDescriptors, std::variant<daq::IString*, py::str, daq::IEvalValue*>& defaultPayloadId, daq::IContext* context, std::variant<daq::IString*, py::str, daq::IEvalValue*>& typeId){
+        return daq::AuthenticationConfig_Create(getVariantValue<daq::IDict*>(payloadDescriptors), getVariantValue<daq::IString*>(defaultPayloadId), context, getVariantValue<daq::IString*>(typeId));
+    }, py::arg("payload_descriptors"), py::arg("default_payload_id"), py::arg("context"), py::arg("type_id"));
 
     cls.def_property_readonly("credential_payload_id",
         [](daq::IAuthenticationConfig *object)
@@ -67,4 +70,13 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
             return objectPtr.getCredentialProviderId().toStdString();
         },
         "Gets the id of the credential provider to request credentials from - the value of the `\"CredentialProviderId\"` String property.");
+    cls.def_property_readonly("supplied_secret",
+        [](daq::IAuthenticationConfig *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            return objectPtr.getSuppliedSecret().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the secret supplied directly by the caller - the value of the `\"SuppliedSecret\"` property.");
 }

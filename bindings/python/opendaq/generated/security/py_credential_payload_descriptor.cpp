@@ -87,7 +87,7 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
             return objectPtr.getParameters().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the format's standard parameter set, as a Struct. Its Struct type (and so which fields it has, if any) is determined by the payload format - see the class description above.");
+        "Gets the format's standard parameter set, as a Struct - see the class description for which formats have one and what it carries. Unassigned if the format has none.");
     cls.def_property_readonly("description",
         [](daq::ICredentialPayloadDescriptor *object)
         {
@@ -103,5 +103,5 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
             const auto objectPtr = daq::CredentialPayloadDescriptorPtr::Borrow(object);
             return objectPtr.createDefaultPayload().detach();
         },
-        "Builds an empty payload template matching this descriptor's shape - a property object with one empty (default `\"\"`) String property per secret the format expects: for `KeyValuePairs`, one property per key named in `getParameters()`'s `\"Keys\"` dict (e.g. `\"UserName\"`, `\"Password\"`); for `String` and `FilePath`, a single `\"Secret\"` property.");
+        "Builds an empty payload template matching this descriptor's shape - a property object with one empty (default `\"\"`) String property per secret the format expects: for `KeyValuePairs`, one property per key named in `getParameters()`'s `\"Keys\"` dict (e.g. `\"UserName\"`, `\"Password\"`); for `String` and `FilePath`, a single property, named and described by the descriptor's own registered payload class. Not supported for `None` - raises, since there is no payload to build.");
 }
