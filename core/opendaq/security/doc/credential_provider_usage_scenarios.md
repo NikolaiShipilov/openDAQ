@@ -33,7 +33,7 @@ As an application developer, I want to know not just whether a type *supports* a
 
 - **Given** a type supporting only a `String`-format method (e.g. `"Pin"`), and only a `FileCredentialProvider` (FilePath-only) registered
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)` and check `hasProperty("CredentialProviderId")`
-  **Then** its absence tells me, entirely client-side and without attempting a connection, that authentication would fail before ever calling `addAuthenticatedDevice` - `"CredentialProviderId"`'s live, format-filtered candidates (see the API reference, §1) mean this check no longer needs a separate hand-rolled cross-reference of `context.getCredentialProviders()` against the type's descriptors; the config itself already reflects the answer for whichever `"PayloadDescriptor"` is currently selected. For a *non-default* method, select it first (`SelectAuthenticationMethod`, §7) and re-check `hasProperty` - the live dependency between the two properties recomputes it for whatever is currently selected, not just the default.
+  **Then** its absence tells me, entirely client-side and without attempting a connection, that authentication would fail before ever calling `addAuthenticatedDevice` - `"CredentialProviderId"`'s live, format-filtered candidates (see the API reference, §1) already reflect the answer for whichever `"PayloadDescriptor"` is currently selected, with no separate cross-reference of `context.getCredentialProviders()` against the type's descriptors needed. For a *non-default* method, select it first (`SelectAuthenticationMethod`, §7) and re-check `hasProperty` - the live dependency between the two properties recomputes it for whatever is currently selected, not just the default.
 - **Given** zero credential providers registered on the instance at all
   **When** I build the default config and call `addAuthenticatedDevice`
   **Then** it fails with `AuthenticationFailedException` ("no credential provider supporting a compatible payload format is registered") - a good negative-path example distinct from 1.1's "type doesn't support auth" case: here the *type* supports it, the *instance* just can't currently serve it.
@@ -116,7 +116,7 @@ As an application developer, I want the unmodified default config to just work: 
 - **Given** two providers registered, `FileCredentialProvider` (FilePath-only) registered before `CmdLineCredentialProvider` (all formats)
   **And** the type's default payload method is `KeyValuePairs` or `String` (not `FilePath`)
   **When** I use `instance.createDefaultAuthenticationConfig(typeId)` completely unmodified and call `addAuthenticatedDevice`
-  **Then** it succeeds - `"CredentialProviderId"` defaulted to `CmdLineCredentialProvider` (the only one supporting the default method's format), not `FileCredentialProvider` just because it happened to register first. Worth keeping as a regression example: an earlier, unfiltered design genuinely broke this way (`demoUserNamePasswordAuthentication` failed with "the explicitly selected credential provider ... does not support the required payload format" before `"CredentialProviderId"` became live-filtered) - this scenario is what confirms it can't recur.
+  **Then** it succeeds - `"CredentialProviderId"` defaulted to `CmdLineCredentialProvider` (the only one supporting the default method's format), not `FileCredentialProvider` just because it happened to register first. Worth keeping as a standing regression guard for this exact registration order, since a provider selection that ignores format compatibility would silently pick the wrong one here.
 
 ### 4.2 — Selecting a non-default payload method live-refilters the provider candidates
 
@@ -132,12 +132,12 @@ As an application developer, I want the unmodified default config to just work: 
   **Then** the second provider - not the auto/default-selected first one - is the one whose `requestCredentials`/`cacheCredentials` gets called; verify by checking which provider's cache holds the entry afterward (§3.1's technique), or by giving each provider observably different prompts/behavior.
   **And** this choice is "sticky" across a later `"PayloadDescriptor"` change: switching to a different method that the second provider *also* supports keeps it selected (not silently reverting to whichever provider is first in the new candidate list) - confirming the config remembers the caller's last explicit provider choice, not just the current one.
 
-### 4.4 — Explicit provider id that's format-incompatible or unregistered is now unreachable through the public API
+### 4.4 — Explicit provider id that's format-incompatible or unregistered is unreachable through the public API
 
-`"CredentialProviderId"`'s candidates are always pre-filtered live to providers compatible with the currently-selected `"PayloadDescriptor"` (see §4.1/§4.2) - there is no longer any config shape through which a caller can select a format-incompatible or nonexistent provider id at all, so `FindMatchingCredentialProvider`'s corresponding "explicit id names no compatible/no registered provider" failure paths are module-internal defensive code only, not something an application-level scenario can still exercise.
+`"CredentialProviderId"`'s candidates are always pre-filtered live to providers compatible with the currently-selected `"PayloadDescriptor"` (see §4.1/§4.2) - there is no config shape through which a caller can select a format-incompatible or nonexistent provider id at all, so `FindMatchingCredentialProvider`'s corresponding "explicit id names no compatible/no registered provider" failure paths are module-internal defensive code only, not something an application-level scenario can exercise.
 
-- **Given** the removal of `IAuthenticationConfigBuilder` (which previously exposed a plain-string `"CredentialProviderId"` with no such filtering)
-  **Then** these two failure paths have no remaining application-reachable trigger - worth a code-level note (not a runnable example) so a future change to this filtering doesn't silently reopen this gap without matching test coverage.
+- **Given** `"CredentialProviderId"` is always a live Selection property, filtered to compatible providers, with no way to assign it an arbitrary string
+  **Then** these two failure paths have no application-reachable trigger - worth a code-level note (not a runnable example) so a future change to this filtering doesn't silently reopen this gap without matching test coverage.
 
 ### 4.6 — An incompatible `"SuppliedSecret"` write is rejected
 
@@ -230,3 +230,39 @@ The user's last bullet, filled in with the fully custom persistence model: `Auth
 - Calling `createDefaultAuthenticationConfig` with a `typeId` that's valid but for a component sort with no notion of authentication at all (e.g. a function block type, if one is ever passed) - confirm it's treated the same as "unsupported" (`OPENDAQ_ERR_NOT_SUPPORTED`) rather than something type-confused.
 - Calling `addAuthenticatedDevice` with `authenticationConfig = nullptr` against a type that supports authentication - confirm this is rejected clearly (`AuthenticationFailedException`, from `Module::requestCredentials`'s own check, before a module's `onCreateAuthenticatedDevice` is ever invoked), distinct from silently falling back to the anonymous path.
 - Two authentication attempts to the *same* connection string in quick succession without an intervening `removeDevice` (e.g. accidental double-click in a UI) - confirm the second attempt's failure/success mode is well-defined rather than racing the first.
+
+---
+
+## 9. Anonymous / `None`-format authentication
+
+A `None`-format method needs no credentials at all - selecting it is the entire authentication step, with no payload, no provider, and no supplied secret involved anywhere.
+
+### 9.1 — Selecting a `None`-format method needs no registered provider
+
+- **Given** a type whose module offers a `None`-format method (e.g. `"Anonymous"`) among its supported authentication methods, and *no* credential provider registered on the instance at all
+  **When** I select that method (`SelectAuthenticationMethod(config, "Anonymous")`) and call `addAuthenticatedDevice`
+  **Then** it succeeds - unlike §2.3, the absence of any registered provider doesn't matter here, since none is ever consulted for this method.
+
+### 9.2 — `"CredentialProviderId"` is absent when a `None`-format method is selected
+
+- **Given** any number of credential providers registered, none of them declaring `None` in `getSupportedPayloadFormats`
+  **When** I select a `None`-format method on a config
+  **Then** `hasProperty("CredentialProviderId")` is `false` - the same outward shape as "no compatible provider" (§1.2), but here it's inherent to the format, not a registration gap; no provider a caller could register would make the property reappear for this selection.
+
+### 9.3 — A `"SuppliedSecret"` write is rejected while a `None`-format method is selected
+
+- **Given** a config with a `None`-format method currently selected
+  **When** I call `setPropertyValue("SuppliedSecret", payload)` for any property object at all, including an empty one
+  **Then** the write throws - `None` has no `createDefaultPayload()` template to match against, so no object is ever a valid shape for it (compare §4.6, the analogous rejection for a real format).
+
+### 9.4 — Switching *to* a `None`-format method clears an existing `"SuppliedSecret"`
+
+- **Given** a config with a valid `"SuppliedSecret"` set for the currently-selected, non-`None` `"PayloadDescriptor"`
+  **When** I switch the selection to a `None`-format method
+  **Then** the selection change succeeds and `hasProperty("SuppliedSecret")` becomes `false` afterward - the same clearing behavior as §4.7, here covering the case where the new selection accepts no secret at all.
+
+### 9.5 — Connecting via `None` behaves like the plain, unauthenticated path
+
+- **Given** a type offering both a `None`-format method and the plain `addDevice` path
+  **When** I connect once via `addDevice(connectionString)` and once via `addAuthenticatedDevice(connectionString, nullptr, anonymousConfig)`
+  **Then** both succeed identically from the caller's perspective - no prompt, no provider interaction, the same resulting device. (`credential_demo_module` implements this literally: connecting via its `"Anonymous"` method takes the same construction path as its own unauthenticated `addDevice`.)
