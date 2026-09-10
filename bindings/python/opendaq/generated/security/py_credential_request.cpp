@@ -56,7 +56,7 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
             return objectPtr.getConnectionString().toStdString();
         },
-        "Gets the connection string used for the connection attempt this request was formed for.");
+        "Gets the canonical connection string of the connection attempt this request was formed for - already resolved via the owning module's own `onGetCanonicalConnectionString` (routing prefix trimmed, every parameter made explicit), not necessarily the raw string the caller originally supplied.");
     cls.def_property_readonly("meta_data",
         [](daq::ICredentialRequest *object)
         {
@@ -65,7 +65,7 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             return objectPtr.getMetaData().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets additional metadata describing the request, for the credential provider to present to the user (e.g. device type name/id/description).");
+        "Gets additional metadata describing the request, primarily for the credential provider to show to the user.");
     cls.def_property_readonly("manufacturer",
         [](daq::ICredentialRequest *object)
         {
@@ -73,7 +73,7 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
             return objectPtr.getManufacturer().toStdString();
         },
-        "Gets the manufacturer of the device the request is for.");
+        "Gets the manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it.");
     cls.def_property_readonly("serial_number",
         [](daq::ICredentialRequest *object)
         {
@@ -81,7 +81,7 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
             return objectPtr.getSerialNumber().toStdString();
         },
-        "Gets the serial number of the device the request is for.");
+        "Gets the serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it.");
     cls.def_property_readonly("payload_id",
         [](daq::ICredentialRequest *object)
         {
@@ -89,7 +89,7 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
             return objectPtr.getPayloadId().toStdString();
         },
-        "Gets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on save & replayed on load.");
+        "Gets the id of the negotiated payload, read from `IAuthenticationConfig` when the request was built.");
     cls.def_property_readonly("payload_descriptor",
         [](daq::ICredentialRequest *object)
         {
@@ -98,5 +98,5 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             return objectPtr.getPayloadDescriptor().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the descriptor of the payload the provider must provide - serialized on save or re-attached from the device type on load.");
+        "Gets the descriptor of the payload the provider must provide, read from `IAuthenticationConfig` when the request was built.");
 }

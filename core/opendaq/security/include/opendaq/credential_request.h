@@ -34,10 +34,10 @@ struct ICredentialRequestBuilder;
 struct IComponentType;
 
 /*!
- * @brief Carries the non-secret details of a credential request handed to `ICredentialProvider::requestCredentials`
+ * @brief Carries the details of a credential request handed to `ICredentialProvider::requestCredentials`
  * when authentication is required for a connection attempt.
  *
- * Built via `ICredentialRequestBuilder`, or reconstructed on load. Never carries the actual secrets - only
+ * Built via `ICredentialRequestBuilder`. Never carries the actual secrets - only
  * enough context (the component type, connection details, and the negotiated payload's id and descriptor)
  * for the provider to determine how to provide the secrets.
  */
@@ -51,39 +51,42 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) = 0;
 
     /*!
-     * @brief Gets the connection string used for the connection attempt this request was formed for.
-     * @param[out] connectionString The connection string.
+     * @brief Gets the canonical connection string of the connection attempt this request was formed for -
+     * already resolved via the owning module's own `onGetCanonicalConnectionString` (routing prefix
+     * trimmed, every parameter made explicit), not necessarily the raw string the caller originally supplied.
+     * @param[out] connectionString The canonical connection string.
      */
     virtual ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) = 0;
 
     /*!
-     * @brief Gets additional metadata describing the request, for the credential provider to present to
-     * the user (e.g. device type name/id/description).
+     * @brief Gets additional metadata describing the request, primarily for the credential provider to show to the user.
      * @param[out] metaData The metadata property object.
      */
     virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) = 0;
 
     /*!
-     * @brief Gets the manufacturer of the device the request is for.
+     * @brief Gets the manufacturer of the device the connection is being established to or for - a request
+     * can be for a direct connection to that device, or for a streaming connection attached to it.
      * @param[out] manufacturer The device manufacturer.
      */
     virtual ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) = 0;
 
     /*!
-     * @brief Gets the serial number of the device the request is for.
+     * @brief Gets the serial number of the device the connection is being established to or for - a
+     * request can be for a direct connection to that device, or for a streaming connection attached to it.
      * @param[out] serialNumber The device serial number.
      */
     virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
     /*!
-     * @brief Gets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on save & replayed on load.
+     * @brief Gets the id of the negotiated payload, read from `IAuthenticationConfig` when the request was built.
      * @param[out] payloadId The payload id.
      */
     virtual ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) = 0;
 
     /*!
-     * @brief Gets the descriptor of the payload the provider must provide - serialized on save or re-attached from the
-     * device type on load.
+     * @brief Gets the descriptor of the payload the provider must provide, read from `IAuthenticationConfig`
+     * when the request was built.
      * @param[out] descriptor The payload descriptor.
      */
     virtual ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;

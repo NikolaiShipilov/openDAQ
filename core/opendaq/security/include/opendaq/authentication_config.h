@@ -31,12 +31,11 @@ BEGIN_NAMESPACE_OPENDAQ
 /*!
  * @brief Carries the authentication settings used for a single connection attempt to a component.
  *
- * Credential settings do not live in the base add-component config or its default - they travel in a
- * dedicated authentication config object that exists alongside base config. A component created with
- * authentication may persist the whole config it was authenticated with alongside itself (see
- * `IComponentPrivate::setAuthenticationConfig`), so a reload can re-request credentials for it.
+ * A component created with authentication keeps the config it was authenticated with (see
+ * `IComponentPrivate::setAuthenticationConfig`), so that reloading it later goes through the same
+ * credential-request process again.
  *
- * Is itself a Property object (like `IDeviceInfo`) - the payload id and its descriptor are bound
+ * Is itself a Property object - the payload id and its descriptor are bound
  * together as one `"PayloadDescriptor"` Selection property (its selection value is the
  * `ICredentialPayloadDescriptor` Struct itself, so the two can never be set out of sync - the payload id
  * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`). Its current selection

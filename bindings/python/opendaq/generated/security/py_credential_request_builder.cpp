@@ -78,7 +78,7 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
             objectPtr.setConnectionString(getVariantValue<daq::IString*>(connectionString));
         },
-        "Gets the connection string used for the connection attempt the request is being built for. / Sets the connection string used for the connection attempt the request is being built for.");
+        "Gets the canonical connection string currently set on the builder. / Sets the canonical connection string of the connection attempt the request is being built for - expected to already be resolved via the owning module's `onGetCanonicalConnectionString`, not the raw string the caller originally supplied.");
     cls.def_property("manufacturer",
         [](daq::ICredentialRequestBuilder *object)
         {
@@ -92,7 +92,7 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
             objectPtr.setManufacturer(getVariantValue<daq::IString*>(manufacturer));
         },
-        "Gets the manufacturer of the device the request is being built for. / Sets the manufacturer of the device the request is being built for.");
+        "Gets the manufacturer currently set on the builder. / Sets the manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it.");
     cls.def_property("serial_number",
         [](daq::ICredentialRequestBuilder *object)
         {
@@ -106,7 +106,7 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
             objectPtr.setSerialNumber(getVariantValue<daq::IString*>(serialNumber));
         },
-        "Gets the serial number of the device the request is being built for. / Sets the serial number of the device the request is being built for.");
+        "Gets the serial number currently set on the builder. / Sets the serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it.");
     cls.def("add_meta_data_property",
         [](daq::ICredentialRequestBuilder *object, daq::IProperty* property)
         {
@@ -115,7 +115,7 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             objectPtr.addMetaDataProperty(property);
         },
         py::arg("property"),
-        "Adds a property to the request's metadata, describing additional, request-specific information for the credential provider to present to the user (e.g. device type name/id/description).");
+        "Adds a property to the request's metadata, describing additional, request-specific information primarily for the credential provider to show to the user.");
     cls.def_property_readonly("meta_data",
         [](daq::ICredentialRequestBuilder *object)
         {
@@ -138,7 +138,7 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
             objectPtr.setPayloadId(getVariantValue<daq::IString*>(payloadId));
         },
-        "Gets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on save & replayed on load. / Sets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on save & replayed on load.");
+        "Gets the payload id currently set on the builder. / Sets the id of the negotiated payload - typically read from `IAuthenticationConfig` when the request is being built.");
     cls.def_property("payload_descriptor",
         [](daq::ICredentialRequestBuilder *object)
         {
@@ -153,5 +153,5 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             objectPtr.setPayloadDescriptor(descriptor);
         },
         py::return_value_policy::take_ownership,
-        "Gets the descriptor of the payload the provider must provide - serialized on save or re-attached from the device type on load. / Sets the descriptor of the payload the provider must provide - serialized on save or re-attached from the device type on load.");
+        "Gets the payload descriptor currently set on the builder. / Sets the descriptor of the payload the provider must provide - typically read from `IAuthenticationConfig` when the request is being built.");
 }

@@ -28,7 +28,7 @@ BEGIN_NAMESPACE_OPENDAQ
  */
 enum class CredentialPayloadFormat : EnumType
 {
-    None = 0,       ///< No secret(s) at all - anonymous access, nothing to supply or verify.
+    None = 0,       ///< No secret(s) at all - typically for anonymous access, nothing to supply or verify.
     KeyValuePairs,  ///< N string pairs - e.g. UserName / Password.
     String,         ///< one string - token, API key, PIN.
     FilePath        ///< one string - path to a file containing the secret, e.g. a private key.
@@ -45,20 +45,24 @@ enum class CredentialPayloadFormat : EnumType
  * @brief Describes the details of the payload required for an authentication method used by the module and produced by credential provider.
  *
  * A descriptor carries the payload's id, format, its format-specific parameter set (if any), and a
- * human-readable description. The id uniquely identifies the authentication method within the module that
+ * human-readable description. The id uniquely identifies the authentication method at least within the module that
  * offers it (e.g. `"UserNamePassword"`, `"Pin"`) - the same id the module's
- * `IModule::getSupportedAuthenticationMethods` uses to key the method. Where a format has a parameter set,
+ * `IModule::getSupportedAuthenticationMethods` uses to key the method. In practice the id is often unique
+ * system-wide, deliberately reused across modules: the `Standard*PayloadDescriptor`
+ * factories below key off shared, well-known ids and resolve their Struct/payload class from the one
+ * `ITypeManager` shared by the whole `Context`, so any two modules using the same standard id (with the same
+ * `Context`) produce identically-shaped descriptors. Where a format has a parameter set,
  * it is itself a Struct: for a `KeyValuePairs`-format payload, a `"Keys"` dict field maps each expected key
  * to its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String`-format payload, a
  * single `"Hidden"` bool field applies to the one secret. A `FilePath`-format payload has no format-specific
  * parameters. A `None`-format payload requires no secret(s) at all - for an authentication method that
- * needs no credentials, e.g. anonymous access - and likewise has no parameters.
+ * needs no credentials, e.g. anonymous access - and has no parameters.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 {
     /*!
      * @brief Gets the id that uniquely identifies the authentication method this payload belongs to,
-     * within the module that offers it.
+     * at least within the module that offers it.
      * @param[out] id The payload id.
      */
     virtual ErrCode INTERFACE_FUNC getId(IString** id) = 0;
@@ -78,7 +82,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 
     /*!
      * @brief Gets the description of the payload, for the user. States how the module interpretes it,
-     * e.g. "PIN-code", "username and password", "Raw bytes of the SSH private key", "Path to file containing the SSH private key".
+     * e.g. "PIN-code", "username and password", "Path to file containing the SSH private key".
      * @param[out] description The payload description.
      */
     virtual ErrCode INTERFACE_FUNC getDescription(IString** description) = 0;
@@ -95,7 +99,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
      * property), or by a credential provider, once it has obtained the secret(s) interactively.
      *
      * Not supported for `None` - a `None`-format authentication method requires no credentials at all, so
-     * no payload is ever needed for it in the first place. Returns `OPENDAQ_ERR_NOT_SUPPORTED`.
+     * no payload is ever needed for it in the first place; therefore returns `OPENDAQ_ERR_NOT_SUPPORTED`.
      * @param[out] payload The empty payload template.
      */
     virtual ErrCode INTERFACE_FUNC createDefaultPayload(IPropertyObject** payload) = 0;

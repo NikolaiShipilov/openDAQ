@@ -156,7 +156,7 @@ inline void RegisterCredentialPayloadDescriptorTypes(const TypeManagerPtr& typeM
 
 /*!
  * @brief Creates a `CredentialPayloadDescriptor` describing a `KeyValuePairs`-format payload.
- * @param id The id that uniquely identifies this authentication method within the module that offers it.
+ * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param keys The expected keys, mapped to whether the corresponding value should be hidden as it is
  * entered (e.g. `{"UserName": False, "Password": True}`).
  * @param description A human-readable description of the payload, for the user.
@@ -179,7 +179,7 @@ inline CredentialPayloadDescriptorPtr KeyValuePayloadDescriptor(const StringPtr&
 /*!
  * @brief Creates a `CredentialPayloadDescriptor` describing a `String`-format payload - a single secret,
  * e.g. a PIN, token, or API key.
- * @param id The id that uniquely identifies this authentication method within the module that offers it.
+ * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param description A human-readable description of the payload, for the user.
  * @param hidden Whether the secret should be hidden as it is entered.
  * @param typeManager Must already have a `"StringPayloadDescriptor"` type registered (see
@@ -201,7 +201,7 @@ inline CredentialPayloadDescriptorPtr StringPayloadDescriptor(const StringPtr& i
 /*!
  * @brief Creates a `CredentialPayloadDescriptor` describing a `FilePath`-format payload - a single secret
  * stating that the secret is a path to a file (e.g. a private key) rather than the value itself.
- * @param id The id that uniquely identifies this authentication method within the module that offers it.
+ * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param description A human-readable description of the payload, for the user.
  * @param typeManager Must already have a `"FilePathPayloadDescriptor"` type registered (see
  * `RegisterCredentialPayloadDescriptorTypes`) - a real `Context` always registers it up front. Throws
@@ -220,10 +220,10 @@ inline CredentialPayloadDescriptorPtr FilePathPayloadDescriptor(const StringPtr&
 
 /*!
  * @brief Creates a `CredentialPayloadDescriptor` describing a `None`-format payload - no secret(s) at all,
- * for an authentication method that requires no credentials, e.g. anonymous access. Unlike the other
- * formats, there is no payload to build, so no payload class is involved - `createDefaultPayload()` simply
- * returns an empty property object.
- * @param id The id that uniquely identifies this authentication method within the module that offers it.
+ * for an authentication method that requires no credentials, e.g. typically an anonymous access. Unlike the other
+ * formats, there is no payload to build, so no payload class is involved - `createDefaultPayload()` is not
+ * supported for it, and returns `OPENDAQ_ERR_NOT_SUPPORTED`.
+ * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param description A human-readable description of the payload, for the user.
  * @param typeManager Must already have a `"NonePayloadDescriptor"` type registered (see
  * `RegisterCredentialPayloadDescriptorTypes`) - a real `Context` always registers it up front. Throws

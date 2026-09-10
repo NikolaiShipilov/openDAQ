@@ -21,12 +21,18 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
+/*!
+ * @brief Creates a `CredentialRequestBuilder` with no values set.
+ */
 inline CredentialRequestBuilderPtr CredentialRequestBuilder()
 {
     CredentialRequestBuilderPtr obj(CredentialRequestBuilder_Create());
     return obj;
 }
 
+/*!
+ * @brief Creates a `CredentialRequest` from a `ICredentialRequestBuilder`'s currently configured values.
+ */
 inline CredentialRequestPtr CredentialRequestFromBuilder(const CredentialRequestBuilderPtr& builder)
 {
     CredentialRequestPtr obj(CredentialRequestFromBuilder_Create(builder));

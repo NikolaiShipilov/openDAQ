@@ -70,7 +70,7 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
             const auto objectPtr = daq::CredentialPayloadDescriptorPtr::Borrow(object);
             return objectPtr.getId().toStdString();
         },
-        "Gets the id that uniquely identifies the authentication method this payload belongs to, within the module that offers it.");
+        "Gets the id that uniquely identifies the authentication method this payload belongs to, at least within the module that offers it. In practice often unique system-wide instead: the Standard*PayloadDescriptor factories key off shared, well-known ids resolved through the one ITypeManager shared by the whole Context, so different modules using the same standard id produce identically-shaped descriptors.");
     cls.def_property_readonly("format",
         [](daq::ICredentialPayloadDescriptor *object)
         {
@@ -95,7 +95,7 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
             const auto objectPtr = daq::CredentialPayloadDescriptorPtr::Borrow(object);
             return objectPtr.getDescription().toStdString();
         },
-        "Gets the description of the payload, for the user. States how the module interpretes it, e.g. \"PIN-code\", \"username and password\", \"Raw bytes of the SSH private key\", \"Path to file containing the SSH private key\".");
+        "Gets the description of the payload, for the user. States how the module interpretes it, e.g. \"PIN-code\", \"username and password\", \"Path to file containing the SSH private key\".");
     cls.def("create_default_payload",
         [](daq::ICredentialPayloadDescriptor *object)
         {
@@ -103,5 +103,5 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
             const auto objectPtr = daq::CredentialPayloadDescriptorPtr::Borrow(object);
             return objectPtr.createDefaultPayload().detach();
         },
-        "Builds an empty payload template matching this descriptor's shape - a property object with one empty (default `\"\"`) String property per secret the format expects: for `KeyValuePairs`, one property per key named in `getParameters()`'s `\"Keys\"` dict (e.g. `\"UserName\"`, `\"Password\"`); for `String` and `FilePath`, a single property, named and described by the descriptor's own registered payload class. Not supported for `None` - raises, since there is no payload to build.");
+        "Builds an empty payload template matching this descriptor's shape - a property object with one empty (default `\"\"`) String property per secret the format expects: for `KeyValuePairs`, one property per key named in `getParameters()`'s `\"Keys\"` dict (e.g. `\"UserName\"`, `\"Password\"`); for `String` and `FilePath`, a single property, named and described by the descriptor's own registered payload class. Not supported for `None` - a `None`-format authentication method requires no credentials at all, so no payload is ever needed for it in the first place; therefore raises.");
 }

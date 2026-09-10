@@ -12,11 +12,11 @@ Describes the shape and presentation of the payload an authentication method exp
 
 | Member | Description |
 |---|---|
-| `getId(IString**)` | The id that uniquely identifies this authentication method within the module that offers it - the same id the module declares as its default, and that a caller matches against when selecting this method out of an `IAuthenticationConfig`'s `"PayloadDescriptor"` candidates (see below). |
+| `getId(IString**)` | The id that uniquely identifies this authentication method at least within the module that offers it - the same id the module declares as its default, and that a caller matches against when selecting this method out of an `IAuthenticationConfig`'s `"PayloadDescriptor"` candidates (see below). In practice often unique system-wide instead: the `Standard*PayloadDescriptor` factories key off shared, well-known ids and resolve their Struct/payload class from the one `ITypeManager` shared by the whole `Context`, so different modules using the same standard id (and the same `Context`) produce identically-shaped descriptors, reusing the id deliberately rather than colliding by accident. |
 | `getFormat(CredentialPayloadFormat*)` | The payload's format — `None`, `KeyValuePairs`, `String`, or `FilePath`. |
 | `getParameters(IStruct**)` | The format's standard parameter set, as a Struct whose own Struct type is pinned to the format - for `KeyValuePairs`, a `"Keys"` dict field mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool field. A `FilePath`-format descriptor has no format-specific parameters - `getParameters()` returns an unassigned `IStruct`. A `None`-format descriptor likewise has no parameters, there being nothing to describe. |
 | `getDescription(IString**)` | Human-readable description of the payload, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
-| `createDefaultPayload(IPropertyObject**)` | Builds an empty credential payload template matching this format: a property object with one empty (default `""`) String property per secret expected - one per key named in `getParameters()`'s `"Keys"` dict for `KeyValuePairs` (e.g. `"UserName"`, `"Password"`), or a single property for `String`/`FilePath`, named and described by the descriptor's own registered payload class (e.g. `"Pin"`, `"PrivateKeyFilePath"`). Meant to be filled in with the actual secret value(s) and used as the credential payload itself - see [§5](#5-credential-provider-selection--supplied-secrets). Not supported for `None` - returns `OPENDAQ_ERR_NOT_SUPPORTED`, since a `None`-format method requires no credentials and so has no payload to build. |
+| `createDefaultPayload(IPropertyObject**)` | Builds an empty credential payload template matching this format: a property object with one empty (default `""`) String property per secret expected - one per key named in `getParameters()`'s `"Keys"` dict for `KeyValuePairs` (e.g. `"UserName"`, `"Password"`), or a single property for `String`/`FilePath`, named and described by the descriptor's own registered payload class (e.g. `"Pin"`, `"PrivateKeyFilePath"`). Meant to be filled in with the actual secret value(s) and used as the credential payload itself - see [§5](#5-credential-provider-selection--supplied-secrets). Not supported for `None` - a `None`-format authentication method requires no credentials at all, so no payload is ever needed for it in the first place; therefore returns `OPENDAQ_ERR_NOT_SUPPORTED`. |
 
 **Factories:** `KeyValuePayloadDescriptor(id, keys, description, typeManager, payloadClassName)`, `StringPayloadDescriptor(id, description, hidden, typeManager, payloadClassName)`, `FilePathPayloadDescriptor(id, description, typeManager, payloadClassName)`, `NonePayloadDescriptor(id, description, typeManager)` - `typeManager` must already have the format's struct type registered, and (for every format but `None`, which has no payload class at all) `payloadClassName` must already be a registered `IPropertyObjectClass` that `createDefaultPayload()` builds the returned payload from; these throw otherwise. `Context` registers all four formats' struct types up front (`RegisterCredentialPayloadDescriptorTypes`, called from `ContextImpl::registerOpenDaqTypes`), so any descriptor built with a real `Context`'s type manager already satisfies the struct-type half of this.
 
@@ -25,7 +25,7 @@ Describes the shape and presentation of the payload an authentication method exp
 ```cpp
 enum class CredentialPayloadFormat : EnumType
 {
-    None = 0,       // no secret(s) at all — e.g. anonymous access
+    None = 0,       // no secret(s) at all — typically anonymous access, nothing to supply or verify
     KeyValuePairs,  // N string pairs — e.g. UserName / Password
     String,         // one string — token, API key, PIN
     FilePath        // one string — path to a file containing the secret, e.g. a private key
@@ -38,7 +38,7 @@ enum class CredentialPayloadFormat : EnumType
 
 Carries the authentication settings for a single connection attempt. Lives alongside the base add-component config, never serialized as part of it - though a component created with authentication may persist a reduced form of the config it was authenticated with alongside itself instead (see [Serialization](#serialization) below and [§7](#7-application-level-usage)).
 
-`IAuthenticationConfig` extends `IPropertyObject` (the same way `IDeviceInfo` does) - the settings below are backed by ordinary properties, so besides the typed getters, they can equally be read and set through the generic `IPropertyObject` interface:
+`IAuthenticationConfig` extends `IPropertyObject` - the settings below are backed by ordinary properties, so besides the typed getters, they can equally be read and set through the generic `IPropertyObject` interface:
 
 | Property | Description |
 |---|---|
@@ -63,17 +63,19 @@ There is no "additional config" on `IAuthenticationConfig` itself - settings lik
 
 ### `ICredentialRequest`
 
-Carries the non-secret details of a credential request, handed to `ICredentialProvider::requestCredentials`/`cacheCredentials`. Built via `ICredentialRequestBuilder`, or reconstructed on load. Never carries actual secrets.
+Carries the non-secret details of a credential request, handed to `ICredentialProvider::requestCredentials`/`cacheCredentials`. Built via `ICredentialRequestBuilder`. Never carries actual secrets.
 
 | Member | Description |
 |---|---|
 | `getComponentType(IComponentType**)` | The type of component the request is for. |
-| `getConnectionString(IString**)` | The connection string used for this connection attempt. |
-| `getMetaData(IPropertyObject**)` | Additional metadata for the provider to present to the user (e.g. device type name/id/description). |
-| `getManufacturer(IString**)` | The manufacturer of the device the request is for. |
-| `getSerialNumber(IString**)` | The serial number of the device the request is for. |
-| `getPayloadId(IString**)` | The id of the negotiated payload (from `IAuthenticationConfig`) — serialized on save, replayed on load. |
-| `getPayloadDescriptor(ICredentialPayloadDescriptor**)` | The descriptor of the payload the provider must provide — serialized on save, or re-attached from the device type on load. |
+| `getConnectionString(IString**)` | The *canonical* connection string of this connection attempt - already resolved via the owning module's `onGetCanonicalConnectionString` (routing prefix trimmed, every parameter made explicit), not necessarily the raw string the caller originally supplied. |
+| `getMetaData(IPropertyObject**)` | Additional metadata for the provider to present to the user. |
+| `getManufacturer(IString**)` | The manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. |
+| `getSerialNumber(IString**)` | The serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. |
+| `getPayloadId(IString**)` | The id of the negotiated payload, read from `IAuthenticationConfig` when the request was built. |
+| `getPayloadDescriptor(ICredentialPayloadDescriptor**)` | The descriptor of the payload the provider must provide, read from `IAuthenticationConfig` when the request was built. |
+
+**Why canonical?** A provider identifies which connection a request belongs to primarily by `(manufacturer, serialNumber)` - e.g. `CmdLineCredentialProvider`'s in-session `FilePath` caching (see [§5](#5-credential-provider-selection--supplied-secrets)). When neither is available, a provider falls back to the connection string itself as the identifying key instead - which only works reliably if it's canonical, so the same connection always identifies itself the same way no matter how the caller originally wrote it.
 
 **Factory:** `CredentialRequestFromBuilder(builder)` — hidden factory, built from a `ICredentialRequestBuilder`.
 
@@ -87,13 +89,13 @@ Builds `ICredentialRequest` objects.
 |---|---|
 | `build(ICredentialRequest**)` | Builds and returns a `CredentialRequest` from the currently configured values. |
 | `setComponentType` / `getComponentType` | The component type the request is being built for. |
-| `setConnectionString` / `getConnectionString` | The connection string for this attempt. |
-| `setManufacturer` / `getManufacturer` | The device manufacturer. |
-| `setSerialNumber` / `getSerialNumber` | The device serial number. |
+| `setConnectionString` / `getConnectionString` | The *canonical* connection string for this attempt - expected to already be resolved via `onGetCanonicalConnectionString` before being set here. |
+| `setManufacturer` / `getManufacturer` | The manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. |
+| `setSerialNumber` / `getSerialNumber` | The serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. |
 | `addMetaDataProperty(IProperty*)` | Adds a metadata property, for the provider to present to the user. |
 | `getMetaData(IPropertyObject**)` | The accumulated metadata property object. |
-| `setPayloadId` / `getPayloadId` | The id of the negotiated payload. |
-| `setPayloadDescriptor` / `getPayloadDescriptor` | The descriptor of the payload the provider must supply. |
+| `setPayloadId` / `getPayloadId` | The id of the negotiated payload - typically read from `IAuthenticationConfig` when the request is built. |
+| `setPayloadDescriptor` / `getPayloadDescriptor` | The descriptor of the payload the provider must supply - typically read from `IAuthenticationConfig` when the request is built. |
 
 **Factory:** `CredentialRequestBuilder()`
 
@@ -214,7 +216,7 @@ device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nu
 
 ## 5. Credential Provider Selection & Supplied Secrets
 
-Two independent, combinable settings on `IAuthenticationConfig` let a caller take over parts of the credential-provider machinery that would otherwise happen automatically - both set directly on the config as plain properties (`IAuthenticationConfig` is itself a property object, like `IDeviceInfo`).
+Two independent, combinable settings on `IAuthenticationConfig` let a caller take over parts of the credential-provider machinery that would otherwise happen automatically - both set directly on the config as plain properties (`IAuthenticationConfig` is itself a property object).
 
 ### Explicit provider selection
 
