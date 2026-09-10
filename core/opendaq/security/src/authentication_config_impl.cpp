@@ -1,6 +1,7 @@
 #include <opendaq/authentication_config_impl.h>
 #include <opendaq/authentication_config_factory.h>
 #include <opendaq/component_deserialize_context_ptr.h>
+#include <opendaq/component_update_context_ptr.h>
 #include <opendaq/credential_provider_ptr.h>
 #include <opendaq/module_manager_utils_ptr.h>
 #include <coreobjects/property_factory.h>
@@ -236,6 +237,10 @@ ErrCode AuthenticationConfigImpl::setPropertyValue(IString* propertyName, IBaseO
                                      "Supplied secret's shape does not match the currently selected payload descriptor \"{}\"",
                                      selected.assigned() ? selected.getId() : StringPtr(""));
 
+            // "SuppliedSecret" is never declared up front - added here on first write.
+            if (!objPtr.hasProperty(SuppliedSecretPropertyName))
+                return Super::addProperty(ObjectProperty(SuppliedSecretPropertyName, secret));
+
             return Super::setPropertyValue(propertyName, value);
         });
     }
@@ -282,10 +287,17 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
         const StringPtr savedTypeId = serializedObj.readString(TypeIdSerializedKey);
         const StringPtr savedPayloadId = serializedObj.readString(PayloadIdSerializedKey);
 
-        const auto deserializeContext = BaseObjectPtr::Borrow(context).asPtr<IComponentDeserializeContext>(true);
-        const ContextPtr realContext = deserializeContext.getContext();
+        const auto contextObj = BaseObjectPtr::Borrow(context);
+        ContextPtr daqContext;
+        if (const auto deserializeContext = contextObj.asPtrOrNull<IComponentDeserializeContext>(); deserializeContext.assigned())
+            daqContext = deserializeContext.getContext();
+        else if (const auto updateContext = contextObj.asPtrOrNull<IComponentUpdateContext>(); updateContext.assigned())
+            daqContext = updateContext.getRootComponent().getContext();
 
-        const ModuleManagerUtilsPtr managerUtils = realContext.getModuleManager().asPtr<IModuleManagerUtils>();
+        if (!daqContext.assigned())
+            DAQ_THROW_EXCEPTION(InvalidParameterException, "Unable to resolve a Context while deserializing an AuthenticationConfig");
+
+        const ModuleManagerUtilsPtr managerUtils = daqContext.getModuleManager().asPtr<IModuleManagerUtils>();
 
         const bool typeExists =
             managerUtils.getAvailableDeviceTypes().hasKey(savedTypeId) || managerUtils.getAvailableStreamingTypes().hasKey(savedTypeId);
@@ -301,7 +313,7 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
                                  savedPayloadId,
                                  savedTypeId);
 
-        *obj = AuthenticationConfig(descriptors, savedPayloadId, realContext, savedTypeId).detach();
+        *obj = AuthenticationConfig(descriptors, savedPayloadId, daqContext, savedTypeId).detach();
         return OPENDAQ_SUCCESS;
     });
 }
