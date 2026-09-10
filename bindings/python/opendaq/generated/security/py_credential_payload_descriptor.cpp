@@ -34,6 +34,7 @@
 PyDaqIntf<daq::ICredentialPayloadDescriptor, daq::IBaseObject> declareICredentialPayloadDescriptor(pybind11::module_ m)
 {
     py::enum_<daq::CredentialPayloadFormat>(m, "CredentialPayloadFormat")
+        .value("None_", daq::CredentialPayloadFormat::None)
         .value("KeyValuePairs", daq::CredentialPayloadFormat::KeyValuePairs)
         .value("String", daq::CredentialPayloadFormat::String)
         .value("FilePath", daq::CredentialPayloadFormat::FilePath);
@@ -56,6 +57,10 @@ void defineICredentialPayloadDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICre
     m.def("FilePathPayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager, std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadClassName){
         return daq::FilePathPayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), typeManager, getVariantValue<daq::IString*>(payloadClassName));
     }, py::arg("id"), py::arg("description"), py::arg("type_manager"), py::arg("payload_class_name"));
+
+    m.def("NonePayloadDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager){
+        return daq::NonePayloadDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), typeManager);
+    }, py::arg("id"), py::arg("description"), py::arg("type_manager"));
 
 
     cls.def_property_readonly("id",

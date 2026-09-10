@@ -88,15 +88,6 @@ inline StructTypePtr StringPayloadDescriptorParametersStructType()
 }
 
 /*!
- * @brief The `IStructType` backing a `FilePath`-format descriptor's nested `"Parameters"` field - no
- * fields at all.
- */
-inline StructTypePtr FilePathPayloadDescriptorParametersStructType()
-{
-    return StructType("FilePathPayloadDescriptorParameters", List<IString>(), List<IType>());
-}
-
-/*!
  * @brief The `IStructType` backing a `KeyValuePairs`-format `CredentialPayloadDescriptor`.
  */
 inline StructTypePtr KeyValuePayloadDescriptorStructType()
@@ -117,17 +108,29 @@ inline StructTypePtr StringPayloadDescriptorStructType()
 }
 
 /*!
- * @brief The `IStructType` backing a `FilePath`-format `CredentialPayloadDescriptor`.
+ * @brief The `IStructType` backing a `FilePath`-format `CredentialPayloadDescriptor` - has no `"Parameters"`
+ * field, since the format has no format-specific parameters.
  */
 inline StructTypePtr FilePathPayloadDescriptorStructType()
 {
     return StructType("FilePathPayloadDescriptor",
-                      List<IString>("Id", "Description", "Parameters"),
-                      List<IType>(SimpleType(ctString), SimpleType(ctString), FilePathPayloadDescriptorParametersStructType()));
+                      List<IString>("Id", "Description"),
+                      List<IType>(SimpleType(ctString), SimpleType(ctString)));
 }
 
 /*!
- * @brief Registers the three payload formats' backing `IStructType`s, plus the standard descriptors' own
+ * @brief The `IStructType` backing a `None`-format `CredentialPayloadDescriptor` - has no `"Parameters"`
+ * field, since the format has no format-specific parameters.
+ */
+inline StructTypePtr NonePayloadDescriptorStructType()
+{
+    return StructType("NonePayloadDescriptor",
+                      List<IString>("Id", "Description"),
+                      List<IType>(SimpleType(ctString), SimpleType(ctString)));
+}
+
+/*!
+ * @brief Registers the four payload formats' backing `IStructType`s, plus the standard descriptors' own
  * default-payload `IPropertyObjectClass`es, with `typeManager`. Called once by `Context` up front.
  * @param typeManager The type manager to register the payload descriptor types with.
  */
@@ -138,7 +141,7 @@ inline void RegisterCredentialPayloadDescriptorTypes(const TypeManagerPtr& typeM
                              StringPayloadDescriptorStructType(),
                              StringPayloadDescriptorParametersStructType(),
                              FilePathPayloadDescriptorStructType(),
-                             FilePathPayloadDescriptorParametersStructType()})
+                             NonePayloadDescriptorStructType()})
     {
         checkErrorInfoExcept(typeManager->addType(type), OPENDAQ_ERR_ALREADYEXISTS);
     }
@@ -216,13 +219,33 @@ inline CredentialPayloadDescriptorPtr FilePathPayloadDescriptor(const StringPtr&
 }
 
 /*!
- * @brief Ids of the three standard authentication methods below - shared, well-known payload ids every
+ * @brief Creates a `CredentialPayloadDescriptor` describing a `None`-format payload - no secret(s) at all,
+ * for an authentication method that requires no credentials, e.g. anonymous access. Unlike the other
+ * formats, there is no payload to build, so no payload class is involved - `createDefaultPayload()` simply
+ * returns an empty property object.
+ * @param id The id that uniquely identifies this authentication method within the module that offers it.
+ * @param description A human-readable description of the payload, for the user.
+ * @param typeManager Must already have a `"NonePayloadDescriptor"` type registered (see
+ * `RegisterCredentialPayloadDescriptorTypes`) - a real `Context` always registers it up front. Throws
+ * otherwise.
+ */
+inline CredentialPayloadDescriptorPtr NonePayloadDescriptor(const StringPtr& id,
+                                                             const StringPtr& description,
+                                                             const TypeManagerPtr& typeManager)
+{
+    CredentialPayloadDescriptorPtr obj(NonePayloadDescriptor_Create(id, description, typeManager));
+    return obj;
+}
+
+/*!
+ * @brief Ids of the four standard authentication methods below - shared, well-known payload ids every
  * module can build the exact same descriptor for, instead of each one inventing its own shape/id for the
  * same method.
  */
 inline constexpr const char* StandardUserNamePasswordPayloadId = "UserNamePassword";
 inline constexpr const char* StandardPinPayloadId = "Pin";
 inline constexpr const char* StandardPrivateKeyFilePayloadId = "PrivateKeyFile";
+inline constexpr const char* StandardAnonymousPayloadId = "Anonymous";
 
 /*!
  * @brief The standard `UserName`/`Password` authentication method's `CredentialPayloadDescriptor` - a
@@ -257,6 +280,16 @@ inline CredentialPayloadDescriptorPtr StandardPrivateKeyFilePayloadDescriptor(co
 {
     return FilePathPayloadDescriptor(
         StandardPrivateKeyFilePayloadId, "Path to the PEM-encoded private key file", typeManager, PrivateKeyFileCredentialSecretPayloadClassName);
+}
+
+/*!
+ * @brief The standard anonymous authentication method's `CredentialPayloadDescriptor` - a `None`-format
+ * payload, requiring no credentials at all.
+ * @param typeManager See `NonePayloadDescriptor`.
+ */
+inline CredentialPayloadDescriptorPtr StandardAnonymousPayloadDescriptor(const TypeManagerPtr& typeManager)
+{
+    return NonePayloadDescriptor(StandardAnonymousPayloadId, "No credentials required", typeManager);
 }
 
 END_NAMESPACE_OPENDAQ

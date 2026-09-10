@@ -116,6 +116,11 @@ bool AuthenticationConfigImpl::IsSuppliedSecretShapeValid(const PropertyObjectPt
     if (!secret.assigned() || !selectedDescriptor.assigned())
         return false;
 
+    // "None" requires no credentials at all - no secret is ever valid for it, and it has no
+    // `createDefaultPayload()` template to compare against in the first place.
+    if (selectedDescriptor.getFormat() == CredentialPayloadFormat::None)
+        return false;
+
     const PropertyObjectPtr templateObj = selectedDescriptor.createDefaultPayload();
     const auto templateProps = templateObj.getAllProperties();
 

@@ -103,10 +103,12 @@ DictPtr<IString, ICredentialPayloadDescriptor> CredentialDemoModule::onGetSuppor
     auto userNamePasswordDescriptor = StandardUserNamePasswordPayloadDescriptor(context.getTypeManager());
     auto pinDescriptor = StandardPinPayloadDescriptor(context.getTypeManager());
     auto privateKeyDescriptor = StandardPrivateKeyFilePayloadDescriptor(context.getTypeManager());
+    auto anonymousDescriptor = StandardAnonymousPayloadDescriptor(context.getTypeManager());
 
     return Dict<IString, ICredentialPayloadDescriptor>({{userNamePasswordDescriptor.getId(), userNamePasswordDescriptor},
                                                         {pinDescriptor.getId(), pinDescriptor},
-                                                        {privateKeyDescriptor.getId(), privateKeyDescriptor}});
+                                                        {privateKeyDescriptor.getId(), privateKeyDescriptor},
+                                                        {anonymousDescriptor.getId(), anonymousDescriptor}});
 }
 
 StringPtr CredentialDemoModule::onGetDefaultAuthenticationMethodId(const StringPtr& typeId)

@@ -72,12 +72,19 @@ namespace authentication
 
 void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& payloadId)
 {
+    const std::string payloadIdStr = payloadId.toStdString();
+
+    // Anonymous requires no credentials at all - connects the same way the plain, non-authenticated path
+    // does, so there's nothing to check.
+    if (payloadIdStr == StandardAnonymousPayloadId)
+    {
+        return;
+    }
+
     if (!credentials.assigned())
     {
         DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no credentials provided");
     }
-
-    const std::string payloadIdStr = payloadId.toStdString();
 
     if (payloadIdStr == StandardPinPayloadId)
     {
@@ -115,7 +122,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - private key challenge verification failed");
         }
     }
-    else
+    else if (payloadIdStr == StandardUserNamePasswordPayloadId)
     {
         const StringPtr userName = credentials.hasProperty("UserName") ? credentials.getPropertyValue("UserName") : nullptr;
         const StringPtr password = credentials.hasProperty("Password") ? credentials.getPropertyValue("Password") : nullptr;
@@ -123,6 +130,10 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
         {
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - wrong username or password");
         }
+    }
+    else
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - unknown payload id \"{}\"", payloadIdStr);
     }
 }
 

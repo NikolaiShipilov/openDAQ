@@ -24,9 +24,9 @@ BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 namespace authentication
 {
     /*
-     * Verifies credentials for one of the three showcased auth methods (UserName/Password, PIN,
-     * PrivateKeyFile). Shared by both the device (authenticating a connection to it) and the streaming
-     * implementation (authenticating a streaming connection).
+     * Verifies credentials for one of the four showcased auth methods (UserName/Password, PIN,
+     * PrivateKeyFile, Anonymous). Shared by both the device (authenticating a connection to it) and the
+     * streaming implementation (authenticating a streaming connection).
      */
     void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& payloadId);
 }

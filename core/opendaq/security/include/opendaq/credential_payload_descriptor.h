@@ -28,6 +28,7 @@ BEGIN_NAMESPACE_OPENDAQ
  */
 enum class CredentialPayloadFormat : EnumType
 {
+    None = 0,       ///< No secret(s) at all - anonymous access, nothing to supply or verify.
     KeyValuePairs,  ///< N string pairs - e.g. UserName / Password.
     String,         ///< one string - token, API key, PIN.
     FilePath        ///< one string - path to a file containing the secret, e.g. a private key.
@@ -43,14 +44,15 @@ enum class CredentialPayloadFormat : EnumType
 /*!
  * @brief Describes the details of the payload required for an authentication method used by the module and produced by credential provider.
  *
- * A descriptor carries the payload's id, format, its format-specific parameter set, and a human-readable
- * description. The id uniquely identifies the authentication method within the module that offers it
- * (e.g. `"UserNamePassword"`, `"Pin"`) - the same id the module's `IModule::getSupportedAuthenticationMethods`
- * uses to key the method. The parameter set is itself a Struct, whose exact Struct type (and so its fields) depends
- * on the format: for a `KeyValuePairs`-format payload, a `"Keys"` dict field maps each expected key to
- * its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String`-format payload, a
- * single `"Hidden"` bool field applies to the one secret. A `FilePath`-format payload's parameters Struct
- * has no fields at all.
+ * A descriptor carries the payload's id, format, its format-specific parameter set (if any), and a
+ * human-readable description. The id uniquely identifies the authentication method within the module that
+ * offers it (e.g. `"UserNamePassword"`, `"Pin"`) - the same id the module's
+ * `IModule::getSupportedAuthenticationMethods` uses to key the method. Where a format has a parameter set,
+ * it is itself a Struct: for a `KeyValuePairs`-format payload, a `"Keys"` dict field maps each expected key
+ * to its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String`-format payload, a
+ * single `"Hidden"` bool field applies to the one secret. A `FilePath`-format payload has no format-specific
+ * parameters. A `None`-format payload requires no secret(s) at all - for an authentication method that
+ * needs no credentials, e.g. anonymous access - and likewise has no parameters.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
 {
@@ -68,9 +70,9 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) = 0;
 
     /*!
-     * @brief Gets the format's standard parameter set, as a Struct. Its Struct type (and so which fields
-     * it has, if any) is determined by the payload format - see the class description above.
-     * @param[out] parameters The parameters.
+     * @brief Gets the format's standard parameter set, as a Struct - see the class description above for
+     * which formats have one and what it carries.
+     * @param[out] parameters The parameters, or an unassigned `IStruct` if the format has none.
      */
     virtual ErrCode INTERFACE_FUNC getParameters(IStruct** parameters) = 0;
 
@@ -91,6 +93,9 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialPayloadDescriptor, IBaseObject)
      * Meant to be filled in with the actual secret value(s) and used as the credential payload itself -
      * either by the caller, to supply a secret directly (`IAuthenticationConfig`'s `"SuppliedSecret"`
      * property), or by a credential provider, once it has obtained the secret(s) interactively.
+     *
+     * Not supported for `None` - a `None`-format authentication method requires no credentials at all, so
+     * no payload is ever needed for it in the first place. Returns `OPENDAQ_ERR_NOT_SUPPORTED`.
      * @param[out] payload The empty payload template.
      */
     virtual ErrCode INTERFACE_FUNC createDefaultPayload(IPropertyObject** payload) = 0;
@@ -109,6 +114,11 @@ OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor,
     IString*, id, IString*, description, ITypeManager*, typeManager, IString*, payloadClassName
+)
+
+OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
+    LIBRARY_FACTORY, NonePayloadDescriptor, ICredentialPayloadDescriptor,
+    IString*, id, IString*, description, ITypeManager*, typeManager
 )
 
 END_NAMESPACE_OPENDAQ

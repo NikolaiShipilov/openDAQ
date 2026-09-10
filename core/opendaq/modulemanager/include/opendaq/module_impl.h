@@ -797,6 +797,12 @@ private:
     // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload, then resolves
     // credentials for it via `obtainCredentials` (see it for details on `resolvedProvider`). Throws
     // `AuthenticationFailedException` if `authenticationConfig` is unassigned.
+    //
+    // A `None`-format payload needs no credentials at all, so it is resolved directly here, as an unassigned
+    // payload - `createDefaultPayload()` doesn't apply to it either, there being no payload to build. No
+    // `ICredentialRequest` is even formed for it, since nothing will ever be requested with it: not from a
+    // credential provider (none is expected to declare support for `None` - there is nothing for one to
+    // provide) and not via a caller-supplied secret either.
     PropertyObjectPtr requestCredentials(const AuthenticationConfigPtr& authenticationConfig,
                                         const StringPtr& connectionString,
                                         const StringPtr& manufacturer,
@@ -808,6 +814,9 @@ private:
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
 
         const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
+        if (payloadDescriptor.getFormat() == CredentialPayloadFormat::None)
+            return nullptr;
+
         const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, componentType);
 
         return obtainCredentials(authenticationConfig, credentialRequest, payloadDescriptor, resolvedProvider);
@@ -835,12 +844,13 @@ private:
         return requestBuilder.build();
     }
 
-    // Resolves the credential payload for `credentialRequest`. Consumes whichever provider id
-    // `authenticationConfig.getCredentialProviderId()` currently returns. If `authenticationConfig.getSuppliedSecret()`
-    // returns one, it is used directly instead of asking a provider to obtain one - though the currently-selected
-    // provider, if any, is still handed the secret via `cacheCredentials`, so a later request for the same
-    // context can be served from its cache. `resolvedProvider` receives whichever provider was actually
-    // involved, or stays unassigned if none was.
+    // Resolves the credential payload for `credentialRequest` - always a non-`None`-format payload (see
+    // `requestCredentials`, its only caller, which resolves `None` itself beforehand). Consumes whichever
+    // provider id `authenticationConfig.getCredentialProviderId()` currently returns. If
+    // `authenticationConfig.getSuppliedSecret()` returns one, it is used directly instead of asking a
+    // provider to obtain one - though the currently-selected provider, if any, is still handed the secret
+    // via `cacheCredentials`, so a later request for the same context can be served from its cache.
+    // `resolvedProvider` receives whichever provider was actually involved, or stays unassigned if none was.
     //
     // Throws `AuthenticationFailedException` if:
     // - `getCredentialProviderId()` returns nothing at all,
