@@ -264,6 +264,17 @@ ErrCode AuthenticationConfigImpl::serialize(ISerializer* serializer)
         serializer->writeString(typeId.getCharPtr(), typeId.getLength());
         serializer->key(PayloadIdSerializedKey);
         serializer->writeString(payloadId.getCharPtr(), payloadId.getLength());
+
+        if (objPtr.hasProperty(CredentialProviderIdPropertyName))
+        {
+            const StringPtr providerId = objPtr.getPropertySelectionValue(CredentialProviderIdPropertyName);
+            if (providerId.assigned())
+            {
+                serializer->key(ProviderIdSerializedKey);
+                serializer->writeString(providerId.getCharPtr(), providerId.getLength());
+            }
+        }
+
         serializer->endObject();
 
         return OPENDAQ_SUCCESS;
@@ -317,7 +328,28 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
                                  savedPayloadId,
                                  savedTypeId);
 
-        *obj = AuthenticationConfig(descriptors, savedPayloadId, daqContext, savedTypeId).detach();
+        AuthenticationConfigPtr authConfig = AuthenticationConfig(descriptors, savedPayloadId, daqContext, savedTypeId);
+
+        if (serializedObj.hasKey(ProviderIdSerializedKey) && authConfig.hasProperty(CredentialProviderIdPropertyName))
+        {
+            const StringPtr savedProviderId = serializedObj.readString(ProviderIdSerializedKey);
+            const ListPtr<IString> candidates = authConfig.getProperty(CredentialProviderIdPropertyName).getSelectionValues();
+
+            bool isCompatible = false;
+            for (const auto& candidate : candidates)
+            {
+                if (candidate == savedProviderId)
+                {
+                    isCompatible = true;
+                    break;
+                }
+            }
+
+            if (isCompatible)
+                authConfig.setPropertySelectionValue(CredentialProviderIdPropertyName, savedProviderId);
+        }
+
+        *obj = authConfig.detach();
         return OPENDAQ_SUCCESS;
     });
 }

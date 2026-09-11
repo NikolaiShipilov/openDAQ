@@ -197,31 +197,37 @@ As an application developer relying on `PrioritizedStreamingProtocols`/`Automati
 
 ## 7. Save & load
 
-The user's last bullet, filled in with the fully custom persistence model: `AuthenticationConfigImpl`'s own `serialize()` writes only the component type id and the selected payload method id - never `"CredentialProviderId"`, never `"SuppliedSecret"`, regardless of whether they're currently present. Reload re-resolves the type against the *new* instance's `Context` and rebuilds `"CredentialProviderId"` exactly as a brand-new `createDefaultAuthenticationConfig` call would - live-filtered by the saved method's format, defaulting to the first compatible provider. There is no "matching by saved provider id" at all.
+The user's last bullet, filled in with the fully custom persistence model: `AuthenticationConfigImpl`'s own `serialize()` writes the component type id, the selected payload method id, and - when present - the selected `"CredentialProviderId"`; `"SuppliedSecret"` is never written. Reload re-resolves the type against the *new* instance's `Context` and rebuilds `"CredentialProviderId"` exactly as a brand-new `createDefaultAuthenticationConfig` call would - live-filtered by the saved method's format - then restores the saved provider id as the selection only if it's still among those live candidates; otherwise it falls back to the same default (first compatible provider) a brand-new call would use.
 
-### 7.1 — Reload with any compatible provider registered (not necessarily the same one)
+### 7.1 — Reload with the same provider registered restores that selection
 
-- **Given** an authenticated device saved via `instance.saveConfiguration()`, originally authenticated through provider A
-  **When** a new instance registers a *different* provider B - same format support, different id/class - then calls `loadConfiguration(savedConfiguration)`
-  **Then** the device reconnects through provider B without issue - confirming reload re-resolves `"CredentialProviderId"` fresh from the new instance's `Context` rather than requiring a provider matching any saved id (there is none saved to match). Re-authenticates from scratch through the normal `requestCredentials` path - prompting again unless B happens to have something cached for this context (§5.1).
+- **Given** an authenticated device saved via `instance.saveConfiguration()`, originally authenticated through a non-default provider B (explicitly selected, e.g. via §4.3)
+  **When** a new instance registers both the default provider A and provider B, then calls `loadConfiguration(savedConfiguration)`
+  **Then** the reconnect goes through provider B, not A - confirming the saved `"CredentialProviderId"` is restored rather than the rebuilt config simply defaulting to the first compatible candidate.
 
-### 7.2 — Reload with no compatible provider registered
+### 7.2 — Reload with the saved provider unavailable falls back to the default
+
+- **Given** the same saved configuration (originally authenticated through provider B)
+  **When** a new instance registers only a *different*, format-compatible provider C - B itself not registered - then calls `loadConfiguration(savedConfiguration)`
+  **Then** the device reconnects through provider C without issue - confirming that when the saved provider id isn't among the live candidates, reload falls back to the same default a brand-new `createDefaultAuthenticationConfig` call would use, rather than failing. Re-authenticates from scratch through the normal `requestCredentials` path - prompting again unless C happens to have something cached for this context (§5.1).
+
+### 7.3 — Reload with no compatible provider registered
 
 - **Given** the same saved configuration
   **When** the new instance registers no provider at all, or one that doesn't support the persisted method's format
-  **Then** `loadConfiguration` fails to reconnect the device (confirm via `reloadedInstance.getDevices()` being empty, matching `demoPinAuthenticationAndReload`'s own check) - not a silent, disconnected-but-present device. (This is also what `"CredentialProviderId"` being entirely absent on the rebuilt config would look like internally - no compatible provider to select.)
+  **Then** `loadConfiguration` fails to reconnect the device (confirm via `reloadedInstance.getDevices()` being empty, matching `demoPinAuthenticationAndReload`'s own check) - not a silent, disconnected-but-present device. (This is also what `"CredentialProviderId"` being entirely absent on the rebuilt config would look like internally - no compatible provider to select, saved id included.)
 
-### 7.3 — Reload with a stale saved method id
+### 7.4 — Reload with a stale saved method id
 
 - **Given** a saved configuration whose method id is no longer among the type's *currently* supported descriptors (e.g. the module was updated and dropped or renamed that method), or whose saved type id no longer resolves to any available device/streaming type at all
   **When** the new instance calls `loadConfiguration(savedConfiguration)`
   **Then** the reload fails hard (custom `Deserialize` throws) rather than silently substituting the type's current default method - confirming a reload never silently authenticates via a method the user didn't actually choose.
 
-### 7.4 — A supplied-secret device does not skip the prompt on reload
+### 7.5 — A supplied-secret device does not skip the prompt on reload
 
 - **Given** a device originally authenticated via `setSuppliedSecret` (§3.1/3.2)
   **When** it's saved and reloaded into a new instance with a compatible provider registered
-  **Then** the reload prompts (or fails, if no provider is registered) exactly as a from-scratch connection would - confirming the supplied secret never survives serialization at all, only the type id and payload method id do.
+  **Then** the reload prompts (or fails, if no provider is registered) exactly as a from-scratch connection would - confirming the supplied secret never survives serialization at all, only the type id, payload method id, and (if one was selected) provider id do.
 
 ---
 

@@ -53,13 +53,13 @@ BEGIN_NAMESPACE_OPENDAQ
  * `"PayloadDescriptor"` can all equally be read and set through the ordinary `IPropertyObject` interface this
  * object also implements.
  *
- * Serialization is fully custom, not the generic `IPropertyObject` mechanism: only the component type id
- * (as passed by `IDevice::createDefaultAuthenticationConfig`) and the selected `"PayloadDescriptor"`'s id
- * are ever written. `"CredentialProviderId"` (not portable across openDAQ runs) and `"SuppliedSecret"` (a
- * secret) are never serialized, regardless of whether they're currently present. Deserializing re-resolves
- * the saved type id against the live `Context` and rebuilds everything above fresh - it fails outright if
- * the type no longer resolves, or the saved payload id is no longer among that type's currently supported
- * descriptors.
+ * Serialization is fully custom, not the generic `IPropertyObject` mechanism: the component type id (as
+ * passed by `IDevice::createDefaultAuthenticationConfig`), the selected `"PayloadDescriptor"`'s id, and -
+ * when present - the selected `"CredentialProviderId"` are written. `"SuppliedSecret"` (a secret) is never
+ * serialized. Deserializing re-resolves the saved type id against the live `Context` and rebuilds everything
+ * above fresh - it fails outright if the type no longer resolves, or the saved payload id is no longer
+ * among that type's currently supported descriptors. The saved provider id is restored only if it's still
+ * among the freshly-rebuilt `"CredentialProviderId"` candidates; otherwise the normal live default applies.
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
