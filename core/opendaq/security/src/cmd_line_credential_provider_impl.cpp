@@ -6,6 +6,8 @@
 
 #ifdef _WIN32
 #include <conio.h>
+#include <codecvt>
+#include <locale>
 #else
 #include <termios.h>
 #include <unistd.h>
@@ -212,8 +214,18 @@ std::string CmdLineCredentialProviderImpl::readLine(const std::string& prompt, b
         switch (ch)
         {
             case L'\r': // Enter
+            {
                 std::wcout << std::endl;
-                return StringConverter::Utf16ToUtf8(value);
+#if defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
+#if defined(__clang__)
+    #pragma clang diagnostic pop
+#endif
+                return converter.to_bytes(value);
+            }
 
             case 3: // Ctrl+C
                 throw std::runtime_error("Input cancelled.");

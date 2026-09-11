@@ -107,7 +107,7 @@ ErrCode CredentialPayloadDescriptorParametersImpl::getSerializeId(ConstCharPtr* 
     else if (typeName == "StringPayloadDescriptorParameters")
         *id = "StringPayloadDescriptorParameters";
     else
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Unknown payload descriptor parameters type \"{}\"", typeName);
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Unknown payload descriptor parameters type \"{}\"", typeName.getCharPtr());
 
     return OPENDAQ_SUCCESS;
 }
