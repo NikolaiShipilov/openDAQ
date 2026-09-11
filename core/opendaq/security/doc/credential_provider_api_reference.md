@@ -69,9 +69,9 @@ Carries the non-secret details of a credential request, handed to `ICredentialPr
 |---|---|
 | `getComponentType(IComponentType**)` | The type of component the request is for. |
 | `getConnectionString(IString**)` | The *canonical* connection string of this connection attempt - already resolved via the owning module's `onGetCanonicalConnectionString` (routing prefix trimmed, every parameter made explicit), not necessarily the raw string the caller originally supplied. |
-| `getMetaData(IPropertyObject**)` | Additional metadata for the provider to present to the user. |
-| `getManufacturer(IString**)` | The manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. |
-| `getSerialNumber(IString**)` | The serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. |
+| `getMetaData(IPropertyObject**)` | Additional metadata for the provider to present to the user. Optional - empty (no properties) if the caller added none. |
+| `getManufacturer(IString**)` | The manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection. |
+| `getSerialNumber(IString**)` | The serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection. |
 | `getPayloadId(IString**)` | The id of the negotiated payload, read from `IAuthenticationConfig` when the request was built. |
 | `getPayloadDescriptor(ICredentialPayloadDescriptor**)` | The descriptor of the payload the provider must provide, read from `IAuthenticationConfig` when the request was built. |
 
@@ -87,15 +87,15 @@ Builds `ICredentialRequest` objects.
 
 | Member | Description |
 |---|---|
-| `build(ICredentialRequest**)` | Builds and returns a `CredentialRequest` from the currently configured values. |
-| `setComponentType` / `getComponentType` | The component type the request is being built for. |
-| `setConnectionString` / `getConnectionString` | The *canonical* connection string for this attempt - expected to already be resolved via `onGetCanonicalConnectionString` before being set here. |
-| `setManufacturer` / `getManufacturer` | The manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. |
-| `setSerialNumber` / `getSerialNumber` | The serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. |
-| `addMetaDataProperty(IProperty*)` | Adds a metadata property, for the provider to present to the user. |
+| `build(ICredentialRequest**)` | Builds and returns a `CredentialRequest` from the currently configured values. Fails if `componentType`, `connectionString`, `payloadId`, or `payloadDescriptor` was never set. |
+| `setComponentType` / `getComponentType` | The component type the request is being built for. Required. |
+| `setConnectionString` / `getConnectionString` | The *canonical* connection string for this attempt - expected to already be resolved via `onGetCanonicalConnectionString` before being set here. Required. |
+| `setManufacturer` / `getManufacturer` | The manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - leave unset if not known. |
+| `setSerialNumber` / `getSerialNumber` | The serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - leave unset if not known. |
+| `addMetaDataProperty(IProperty*)` | Adds a metadata property, for the provider to present to the user. Optional - the built request's metadata is simply empty if never called. |
 | `getMetaData(IPropertyObject**)` | The accumulated metadata property object. |
-| `setPayloadId` / `getPayloadId` | The id of the negotiated payload - typically read from `IAuthenticationConfig` when the request is built. |
-| `setPayloadDescriptor` / `getPayloadDescriptor` | The descriptor of the payload the provider must supply - typically read from `IAuthenticationConfig` when the request is built. |
+| `setPayloadId` / `getPayloadId` | The id of the negotiated payload - typically read from `IAuthenticationConfig` when the request is built. Required. |
+| `setPayloadDescriptor` / `getPayloadDescriptor` | The descriptor of the payload the provider must supply - typically read from `IAuthenticationConfig` when the request is built. Required. |
 
 **Factory:** `CredentialRequestBuilder()`
 

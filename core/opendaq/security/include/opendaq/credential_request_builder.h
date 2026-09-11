@@ -39,13 +39,15 @@ BEGIN_NAMESPACE_OPENDAQ
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequestBuilder, IBaseObject)
 {
 /*!
- * @brief Builds and returns a `CredentialRequest` using the currently configured values.
+ * @brief Builds and returns a `CredentialRequest` using the currently configured values. Fails if
+ * `componentType`, `connectionString`, `payloadId`, or `payloadDescriptor` was never set.
  * @param[out] request The built credential request.
  */
 virtual ErrCode INTERFACE_FUNC build(ICredentialRequest** request) = 0;
 
 /*!
- * @brief Sets the type of the component the request is being built for.
+ * @brief Sets the type of the component the request is being built for. Required - `build()` fails if
+ * never set.
  * @param componentType The component type.
  */
 // [returnSelf]
@@ -62,7 +64,8 @@ virtual ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) 
 /*!
  * @brief Sets the canonical connection string of the connection attempt the request is being built for -
  * expected to already be resolved via the owning module's `onGetCanonicalConnectionString` (routing prefix
- * trimmed, every parameter made explicit), not the raw string the caller originally supplied.
+ * trimmed, every parameter made explicit), not the raw string the caller originally supplied. Required -
+ * `build()` fails if never set.
  * @param connectionString The canonical connection string.
  */
 // [returnSelf]
@@ -76,7 +79,8 @@ virtual ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) =
 
 /*!
  * @brief Sets the manufacturer of the device the connection is being established to or for - a request
- * can be for a direct connection to that device, or for a streaming connection attached to it.
+ * can be for a direct connection to that device, or for a streaming connection attached to it. Optional -
+ * leave unset if the manufacturer isn't known for this connection.
  * @param manufacturer The device manufacturer.
  */
 // [returnSelf]
@@ -90,7 +94,8 @@ virtual ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) = 0;
 
 /*!
  * @brief Sets the serial number of the device the connection is being established to or for - a request
- * can be for a direct connection to that device, or for a streaming connection attached to it.
+ * can be for a direct connection to that device, or for a streaming connection attached to it. Optional -
+ * leave unset if the serial number isn't known for this connection.
  * @param serialNumber The device serial number.
  */
 // [returnSelf]
@@ -104,7 +109,8 @@ virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
 /*!
  * @brief Adds a property to the request's metadata, describing additional, request-specific information
- * primarily for the credential provider to show to the user.
+ * primarily for the credential provider to show to the user. Optional - never called at all if there's
+ * nothing extra to describe, leaving the built request's metadata empty.
  * @param property The metadata property to add.
  */
 // [returnSelf]
@@ -118,7 +124,7 @@ virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;
 
 /*!
  * @brief Sets the id of the negotiated payload - typically read from `IAuthenticationConfig` when the
- * request is being built.
+ * request is being built. Required - `build()` fails if never set.
  * @param payloadId The payload id.
  */
 // [returnSelf]
@@ -132,7 +138,7 @@ virtual ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) = 0;
 
 /*!
  * @brief Sets the descriptor of the payload the provider must provide - typically read from
- * `IAuthenticationConfig` when the request is being built.
+ * `IAuthenticationConfig` when the request is being built. Required - `build()` fails if never set.
  * @param descriptor The payload descriptor.
  */
 // [returnSelf]

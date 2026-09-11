@@ -59,14 +59,16 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) = 0;
 
     /*!
-     * @brief Gets additional metadata describing the request, primarily for the credential provider to show to the user.
+     * @brief Gets additional metadata describing the request, primarily for the credential provider to show
+     * to the user. Optional - empty (no properties) if the caller added none via `addMetaDataProperty`.
      * @param[out] metaData The metadata property object.
      */
     virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) = 0;
 
     /*!
      * @brief Gets the manufacturer of the device the connection is being established to or for - a request
-     * can be for a direct connection to that device, or for a streaming connection attached to it.
+     * can be for a direct connection to that device, or for a streaming connection attached to it. Optional -
+     * unassigned if the manufacturer isn't known for this connection.
      * @param[out] manufacturer The device manufacturer.
      */
     virtual ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) = 0;
@@ -74,12 +76,14 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     /*!
      * @brief Gets the serial number of the device the connection is being established to or for - a
      * request can be for a direct connection to that device, or for a streaming connection attached to it.
+     * Optional - unassigned if the serial number isn't known for this connection.
      * @param[out] serialNumber The device serial number.
      */
     virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
     /*!
-     * @brief Gets the id of the negotiated payload, read from `IAuthenticationConfig` when the request was built.
+     * @brief Gets the id of the negotiated payload, read from `IAuthenticationConfig` when the request was
+     * built.
      * @param[out] payloadId The payload id.
      */
     virtual ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) = 0;

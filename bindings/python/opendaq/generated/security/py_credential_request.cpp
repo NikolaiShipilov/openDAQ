@@ -65,7 +65,7 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             return objectPtr.getMetaData().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets additional metadata describing the request, primarily for the credential provider to show to the user.");
+        "Gets additional metadata describing the request, primarily for the credential provider to show to the user. Optional - empty (no properties) if the caller added none via add_meta_data_property.");
     cls.def_property_readonly("manufacturer",
         [](daq::ICredentialRequest *object)
         {
@@ -73,7 +73,7 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
             return objectPtr.getManufacturer().toStdString();
         },
-        "Gets the manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it.");
+        "Gets the manufacturer of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection.");
     cls.def_property_readonly("serial_number",
         [](daq::ICredentialRequest *object)
         {
@@ -81,7 +81,7 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
             return objectPtr.getSerialNumber().toStdString();
         },
-        "Gets the serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it.");
+        "Gets the serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection.");
     cls.def_property_readonly("payload_id",
         [](daq::ICredentialRequest *object)
         {
