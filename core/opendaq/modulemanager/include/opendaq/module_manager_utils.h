@@ -76,7 +76,8 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
      * @param connectionString Describes the connection info of the device to connect to.
      * @param parent The parent component/device to which the device attaches.
      * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
-     * @param authenticationConfig The authentication configuration used to authenticate the connection to the device.
+     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
+     * obtain and verify credentials for this connection - see `IAuthenticationConfig`.
      *
      * Iterates through all loaded modules and creates a device with the first module that accepts the provided connection string.
      * The manufacturer and serial number identifying the target device are not accepted here - if the connection string is a
@@ -122,7 +123,8 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
      * @param[out] streaming The created streaming object.
      * @param connectionString Describes the connection parameters of the streaming.
      * @param config A configuration object that contains parameters used to configure a streaming connection in the form of key-value pairs.
-     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case of
+     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
+     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. In case of
      * a null value, the streaming is connected to without authentication.
      * @param manufacturer The manufacturer of the device the streaming connection belongs to.
      * @param serialNumber The serial number of the device the streaming connection belongs to.
@@ -140,28 +142,6 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
                                                    IString* serialNumber = nullptr) = 0;
     // [templateType(streamingTypes, IString, IStreamingType)]
     virtual ErrCode INTERFACE_FUNC getAvailableStreamingTypes(IDict** streamingTypes) = 0;
-
-    /*!
-     * @brief Returns the payload descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
-     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
-     * @param[out] descriptors The supported authentication payload descriptors, keyed by their own id. Empty
-     * if no loaded module recognizes `typeId` as supporting authentication.
-     *
-     * Tries each loaded module in turn, returning the first that recognizes `typeId`.
-     */
-    // [templateType(descriptors, IString, ICredentialPayloadDescriptor)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) = 0;
-
-    /*!
-     * @brief Returns the id of the payload descriptor the type identified by `typeId` supports authenticating with by default (see
-     * `getSupportedAuthenticationMethods`).
-     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
-     * @param[out] defaultPayloadId The id of the payload descriptor to select by default, or `nullptr` if no
-     * loaded module recognizes `typeId` as supporting authentication.
-     *
-     * Tries each loaded module in turn, returning the first that recognizes `typeId`.
-     */
-    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultPayloadId) = 0;
 
     virtual ErrCode INTERFACE_FUNC createDefaultAddDeviceConfig(IPropertyObject** defaultConfig) = 0;
 
@@ -252,6 +232,27 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
      */
     virtual ErrCode INTERFACE_FUNC getDiscoveryInfo(IDeviceInfo** deviceInfo, IString* manufacturer, IString* serialNumber) = 0;
 
+    /*!
+     * @brief Returns the payload descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
+     * @param[out] descriptors The supported authentication payload descriptors, keyed by their own id. Empty
+     * if no loaded module recognizes `typeId` as supporting authentication.
+     *
+     * Tries each loaded module in turn, returning the first that recognizes `typeId`.
+     */
+    // [templateType(descriptors, IString, ICredentialPayloadDescriptor)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) = 0;
+
+    /*!
+     * @brief Returns the id of the payload descriptor the type identified by `typeId` supports authenticating with by default (see
+     * `getSupportedAuthenticationMethods`).
+     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
+     * @param[out] defaultPayloadId The id of the payload descriptor to select by default, or `nullptr` if no
+     * loaded module recognizes `typeId` as supporting authentication.
+     *
+     * Tries each loaded module in turn, returning the first that recognizes `typeId`.
+     */
+    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultPayloadId) = 0;
 };
 /*!@}*/
 

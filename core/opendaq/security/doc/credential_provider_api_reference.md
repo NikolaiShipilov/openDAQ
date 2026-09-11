@@ -134,7 +134,7 @@ Component types (`IComponentType` and everything derived from it, including `IDe
 
 | New member | Description |
 |---|---|
-| `createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig**)` | Builds and returns a new, self-contained authentication config for the component type named by `typeId` (looked up among the device's available device types, then its available streaming types); a new object on each call, same as `createDefaultConfig`. Its `"PayloadDescriptor"` property has every payload descriptor the type's module declares supporting as a selection candidate, defaulting to the one it declares as the default. Its `"CredentialProviderId"` property is a live selection over the device's `Context`-registered providers, filtered to those supporting the *selected* method's format (recomputed on every `"PayloadDescriptor"` change), defaulting to the first compatible one - absent entirely when none are compatible. Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type doesn't support authentication. |
+| `createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig**)` | Builds and returns a new, self-contained authentication config for one of this device's own available device or streaming types, named by `typeId` (looked up among the device's available device types, then its available streaming types) - not for the device itself, which this method has no bearing on. A new object is returned on each call, same as `createDefaultConfig`. See `IAuthenticationConfig` ([§1](#1-core-interfaces)) for what it contains and how to tune it. Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available streaming type. |
 | `addAuthenticatedDevice(IDevice**, IString* connectionString, IPropertyObject* config = nullptr, IAuthenticationConfig* authenticationConfig = nullptr)` | Connects to a device using the given authentication configuration. |
 | `addStreaming(IStreaming**, IString* connectionString, IPropertyObject* config = nullptr, IAuthenticationConfig* authenticationConfig = nullptr)` | Attaches a streaming connection, optionally authenticated — a `nullptr` config (the default) uses the plain, unauthenticated path. See [§4](#4-streaming-authentication). |
 
@@ -187,7 +187,7 @@ auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, aut
 
 The same connection string is used, but an `IAuthenticationConfig` is supplied, and everything described in the rest of this document — payload negotiation, provider lookup, credential retrieval, verification — is triggered as a result.
 
-A device type only exposes this path if it supports authentication at all - `IDevice::createDefaultAuthenticationConfig(typeId)` returns `OPENDAQ_ERR_NOT_SUPPORTED` for a type that doesn't (see [§2](#2-extensions-to-existing-interfaces)); calling `addAuthenticatedDevice` against such a type likewise fails.
+A device type only exposes this path meaningfully when its module declares at least one supported authentication method for it (see [§2](#2-extensions-to-existing-interfaces)) - `IDevice::createDefaultAuthenticationConfig(typeId)` fails otherwise, and so does `addAuthenticatedDevice` against such a type.
 
 ---
 

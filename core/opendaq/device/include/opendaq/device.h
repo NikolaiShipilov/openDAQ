@@ -183,31 +183,6 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      */
     virtual ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) = 0;
 
-    /*!
-     * @brief Builds and returns a new, self-contained default authentication config for the component type
-     * identified by `typeId` - covering every authentication method that type supports, not just one of
-     * them, and offering every credential provider currently registered on this device's `Context` as a
-     * `"CredentialProviderId"` selection candidate.
-     * @param typeId The id of the component type to build a default authentication config for - looked up
-     * first among `getAvailableDeviceTypes`, then among the available streaming types, since streaming
-     * connections can support authentication the same way devices do.
-     * @param[out] authenticationConfig Newly created authentication config object. A new object is created
-     * on each call, same as with `IComponentType::createDefaultConfig`.
-     *
-     * The returned config's `"PayloadDescriptor"` property (see `IAuthenticationConfig`) has every payload
-     * descriptor the type's module declares supporting as a selection candidate, defaulting to the one it
-     * declares as the default. Its `"CredentialProviderId"` property is a live selection over registered
-     * credential providers filtered to those supporting the currently selected payload format, recomputed on
-     * every `"PayloadDescriptor"` change, and entirely absent when none are compatible. The caller tunes the
-     * returned config directly - e.g. selecting a different supported method or provider, or setting
-     * `"SuppliedSecret"` - before handing it to `addAuthenticatedDevice`/`addAuthenticatedStreaming`, all via
-     * plain `IPropertyObject` calls.
-     *
-     * Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available
-     * streaming type. Returns `OPENDAQ_ERR_NOT_SUPPORTED` if the found type does not support authentication.
-     */
-    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
-
     // [templateType(device, IDevice)]
     /*!
      * @brief Connects to a device at the given connection string and returns it.
@@ -220,23 +195,6 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      * created from its corresponding Device type object. In case of a null value, it will use the default configuration.
      */
     virtual ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config = nullptr) = 0;
-
-    // [templateType(device, IDevice)]
-    /*!
-     * @brief Connects to a device at the given connection string using the provided authentication configuration and returns the added device.
-     * @param[out] device The added device.
-     * @param connectionString The connection string containing the address of the device. In example an
-     * IPv4/IPv6 address. The connection string can be found in the Device Info objects returned by
-     * `getAvailableDevices`.
-     * @param config A config object to configure a client device. This object can contain properties like max sample rate,
-     * port to use for 3rd party communication, number of channels to generate, or other device specific settings. Can be
-     * created from its corresponding Device type object. In case of a null value, it will use the default configuration.
-     * @param authenticationConfig The authentication configuration used to authenticate the connection to the device.
-     */
-    virtual ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
-                                                          IString* connectionString,
-                                                          IPropertyObject* config = nullptr,
-                                                          IAuthenticationConfig* authenticationConfig = nullptr) = 0;
 
     // [templateType(device, IDevice)]
     /*!
@@ -308,8 +266,9 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      * @param config A config object to configure a streaming connection. This object can contain properties like
      * various connection timeouts or other streaming protocol specific settings. Can be created from its corresponding
      * Streaming type object. In case of a null value, it will use the default configuration.
-     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection.
-     * In case of a null value, the streaming is connected to without authentication.
+     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
+     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. In case of
+     * a null value, the streaming is connected to without authentication.
      */
     virtual ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming,
                                                  IString* connectionString,
@@ -452,6 +411,40 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      *         OPENDAQ_IGNORED if adding the devices from modules is not allowed within the device.
      */
     virtual ErrCode INTERFACE_FUNC addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes = nullptr, IDict* errorInfos = nullptr) = 0;
+
+    /*!
+     * @brief Builds and returns a new, self-contained default authentication config for one of this
+     * device's own available device or streaming types, identified by `typeId` - not for the device
+     * itself, which this method has no bearing on. See `IAuthenticationConfig` for what the returned
+     * config contains and how to tune it before handing it to `addAuthenticatedDevice`/`addStreaming`.
+     * @param typeId The id of one of this device's available device or streaming types - looked up first
+     * among `getAvailableDeviceTypes`, then among the available streaming types, since streaming
+     * connections can support authentication the same way devices do.
+     * @param[out] authenticationConfig Newly created authentication config object. A new object is created
+     * on each call.
+     *
+     * Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available
+     * streaming type.
+     */
+    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
+
+    // [templateType(device, IDevice)]
+    /*!
+     * @brief Connects to a device at the given connection string using the provided authentication configuration and returns the added device.
+     * @param[out] device The added device.
+     * @param connectionString The connection string containing the address of the device. In example an
+     * IPv4/IPv6 address. The connection string can be found in the Device Info objects returned by
+     * `getAvailableDevices`.
+     * @param config A config object to configure a client device. This object can contain properties like max sample rate,
+     * port to use for 3rd party communication, number of channels to generate, or other device specific settings. Can be
+     * created from its corresponding Device type object. In case of a null value, it will use the default configuration.
+     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
+     * obtain and verify credentials for this connection - see `IAuthenticationConfig`.
+     */
+    virtual ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
+                                                          IString* connectionString,
+                                                          IPropertyObject* config = nullptr,
+                                                          IAuthenticationConfig* authenticationConfig = nullptr) = 0;
 };
 /*!@}*/
 
