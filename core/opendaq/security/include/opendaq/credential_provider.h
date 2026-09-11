@@ -67,7 +67,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
     // [elementType(formats, IInteger)]
     /*!
      * @brief Gets a list of the credential payload formats this provider can provide. Used for
-     * format-matching against a device type's supported payload formats.
+     * format-matching against a device / streaming type's supported payload formats.
      * @param[out] formats The list of supported payload formats.
      */
     virtual ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) = 0;

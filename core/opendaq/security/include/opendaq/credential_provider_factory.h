@@ -20,12 +20,19 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
+/*!
+ * @brief Creates a CredentialProvider that prompts the user for secrets via the command line.
+ */
 inline CredentialProviderPtr CmdLineCredentialProvider()
 {
     CredentialProviderPtr obj(CmdLineCredentialProvider_Create());
     return obj;
 }
 
+/*!
+ * @brief Creates a CredentialProvider dedicated to file-backed secrets. Prompts for the file's path via
+ * the command line and hands back the path itself for a `FilePath`-format request.
+ */
 inline CredentialProviderPtr FileCredentialProvider()
 {
     CredentialProviderPtr obj(FileCredentialProvider_Create());

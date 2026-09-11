@@ -95,10 +95,16 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 };
 
 /*!
- * @brief Builds an `AuthenticationConfig` listing every one of `payloadDescriptors` (keyed by each
- * descriptor's own `ICredentialPayloadDescriptor::getId()`) as a candidate of its `"PayloadDescriptor"`
- * selection property, defaulting to the one whose id matches `defaultPayloadId`. A single-method config is
- * simply the one-candidate case of this - construct `payloadDescriptors` with one entry.
+ * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
+ * `payloadDescriptors`. Each entry becomes one candidate value of the resulting config's
+ * `"PayloadDescriptor"` Selection property (see `IAuthenticationConfig`), so a caller can later switch
+ * between methods just by changing that property's selection, rather than needing a different config
+ * object per method. `payloadDescriptors` is a dict keyed by each descriptor's own
+ * `ICredentialPayloadDescriptor::getId()`; `defaultPayloadId` names which one of those keys starts out
+ * selected.
+ *
+ * A config that only ever supports one method is simply the one-entry case of this: pass a
+ * `payloadDescriptors` dict with a single key/value pair.
  * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
  * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
  * @param typeId The id of the component type this config was built for - carried through serialization so a

@@ -23,14 +23,14 @@
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief Builds an `AuthenticationConfig` listing every one of `payloadDescriptors` (keyed by each
- * descriptor's own `ICredentialPayloadDescriptor::getId()`) as a candidate of its `"PayloadDescriptor"`
- * selection property. A single-method config is simply the one-entry case of this.
+ * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
+ * `payloadDescriptors`. Each entry becomes one candidate value of the resulting config's
+ * `"PayloadDescriptor"` Selection property , so a caller can later switch between methods
+ * by changing that property's selection.
  * @param payloadDescriptors The supported payload descriptors, keyed by their own id.
  * @param defaultPayloadId The payload id of the descriptor to select by default.
  * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
- * `IAuthenticationConfig`) - required, no default. Pass `nullptr` explicitly for a config with no
- * `"CredentialProviderId"` selection at all.
+ * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
  * @param typeId The id of the component type this config was built for, carried through serialization so a
  * reload can re-resolve everything fresh - required, no default. Pass `nullptr` explicitly for a config with
  * no type behind it; such a config can't meaningfully round-trip through save/reload.
