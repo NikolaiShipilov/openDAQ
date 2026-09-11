@@ -25,6 +25,9 @@ AuthenticationConfigImpl::AuthenticationConfigImpl(const DictPtr<IString, ICrede
 void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                                               const StringPtr& defaultPayloadId)
 {
+    if (!context.assigned())
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Context must be assigned when creating an authentication config");
+
     if (!payloadDescriptors.assigned() || payloadDescriptors.getCount() == 0)
         DAQ_THROW_EXCEPTION(InvalidParameterException, "At least one payload descriptor must be supplied when creating an authentication config");
 
@@ -57,10 +60,6 @@ void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredential
 
 void AuthenticationConfigImpl::rebuildCredentialProviderCandidates(const CredentialPayloadDescriptorPtr& selectedDescriptor)
 {
-    // No live provider list to filter without a `Context` - "CredentialProviderId" is simply never present.
-    if (!context.assigned())
-        return;
-
     if (objPtr.hasProperty(CredentialProviderIdPropertyName))
         Super::removeProperty(String(CredentialProviderIdPropertyName));
 
@@ -166,9 +165,9 @@ ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
 
     return daqTry([&]
     {
-        // The property is entirely absent when this config has no `Context` or no compatible provider for
-        // the currently selected format (see `rebuildCredentialProviderCandidates`) - that absence is itself
-        // "no provider explicitly selected".
+        // The property is entirely absent when no compatible provider is registered for the currently
+        // selected format (see `rebuildCredentialProviderCandidates`) - that absence is itself "no provider
+        // explicitly selected".
         if (!objPtr.hasProperty(CredentialProviderIdPropertyName))
         {
             *providerId = nullptr;

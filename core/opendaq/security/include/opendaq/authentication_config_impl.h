@@ -29,10 +29,11 @@ class AuthenticationConfigImpl : public GenericPropertyObjectImpl<IAuthenticatio
 public:
     using Super = GenericPropertyObjectImpl<IAuthenticationConfig>;
 
-    // `context` and `typeId` have no default - every caller states explicitly whether it has one (`nullptr`
-    // included), rather than a config silently ending up context-less or type-less by omission. `typeId` lets
-    // a saved config re-resolve `payloadDescriptors`/`context` fresh on reload (see `serialize`/`Deserialize`)
-    // - a config built with no type behind it can't meaningfully round-trip through save/reload.
+    // `context` must be assigned - throws otherwise. `typeId` has no default instead: every caller states
+    // explicitly whether it has one (`nullptr` included), rather than a config silently ending up type-less
+    // by omission. `typeId` lets a saved config re-resolve `payloadDescriptors`/`context` fresh on reload
+    // (see `serialize`/`Deserialize`) - a config built with no type behind it can't meaningfully round-trip
+    // through save/reload.
     AuthenticationConfigImpl(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                              const StringPtr& defaultPayloadId,
                              const ContextPtr& context,
@@ -72,10 +73,9 @@ private:
     void initProperties(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
                         const StringPtr& defaultPayloadId);
 
-    // No-op when `context` is unassigned - there's no live provider list to filter without it, so
-    // "CredentialProviderId" is simply never present on such a config. Otherwise always re-queries
-    // `context.getCredentialProviders()` fresh (never a cached snapshot), filters by `selectedDescriptor`'s
-    // format, and adds/removes/replaces "CredentialProviderId" to match.
+    // Always re-queries `context.getCredentialProviders()` fresh (never a cached snapshot), filters by
+    // `selectedDescriptor`'s format, and adds/removes/replaces "CredentialProviderId" to match - present
+    // only when at least one registered provider currently supports the selected format.
     void rebuildCredentialProviderCandidates(const CredentialPayloadDescriptorPtr& selectedDescriptor);
 
     void clearSuppliedSecretIfIncompatible(const CredentialPayloadDescriptorPtr& selectedDescriptor);

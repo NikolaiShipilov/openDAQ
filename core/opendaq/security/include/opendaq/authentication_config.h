@@ -39,12 +39,11 @@ BEGIN_NAMESPACE_OPENDAQ
  * together as one `"PayloadDescriptor"` Selection property (its selection value is the
  * `ICredentialPayloadDescriptor` Struct itself, so the two can never be set out of sync - the payload id
  * is simply the selected descriptor's own `ICredentialPayloadDescriptor::getId()`). Its current selection
- * drives `"CredentialProviderId"`'s own candidates: whenever a config was built with a `Context` (see `AuthenticationConfig`'s
- * `context` parameter and `IDevice::createDefaultAuthenticationConfig`), `"CredentialProviderId"` is a
- * Selection over `Context::getCredentialProviders()` filtered live to the *currently selected*
- * `"PayloadDescriptor"`'s format - re-queried from `Context` and recomputed (candidates added, removed, or
- * refreshed) every time `"PayloadDescriptor"` is written, never a cached snapshot. The property is entirely
- * absent whenever no `Context` was given, or no registered provider currently supports the selected format.
+ * drives `"CredentialProviderId"`'s own candidates: `"CredentialProviderId"` is a Selection over
+ * `Context::getCredentialProviders()` filtered live to the *currently selected* `"PayloadDescriptor"`'s
+ * format - re-queried from `Context` and recomputed (candidates added, removed, or refreshed) every time
+ * `"PayloadDescriptor"` is written, never a cached snapshot. The property is entirely absent whenever no
+ * registered provider currently supports the selected format.
  * A directly-supplied secret is carried, when present, as a `"SuppliedSecret"` property, validated on every
  * write against whatever `"PayloadDescriptor"` is currently selected (its property names must match
  * `descriptor.createDefaultPayload()`'s exactly - the blessed workflow is to build from that template, fill
@@ -101,8 +100,7 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
  * selection property, defaulting to the one whose id matches `defaultPayloadId`. A single-method config is
  * simply the one-candidate case of this - construct `payloadDescriptors` with one entry.
  * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
- * `IAuthenticationConfig`) - required, no default; pass `nullptr` explicitly to build a config with no
- * `"CredentialProviderId"` selection at all (e.g. for a context-less use case).
+ * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
  * @param typeId The id of the component type this config was built for - carried through serialization so a
  * reload can re-resolve `payloadDescriptors`/`context` fresh (see `IAuthenticationConfig`'s serialization
  * notes) - required, no default; pass `nullptr` explicitly for a config with no type behind it (e.g. one
