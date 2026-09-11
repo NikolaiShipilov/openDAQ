@@ -20,9 +20,6 @@
 #include <coretypes/dict_ptr.h>
 #include <coretypes/boolean_factory.h>
 #include <coretypes/struct_impl.h>
-#include <coretypes/serializable.h>
-#include <coretypes/serialized_object_ptr.h>
-#include <coretypes/function_ptr.h>
 #include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -34,13 +31,6 @@ class CredentialPayloadDescriptorParametersImpl final : public GenericStructImpl
 {
 public:
     CredentialPayloadDescriptorParametersImpl(const StructTypePtr& structType, const DictPtr<IString, IBaseObject>& fields);
-
-    ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
-    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
-
-    // One per registered dispatch key (see the .cpp).
-    static ErrCode DeserializeKeyValuePairs(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-    static ErrCode DeserializeString(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 };
 
 /*!
@@ -53,20 +43,24 @@ public:
     // `createDefaultPayload()` builds the returned payload from. `None` has none - there is no payload to build.
 
     // KeyValuePairs
-    CredentialPayloadDescriptorImpl(IString* id, IDict* keys, IString* description, ITypeManager* typeManager, IString* payloadClassName);
-    // String
-    CredentialPayloadDescriptorImpl(IString* id, IString* description, Bool hidden, ITypeManager* typeManager, IString* payloadClassName);
-    // FilePath
-    CredentialPayloadDescriptorImpl(IString* id, IString* description, ITypeManager* typeManager, IString* payloadClassName);
-    // None
-    CredentialPayloadDescriptorImpl(IString* id, IString* description, ITypeManager* typeManager);
-
-    // Builds directly from an already-resolved `structType`, bypassing the registered-type requirement above - used by `Deserialize`.
-    CredentialPayloadDescriptorImpl(CredentialPayloadFormat format,
-                                    const StructTypePtr& structType,
-                                    const DictPtr<IString, IBaseObject>& fields,
+    CredentialPayloadDescriptorImpl(const StringPtr& id,
+                                    const DictPtr<IString, IBoolean>& keys,
+                                    const StringPtr& description,
                                     const TypeManagerPtr& typeManager,
                                     const StringPtr& payloadClassName);
+    // String
+    CredentialPayloadDescriptorImpl(const StringPtr& id,
+                                    const StringPtr& description,
+                                    Bool hidden,
+                                    const TypeManagerPtr& typeManager,
+                                    const StringPtr& payloadClassName);
+    // FilePath
+    CredentialPayloadDescriptorImpl(const StringPtr& id,
+                                    const StringPtr& description,
+                                    const TypeManagerPtr& typeManager,
+                                    const StringPtr& payloadClassName);
+    // None
+    CredentialPayloadDescriptorImpl(const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager);
 
     ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC getFormat(CredentialPayloadFormat* format) override;
@@ -74,21 +68,21 @@ public:
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC createDefaultPayload(IPropertyObject** payload) override;
 
-    // ISerializable
-    ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
-    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
-
-    // One per registered dispatch key
-    static ErrCode DeserializeKeyValuePairs(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-    static ErrCode DeserializeString(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-    static ErrCode DeserializeFilePath(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-    static ErrCode DeserializeNone(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
-
 private:
-    static DictPtr<IString, IBaseObject> BuildFields(IString* id, IDict* keys, IString* description, const StructTypePtr& parametersType);
-    static DictPtr<IString, IBaseObject> BuildFields(IString* id, IString* description, Bool hidden, const StructTypePtr& parametersType);
+    // Shared implementation constructor the four format-specific constructors above delegate to.
+    CredentialPayloadDescriptorImpl(CredentialPayloadFormat format,
+                                    const StructTypePtr& structType,
+                                    const DictPtr<IString, IBaseObject>& fields,
+                                    const TypeManagerPtr& typeManager,
+                                    const StringPtr& payloadClassName);
+
+    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id,
+                                                     const DictPtr<IString, IBoolean>& keys,
+                                                     const StringPtr& description,
+                                                     const StructTypePtr& parametersType);
+    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const StringPtr& description, Bool hidden, const StructTypePtr& parametersType);
     // For a format with no format-specific parameters - "Id"/"Description" only, no "Parameters" field.
-    static DictPtr<IString, IBaseObject> BuildFields(IString* id, IString* description);
+    static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const StringPtr& description);
 
     CredentialPayloadFormat format;
     TypeManagerPtr typeManager;

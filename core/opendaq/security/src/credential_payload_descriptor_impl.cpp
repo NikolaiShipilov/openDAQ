@@ -7,41 +7,6 @@ BEGIN_NAMESPACE_OPENDAQ
 
 namespace detail
 {
-    // Used when reconstructing from serialized data, without a type manager.
-    // Only `KeyValuePairs` and `String` have a "Parameters" field at all - `None` and `FilePath` are
-    // explicitly listed with no return, falling through to the throw below.
-    inline StructTypePtr LocalParametersStructType(CredentialPayloadFormat format)
-    {
-        switch (format)
-        {
-            case CredentialPayloadFormat::KeyValuePairs:
-                return KeyValuePayloadDescriptorParametersStructType();
-            case CredentialPayloadFormat::String:
-                return StringPayloadDescriptorParametersStructType();
-            case CredentialPayloadFormat::None:
-            case CredentialPayloadFormat::FilePath:
-                break;
-        }
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "CredentialPayloadFormat has no parameters struct type");
-    }
-
-    inline StructTypePtr LocalDescriptorStructType(CredentialPayloadFormat format)
-    {
-        switch (format)
-        {
-            case CredentialPayloadFormat::None:
-                return NonePayloadDescriptorStructType();
-            case CredentialPayloadFormat::KeyValuePairs:
-                return KeyValuePayloadDescriptorStructType();
-            case CredentialPayloadFormat::String:
-                return StringPayloadDescriptorStructType();
-            case CredentialPayloadFormat::FilePath:
-                return FilePathPayloadDescriptorStructType();
-        }
-
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "Unknown CredentialPayloadFormat value");
-    }
-
     inline StructTypePtr RequireRegisteredType(const TypeManagerPtr& typeManager, const StringPtr& typeName)
     {
         if (!typeManager.assigned())
@@ -73,108 +38,48 @@ CredentialPayloadDescriptorParametersImpl::CredentialPayloadDescriptorParameters
 {
 }
 
-ErrCode CredentialPayloadDescriptorParametersImpl::serialize(ISerializer* serializer)
-{
-    serializer->startTaggedObject(this);
-
-    const StringPtr typeName = this->structType.getName();
-    if (typeName == "KeyValuePayloadDescriptorParameters")
-    {
-        const DictPtr<IString, IBoolean> keys = this->fields.get("Keys");
-        serializer->key("Keys");
-        keys.template asPtr<ISerializable>().serialize(serializer);
-    }
-    else if (typeName == "StringPayloadDescriptorParameters")
-    {
-        const Bool hidden = this->fields.get("Hidden");
-        serializer->key("Hidden");
-        serializer->writeBool(hidden);
-    }
-    else
-    {
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Unknown payload descriptor parameters type \"{}\"", typeName.getCharPtr());
-    }
-
-    serializer->endObject();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode CredentialPayloadDescriptorParametersImpl::getSerializeId(ConstCharPtr* id) const
-{
-    const StringPtr typeName = this->structType.getName();
-    if (typeName == "KeyValuePayloadDescriptorParameters")
-        *id = "KeyValuePayloadDescriptorParameters";
-    else if (typeName == "StringPayloadDescriptorParameters")
-        *id = "StringPayloadDescriptorParameters";
-    else
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Unknown payload descriptor parameters type \"{}\"", typeName.getCharPtr());
-
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode CredentialPayloadDescriptorParametersImpl::DeserializeKeyValuePairs(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-    const auto contextPtr = BaseObjectPtr::Borrow(context);
-    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
-
-    return daqTry(
-        [&]
-        {
-            const DictPtr<IString, IBoolean> keys = serializedObj.readObject("Keys", contextPtr, factoryCallbackPtr);
-            *obj = createWithImplementation<IStruct, CredentialPayloadDescriptorParametersImpl>(
-                       detail::LocalParametersStructType(CredentialPayloadFormat::KeyValuePairs), Dict<IString, IBaseObject>({{"Keys", keys}}))
-                       .detach();
-            return OPENDAQ_SUCCESS;
-        });
-}
-
-ErrCode CredentialPayloadDescriptorParametersImpl::DeserializeString(ISerializedObject* serialized, IBaseObject*, IFunction*, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-
-    return daqTry(
-        [&]
-        {
-            const Bool hidden = serializedObj.readBool("Hidden");
-            *obj = createWithImplementation<IStruct, CredentialPayloadDescriptorParametersImpl>(
-                       detail::LocalParametersStructType(CredentialPayloadFormat::String), Dict<IString, IBaseObject>({{"Hidden", hidden}}))
-                       .detach();
-            return OPENDAQ_SUCCESS;
-        });
-}
-
 //
 // CredentialPayloadDescriptorImpl
 //
 
-DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl::BuildFields(IString* id, IDict* keys, IString* description, const StructTypePtr& parametersType)
+DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl::BuildFields(
+    const StringPtr& id,
+    const DictPtr<IString, IBoolean>& keys,
+    const StringPtr& description,
+    const StructTypePtr& parametersType)
 {
-    const DictPtr<IString, IBoolean> keysPtr = keys;
-    if (!keysPtr.assigned() || keysPtr.getCount() == 0)
+    if (!keys.assigned() || keys.getCount() == 0)
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Keys must be assigned and non-empty when creating a key-value credential payload descriptor");
 
     const auto parameters =
-        createWithImplementation<IStruct, CredentialPayloadDescriptorParametersImpl>(parametersType, Dict<IString, IBaseObject>({{"Keys", keysPtr}}));
+        createWithImplementation<IStruct, CredentialPayloadDescriptorParametersImpl>(parametersType, Dict<IString, IBaseObject>({{"Keys", keys}}));
 
-    return Dict<IString, IBaseObject>({{"Id", StringPtr(id)}, {"Description", StringPtr(description)}, {"Parameters", parameters}});
+    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}, {"Parameters", parameters}});
 }
 
-DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl::BuildFields(IString* id, IString* description, Bool hidden, const StructTypePtr& parametersType)
+DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl::BuildFields(
+    const StringPtr& id,
+    const StringPtr& description,
+    Bool hidden,
+    const StructTypePtr& parametersType)
 {
     const auto parameters = createWithImplementation<IStruct, CredentialPayloadDescriptorParametersImpl>(
         parametersType, Dict<IString, IBaseObject>({{"Hidden", hidden}}));
 
-    return Dict<IString, IBaseObject>({{"Id", StringPtr(id)}, {"Description", StringPtr(description)}, {"Parameters", parameters}});
+    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}, {"Parameters", parameters}});
 }
 
-DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl::BuildFields(IString* id, IString* description)
+DictPtr<IString, IBaseObject> CredentialPayloadDescriptorImpl::BuildFields(const StringPtr& id, const StringPtr& description)
 {
-    return Dict<IString, IBaseObject>({{"Id", StringPtr(id)}, {"Description", StringPtr(description)}});
+    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}});
 }
 
 CredentialPayloadDescriptorImpl::CredentialPayloadDescriptorImpl(
-    IString* id, IDict* keys, IString* description, ITypeManager* typeManager, IString* payloadClassName)
+    const StringPtr& id,
+    const DictPtr<IString, IBoolean>& keys,
+    const StringPtr& description,
+    const TypeManagerPtr& typeManager,
+    const StringPtr& payloadClassName)
     : CredentialPayloadDescriptorImpl(
           CredentialPayloadFormat::KeyValuePairs,
           detail::RequireRegisteredType(typeManager, KeyValuePayloadDescriptorStructType().getName()),
@@ -185,7 +90,7 @@ CredentialPayloadDescriptorImpl::CredentialPayloadDescriptorImpl(
 }
 
 CredentialPayloadDescriptorImpl::CredentialPayloadDescriptorImpl(
-    IString* id, IString* description, Bool hidden, ITypeManager* typeManager, IString* payloadClassName)
+    const StringPtr& id, const StringPtr& description, Bool hidden, const TypeManagerPtr& typeManager, const StringPtr& payloadClassName)
     : CredentialPayloadDescriptorImpl(
           CredentialPayloadFormat::String,
           detail::RequireRegisteredType(typeManager, StringPayloadDescriptorStructType().getName()),
@@ -196,7 +101,7 @@ CredentialPayloadDescriptorImpl::CredentialPayloadDescriptorImpl(
 }
 
 CredentialPayloadDescriptorImpl::CredentialPayloadDescriptorImpl(
-    IString* id, IString* description, ITypeManager* typeManager, IString* payloadClassName)
+    const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager, const StringPtr& payloadClassName)
     : CredentialPayloadDescriptorImpl(
           CredentialPayloadFormat::FilePath,
           detail::RequireRegisteredType(typeManager, FilePathPayloadDescriptorStructType().getName()),
@@ -206,7 +111,7 @@ CredentialPayloadDescriptorImpl::CredentialPayloadDescriptorImpl(
 {
 }
 
-CredentialPayloadDescriptorImpl::CredentialPayloadDescriptorImpl(IString* id, IString* description, ITypeManager* typeManager)
+CredentialPayloadDescriptorImpl::CredentialPayloadDescriptorImpl(const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager)
     : CredentialPayloadDescriptorImpl(
           CredentialPayloadFormat::None,
           detail::RequireRegisteredType(typeManager, NonePayloadDescriptorStructType().getName()),
@@ -277,201 +182,9 @@ ErrCode CredentialPayloadDescriptorImpl::createDefaultPayload(IPropertyObject** 
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialPayloadDescriptorImpl::serialize(ISerializer* serializer)
-{
-    serializer->startTaggedObject(this);
-
-    const StringPtr id = this->fields.get("Id");
-    serializer->key("Id");
-    serializer->writeString(id.getCharPtr(), id.getLength());
-
-    const StringPtr description = this->fields.get("Description");
-    serializer->key("Description");
-    serializer->writeString(description.getCharPtr(), description.getLength());
-
-    if (this->fields.hasKey("Parameters"))
-    {
-        const StructPtr parameters = this->fields.get("Parameters");
-        serializer->key("Parameters");
-        parameters.template asPtr<ISerializable>().serialize(serializer);
-    }
-
-    if (payloadClassName.assigned())
-    {
-        serializer->key("PayloadClassName");
-        serializer->writeString(payloadClassName.getCharPtr(), payloadClassName.getLength());
-    }
-
-    serializer->endObject();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode CredentialPayloadDescriptorImpl::getSerializeId(ConstCharPtr* id) const
-{
-    switch (format)
-    {
-        case CredentialPayloadFormat::KeyValuePairs:
-            *id = "KeyValuePayloadDescriptor";
-            return OPENDAQ_SUCCESS;
-        case CredentialPayloadFormat::String:
-            *id = "StringPayloadDescriptor";
-            return OPENDAQ_SUCCESS;
-        case CredentialPayloadFormat::FilePath:
-            *id = "FilePathPayloadDescriptor";
-            return OPENDAQ_SUCCESS;
-        case CredentialPayloadFormat::None:
-            *id = "NonePayloadDescriptor";
-            return OPENDAQ_SUCCESS;
-    }
-
-    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Unknown CredentialPayloadFormat value");
-}
-
-ErrCode CredentialPayloadDescriptorImpl::DeserializeKeyValuePairs(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-    const auto contextPtr = BaseObjectPtr::Borrow(context);
-    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
-
-    return daqTry(
-        [&]
-        {
-            const auto id = serializedObj.readString("Id");
-            const auto description = serializedObj.readString("Description");
-            const StructPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
-            const DictPtr<IString, IBoolean> keys = parameters.get("Keys");
-            const auto payloadClassName = serializedObj.readString("PayloadClassName");
-            const TypeManagerPtr typeManagerPtr = contextPtr.asPtrOrNull<ITypeManager>();
-
-            const auto fields = BuildFields(id.getObject(), keys.getObject(), description.getObject(),
-                                            detail::LocalParametersStructType(CredentialPayloadFormat::KeyValuePairs));
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(
-                       CredentialPayloadFormat::KeyValuePairs,
-                       detail::LocalDescriptorStructType(CredentialPayloadFormat::KeyValuePairs),
-                       fields,
-                       typeManagerPtr,
-                       payloadClassName)
-                       .detach();
-
-            return OPENDAQ_SUCCESS;
-        });
-}
-
-ErrCode CredentialPayloadDescriptorImpl::DeserializeString(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-    const auto contextPtr = BaseObjectPtr::Borrow(context);
-    const auto factoryCallbackPtr = FunctionPtr::Borrow(factoryCallback);
-
-    return daqTry(
-        [&]
-        {
-            const auto id = serializedObj.readString("Id");
-            const auto description = serializedObj.readString("Description");
-            const StructPtr parameters = serializedObj.readObject("Parameters", contextPtr, factoryCallbackPtr);
-            const Bool hidden = parameters.get("Hidden");
-            const auto payloadClassName = serializedObj.readString("PayloadClassName");
-
-            const TypeManagerPtr typeManagerPtr = contextPtr.asPtrOrNull<ITypeManager>();
-
-            const auto fields = BuildFields(id.getObject(), description.getObject(), hidden,
-                                            detail::LocalParametersStructType(CredentialPayloadFormat::String));
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(
-                       CredentialPayloadFormat::String,
-                       detail::LocalDescriptorStructType(CredentialPayloadFormat::String),
-                       fields,
-                       typeManagerPtr,
-                       payloadClassName)
-                       .detach();
-
-            return OPENDAQ_SUCCESS;
-        });
-}
-
-ErrCode CredentialPayloadDescriptorImpl::DeserializeFilePath(ISerializedObject* serialized, IBaseObject* context, IFunction*, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-    const auto contextPtr = BaseObjectPtr::Borrow(context);
-
-    return daqTry(
-        [&]
-        {
-            const auto id = serializedObj.readString("Id");
-            const auto description = serializedObj.readString("Description");
-            const auto payloadClassName = serializedObj.readString("PayloadClassName");
-
-            const TypeManagerPtr typeManagerPtr = contextPtr.asPtrOrNull<ITypeManager>();
-
-            const auto fields = BuildFields(id.getObject(), description.getObject());
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(
-                       CredentialPayloadFormat::FilePath,
-                       detail::LocalDescriptorStructType(CredentialPayloadFormat::FilePath),
-                       fields,
-                       typeManagerPtr,
-                       payloadClassName)
-                       .detach();
-
-            return OPENDAQ_SUCCESS;
-        });
-}
-
-ErrCode CredentialPayloadDescriptorImpl::DeserializeNone(ISerializedObject* serialized, IBaseObject* context, IFunction*, IBaseObject** obj)
-{
-    const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
-    const auto contextPtr = BaseObjectPtr::Borrow(context);
-
-    return daqTry(
-        [&]
-        {
-            const auto id = serializedObj.readString("Id");
-            const auto description = serializedObj.readString("Description");
-
-            const TypeManagerPtr typeManagerPtr = contextPtr.asPtrOrNull<ITypeManager>();
-
-            const auto fields = BuildFields(id.getObject(), description.getObject());
-            *obj = createWithImplementation<ICredentialPayloadDescriptor, CredentialPayloadDescriptorImpl>(
-                       CredentialPayloadFormat::None,
-                       detail::LocalDescriptorStructType(CredentialPayloadFormat::None),
-                       fields,
-                       typeManagerPtr,
-                       nullptr)
-                       .detach();
-
-            return OPENDAQ_SUCCESS;
-        });
-}
-
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValuePayloadDescriptor, ICredentialPayloadDescriptor, IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, payloadClassName)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringPayloadDescriptor, ICredentialPayloadDescriptor, IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, payloadClassName)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathPayloadDescriptor, ICredentialPayloadDescriptor, IString*, id, IString*, description, ITypeManager*, typeManager, IString*, payloadClassName)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, NonePayloadDescriptor, ICredentialPayloadDescriptor, IString*, id, IString*, description, ITypeManager*, typeManager)
-
-namespace detail
-{
-    class CredentialPayloadDescriptorDeserializeFactory
-    {
-    public:
-        CredentialPayloadDescriptorDeserializeFactory()
-        {
-            daqRegisterSerializerFactory("KeyValuePayloadDescriptor", CredentialPayloadDescriptorImpl::DeserializeKeyValuePairs);
-            daqRegisterSerializerFactory("StringPayloadDescriptor", CredentialPayloadDescriptorImpl::DeserializeString);
-            daqRegisterSerializerFactory("FilePathPayloadDescriptor", CredentialPayloadDescriptorImpl::DeserializeFilePath);
-            daqRegisterSerializerFactory("NonePayloadDescriptor", CredentialPayloadDescriptorImpl::DeserializeNone);
-        }
-    };
-    static CredentialPayloadDescriptorDeserializeFactory gCredentialPayloadDescriptorDeserializeFactory;
-
-    // Same pattern for the nested "Parameters" struct.
-    class CredentialPayloadDescriptorParametersDeserializeFactory
-    {
-    public:
-        CredentialPayloadDescriptorParametersDeserializeFactory()
-        {
-            daqRegisterSerializerFactory("KeyValuePayloadDescriptorParameters", CredentialPayloadDescriptorParametersImpl::DeserializeKeyValuePairs);
-            daqRegisterSerializerFactory("StringPayloadDescriptorParameters", CredentialPayloadDescriptorParametersImpl::DeserializeString);
-        }
-    };
-    static CredentialPayloadDescriptorParametersDeserializeFactory gCredentialPayloadDescriptorParametersDeserializeFactory;
-}
 
 END_NAMESPACE_OPENDAQ
