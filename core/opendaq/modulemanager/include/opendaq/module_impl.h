@@ -37,6 +37,12 @@
 #include <coreobjects/property_object_protected_ptr.h>
 #include <coretypes/dictobject_factory.h>
 #include <opendaq/authentication_config_ptr.h>
+#include <opendaq/authentication_config_factory.h>
+#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/credential_provider_ptr.h>
+#include <opendaq/credential_request_ptr.h>
+#include <opendaq/credential_request_factory.h>
+#include <coreobjects/exceptions.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -149,6 +155,16 @@ public:
      * @param parent The parent component/device to which the device attaches.
      * @param[out] device The device object created to communicate with and control the device.
      * @param authenticationConfig The authentication configuration used to authenticate the connection to the device.
+     *
+     * The credentials are resolved (`requestCredentials`) here before `onCreateAuthenticatedDevice` is called.
+     * On success, `authenticationConfig` is persisted on the created device (`IComponentPrivate::setAuthenticationConfig`)
+     * so a reload can re-request credentials for it - this, too, is handled here rather than by the module implementation.
+     * `manufacturer`/`serialNumber` are used for that resolution (as metadata on the credential request/for a
+     * provider's own caching).
+     *
+     * If either wasn't known at that point, the created device's own info can provide them afterward - if it
+     * supplies both, the already-obtained credentials are handed again (`cacheCredentials`) to the exact same
+     * provider `requestCredentials` resolved originally (never re-searched), against a request rebuilt with them.
      */
     ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
                                                      IString* connectionString,
@@ -179,20 +195,63 @@ public:
             }
         }
 
+        const AuthenticationConfigPtr authConfigPtr = AuthenticationConfigPtr::Borrow(authenticationConfig);
+
+        CredentialProviderPtr resolvedProvider;
+        PropertyObjectPtr credentials;
+
+        errCode = wrapHandlerReturn(
+            this, &Module::requestCredentials, credentials, authConfigPtr, connectionString, manufacturer, serialNumber, deviceType, resolvedProvider);
+        OPENDAQ_RETURN_IF_FAILED(errCode);
+
+        const StringPtr authenticationMethodId = authConfigPtr.getAuthenticationMethodId();
+
         DevicePtr createdDevice;
         errCode = wrapHandlerReturn(this,
                                     &Module::onCreateAuthenticatedDevice,
                                     createdDevice,
                                     connectionString,
-                                    manufacturer,
-                                    serialNumber,
                                     parent,
                                     mergeConfig(config, deviceType),
-                                    authenticationConfig);
+                                    authenticationMethodId,
+                                    credentials);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         if (createdDevice.assigned())
-            createdDevice.getInfo();
+        {
+            errCode = daqTry([&]
+            {
+                if (const auto& componentPrivate = createdDevice.asPtrOrNull<IComponentPrivate>(true); componentPrivate.assigned())
+                    componentPrivate.setAuthenticationConfig(authConfigPtr);
+
+                const DeviceInfoPtr info = createdDevice.getInfo();
+
+                // If manufacturer/serial number weren't known when `requestCredentials` was originally called
+                // above, but the created device's own info now supplies them, hand the already-obtained
+                // credentials to the same provider again, keyed by them too.
+                if ((manufacturer == nullptr || serialNumber == nullptr) && resolvedProvider.assigned() && info.assigned() &&
+                    info.getManufacturer().assigned() && info.getSerialNumber().assigned())
+                {
+                    try
+                    {
+                        const auto enrichedRequest = buildCredentialRequest(
+                            authConfigPtr, connectionString, info.getManufacturer(), info.getSerialNumber(), deviceType);
+                        resolvedProvider.cacheCredentials(enrichedRequest, credentials);
+                    }
+                    catch (const DaqException& e)
+                    {
+                        LOG_W("Failed to re-cache credentials with resolved manufacturer/serial number: {}", e.what())
+                    }
+                    catch (const std::exception& e)
+                    {
+                        LOG_W("Failed to re-cache credentials with resolved manufacturer/serial number: {}", e.what())
+                    }
+                }
+
+                return OPENDAQ_SUCCESS;
+            });
+            OPENDAQ_RETURN_IF_FAILED(errCode);
+        }
 
         *device = createdDevice.detach();
         return errCode;
@@ -311,11 +370,16 @@ public:
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
-     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case
-     * of a null value, the streaming is connected to without authentication.
+     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. If
+     * unassigned and the resolved streaming type supports authentication, its own default config is used instead
+     * - the streaming is connected to without authentication only if the type doesn't support it at all.
      * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
      * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @param[out] streaming The created streaming object.
+     *
+     * The credentials are resolved (`requestCredentials`) before `onCreateStreaming` is called -
+     * `authenticationConfig` itself never reaches the final module's own implementation, only the
+     * credentials and the resolved authentication method id (to verify them against the right method) do.
      */
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                            IString* connectionString,
@@ -331,7 +395,7 @@ public:
         ErrCode errCode = wrapHandlerReturn(this, &Module::onGetAvailableStreamingTypes, types);
         OPENDAQ_RETURN_IF_FAILED_EXCEPT(errCode, OPENDAQ_ERR_NOTIMPLEMENTED);
 
-        ComponentTypePtr streamingType;
+        StreamingTypePtr streamingType;
         const StringPtr prefix = getPrefixFromConnectionString(connectionString);
         if (prefix.assigned() && prefix.getLength() != 0)
         {
@@ -345,15 +409,46 @@ public:
             }
         }
 
+        if (!streamingType.assigned())
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND,
+                                        "No streaming type matching connection string \"{}\" was found",
+                                        connectionString);
+
+        AuthenticationConfigPtr resolvedAuthConfig;
+        errCode = wrapHandlerReturn(this,
+                                    &Module::resolveDefaultAuthenticationConfig,
+                                    resolvedAuthConfig,
+                                    AuthenticationConfigPtr::Borrow(authenticationConfig),
+                                    streamingType.getId());
+        OPENDAQ_RETURN_IF_FAILED(errCode);
+
+        StringPtr authenticationMethodId;
+        PropertyObjectPtr credentials;
+        if (resolvedAuthConfig.assigned())
+        {
+            CredentialProviderPtr resolvedProvider;
+            errCode = wrapHandlerReturn(this,
+                                        &Module::requestCredentials,
+                                        credentials,
+                                        resolvedAuthConfig,
+                                        connectionString,
+                                        manufacturer,
+                                        serialNumber,
+                                        streamingType,
+                                        resolvedProvider);
+            OPENDAQ_RETURN_IF_FAILED(errCode);
+
+            authenticationMethodId = resolvedAuthConfig.getAuthenticationMethodId();
+        }
+
         StreamingPtr createdStreaming;
         errCode = wrapHandlerReturn(this,
                                     &Module::onCreateStreaming,
                                     createdStreaming,
                                     connectionString,
                                     mergeConfig(config, streamingType),
-                                    authenticationConfig,
-                                    manufacturer,
-                                    serialNumber);
+                                    authenticationMethodId,
+                                    credentials);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         *streaming = createdStreaming.detach();
@@ -390,6 +485,41 @@ public:
         return errCode;
     }
 
+    /*!
+     * @brief Returns the credential descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id.
+     */
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) override
+    {
+        OPENDAQ_PARAM_NOT_NULL(typeId);
+        OPENDAQ_PARAM_NOT_NULL(descriptors);
+
+        DictPtr<IString, ICredentialDescriptor> descriptorsPtr;
+        const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetSupportedAuthenticationMethods, descriptorsPtr, typeId);
+        OPENDAQ_RETURN_IF_FAILED(errCode);
+
+        *descriptors = descriptorsPtr.detach();
+        return errCode;
+    }
+
+    /*!
+     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @param[out] defaultAuthenticationMethodId The id of the authentication method to select by default.
+     */
+    ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultAuthenticationMethodId) override
+    {
+        OPENDAQ_PARAM_NOT_NULL(typeId);
+        OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationMethodId);
+
+        StringPtr defaultAuthenticationMethodIdPtr;
+        const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetDefaultAuthenticationMethodId, defaultAuthenticationMethodIdPtr, typeId);
+        OPENDAQ_RETURN_IF_FAILED(errCode);
+
+        *defaultAuthenticationMethodId = defaultAuthenticationMethodIdPtr.detach();
+        return errCode;
+    }
 
     // Helpers
 
@@ -426,24 +556,41 @@ public:
     }
 
     /*!
+     * @brief Returns the canonical form of `connectionString` - the module's own connection-string prefix
+     * trimmed off, and every connection parameter (port, path, etc.) made explicit, even ones the original
+     * string left unspecified and the module fell back to a default for. Meant to be used as a stable
+     * identifier for caching authentication credentials against a specific connection within a credential
+     * provider - two connection strings that differ only in how much they left implicit still resolve
+     * to the exact same canonical string, and so the same cache entry.
+     * @param connectionString The connection string to canonicalize.
+     * @returns The canonical connection string. The base implementation performs no canonicalization at
+     * all - it returns `connectionString` unchanged - so a module that doesn't yet support authentication
+     * (and so has no need for a caching identifier) doesn't need to override this.
+     */
+    virtual StringPtr onGetCanonicalConnectionString(const StringPtr& connectionString)
+    {
+        return connectionString;
+    }
+
+    /*!
      * @brief Creates a device object that can communicate with the device described in the specified connection string,
-     * authenticating the connection by obtaining credentials - as specified by the given authentication configuration -
-     * from a compatible registered credential provider.
+     * authenticating the connection with the given, already-resolved credentials.
      * The device object is not automatically added as a sub-device of the caller, but only returned by reference.
      * @param connectionString Describes the connection info of the device to connect to.
-     * @param manufacturer The manufacturer of the device to connect to.
-     * @param serialNumber The serial number of the device to connect to.
      * @param parent The parent component/device to which the device attaches.
      * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
-     * @param authenticationConfig The authentication configuration used to authenticate the connection to the device.
+     * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for (see
+     * `IAuthenticationConfig::getAuthenticationMethodId`).
+     * @param credentials The already-resolved credentials to authenticate with - `createAuthenticatedDevice`
+     * has already obtained this (via `requestCredentials`, from a supplied secret or a credential provider)
+     * before calling this method, so the implementation only needs to verify it, never to resolve it itself.
      * @returns The device object created to communicate with and control the device.
      */
     virtual DevicePtr onCreateAuthenticatedDevice(const StringPtr& connectionString,
-                                                  const StringPtr& manufacturer,
-                                                  const StringPtr& serialNumber,
                                                   const ComponentPtr& parent,
                                                   const PropertyObjectPtr& config,
-                                                  const AuthenticationConfigPtr& authenticationConfig)
+                                                  const StringPtr& authenticationMethodId,
+                                                  const PropertyObjectPtr& credentials)
     {
         return nullptr;
     }
@@ -490,21 +637,21 @@ public:
 
     /*!
      * @brief Creates and returns a streaming object using the specified connection string and config object,
-     * optionally authenticating the connection by obtaining credentials - as specified by the given authentication
-     * configuration - from a compatible registered credential provider.
+     * optionally authenticating the connection with the given, already-resolved credentials.
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
-     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case
-     * of a null value, the streaming is connected to without authentication.
-     * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
-     * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
+     * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for, or
+     * unassigned if the connection is unauthenticated (see `createStreaming`).
+     * @param credentials The already-resolved credentials to authenticate with, or unassigned if the
+     * connection is unauthenticated - `createStreaming` has already obtained this (via `requestCredentials`,
+     * from a supplied secret or a credential provider) before calling this method, so the implementation
+     * only needs to verify it, never to resolve it itself.
      * @returns The created streaming object.
      */
     virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString,
                                            const PropertyObjectPtr& config,
-                                           const AuthenticationConfigPtr& authenticationConfig,
-                                           const StringPtr& manufacturer,
-                                           const StringPtr& serialNumber)
+                                           const StringPtr& authenticationMethodId,
+                                           const PropertyObjectPtr& credentials)
     {
         return nullptr;
     }
@@ -512,6 +659,32 @@ public:
     virtual Bool onCompleteServerCapability(const ServerCapabilityPtr& source, const ServerCapabilityConfigPtr& target)
     {
         return false;
+    }
+
+    /*!
+     * @brief Returns the credential descriptors the type identified by `typeId` supports authenticating with,
+     * keyed by their own id. A concrete module overrides this for each device/streaming type id it declares
+     * authentication support for. The base implementation declares no authentication support for any type.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @returns The supported authentication credential descriptors, keyed by their own id. Empty if `typeId`
+     * isn't recognized or doesn't support authentication.
+     */
+    virtual DictPtr<IString, ICredentialDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId)
+    {
+        return Dict<IString, ICredentialDescriptor>();
+    }
+
+    /*!
+     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default.
+     * A concrete module overrides this for each device/streaming type id it declares authentication support for. The base
+     * implementation declares no authentication support for any type.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @returns The default authentication method id, or unassigned if `typeId` isn't recognized or doesn't support
+     * authentication.
+     */
+    virtual StringPtr onGetDefaultAuthenticationMethodId(const StringPtr& typeId)
+    {
+        return nullptr;
     }
 
     virtual ErrCode INTERFACE_FUNC loadLicense(Bool* succeded, IDict* licenseConfig) override
@@ -602,6 +775,199 @@ protected:
     }
 
 private:
+    // Returns `authenticationConfig` unchanged if assigned. Otherwise, if `typeId` declares default
+    // authentication support (`onGetDefaultAuthenticationMethodId` returns one), builds and returns its own
+    // default config instead - so `createStreaming` (the only caller) still authenticates a connection to a
+    // type that supports it even when the caller left `authenticationConfig` unspecified, rather than
+    // silently connecting without any. Returns unassigned only when `authenticationConfig` was unassigned and
+    // `typeId` is either unassigned or doesn't support authentication at all.
+    AuthenticationConfigPtr resolveDefaultAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig, const StringPtr& typeId)
+    {
+        if (authenticationConfig.assigned() || !typeId.assigned())
+            return authenticationConfig;
+
+        const StringPtr defaultAuthenticationMethodId = onGetDefaultAuthenticationMethodId(typeId);
+        if (!defaultAuthenticationMethodId.assigned())
+            return authenticationConfig;
+
+        const auto descriptors = onGetSupportedAuthenticationMethods(typeId);
+        return AuthenticationConfig(descriptors, defaultAuthenticationMethodId, context, typeId);
+    }
+
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
+    // then resolves credentials for it via `obtainCredentials` (see it for details on `resolvedProvider`).
+    // Throws `AuthenticationFailedException` if `authenticationConfig` is unassigned.
+    //
+    // A `None`-format method needs no credentials at all, so it is resolved directly here, as unassigned
+    // credentials - `createEmptySecret()` doesn't apply to it either, there being no secret to build. No
+    // `ICredentialRequest` is even formed for it, since nothing will ever be requested with it: not from a
+    // credential provider (none is expected to declare support for `None` - there is nothing for one to
+    // provide) and not via a caller-supplied secret either.
+    PropertyObjectPtr requestCredentials(const AuthenticationConfigPtr& authenticationConfig,
+                                        const StringPtr& connectionString,
+                                        const StringPtr& manufacturer,
+                                        const StringPtr& serialNumber,
+                                        const ComponentTypePtr& componentType,
+                                        CredentialProviderPtr& resolvedProvider)
+    {
+        if (!authenticationConfig.assigned())
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
+
+        const auto credentialDescriptor = authenticationConfig.getCredentialDescriptor();
+        if (credentialDescriptor.getFormat() == CredentialFormat::None)
+            return nullptr;
+
+        const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, componentType);
+
+        return obtainCredentials(authenticationConfig, credentialRequest, credentialDescriptor, resolvedProvider);
+    }
+
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
+    // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`,
+    // and `componentType`. Split out of `requestCredentials` so `createAuthenticatedDevice` can call it a
+    // second time, with manufacturer/serial number resolved from the created device's own info, to re-cache
+    // credentials that were originally obtained without them.
+    CredentialRequestPtr buildCredentialRequest(const AuthenticationConfigPtr& authenticationConfig,
+                                                const StringPtr& connectionString,
+                                                const StringPtr& manufacturer,
+                                                const StringPtr& serialNumber,
+                                                const ComponentTypePtr& componentType)
+    {
+        auto requestBuilder = CredentialRequestBuilder();
+        requestBuilder.setConnectionString(onGetCanonicalConnectionString(connectionString));
+        requestBuilder.setManufacturer(manufacturer);
+        requestBuilder.setSerialNumber(serialNumber);
+        requestBuilder.setDescriptor(authenticationConfig.getCredentialDescriptor());
+        requestBuilder.setComponentType(componentType);
+
+        return requestBuilder.build();
+    }
+
+    // Resolves the credentials for `credentialRequest` - always a non-`None`-format method (see
+    // `requestCredentials`, its only caller, which resolves `None` itself beforehand). Consumes whichever
+    // provider id `authenticationConfig.getCredentialProviderId()` currently returns. If
+    // `authenticationConfig.getSuppliedSecret()` returns one, it is used directly instead of asking a
+    // provider to obtain one - though the currently-selected provider, if any, is still handed the secret
+    // via `cacheCredentials`, so a later request for the same context can be served from its cache.
+    // `resolvedProvider` receives whichever provider was actually involved, or stays unassigned if none was.
+    //
+    // Throws `AuthenticationFailedException` if:
+    // - `getCredentialProviderId()` returns nothing at all,
+    // - the returned provider id no longer names a registered provider,
+    // - the returned provider no longer supports the required format, or
+    // - the resolved credentials (supplied by the caller, or obtained from a provider) don't match
+    //   `credentialDescriptor`'s expected shape.
+    PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
+                                       const CredentialRequestPtr& credentialRequest,
+                                       const CredentialDescriptorPtr& credentialDescriptor,
+                                       CredentialProviderPtr& resolvedProvider)
+    {
+        const auto providers = context.getCredentialProviders();
+        const auto providerId = authenticationConfig.getCredentialProviderId();
+        const PropertyObjectPtr suppliedSecret = authenticationConfig.getSuppliedSecret();
+
+        if (suppliedSecret.assigned())
+        {
+            if (!secretShapeMatches(suppliedSecret, credentialDescriptor))
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret does not match the expected shape");
+
+            // Already shaped like the credential descriptor's `createEmptySecret` template (filled in by the
+            // caller), so it is used directly as the credential, no provider asked to obtain anything.
+            // If a provider is currently selected too, it still gets a chance to cache the secret, so a later
+            // interactive request for the same context reuses it.
+            if (providerId.assigned())
+            {
+                resolvedProvider = findMatchingCredentialProvider(providers, credentialDescriptor, providerId);
+                if (!resolvedProvider.assigned())
+                    DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                         "Authentication is required but no credential provider supporting a compatible format is registered");
+
+                resolvedProvider.cacheCredentials(credentialRequest, suppliedSecret);
+            }
+
+            return suppliedSecret;
+        }
+
+        resolvedProvider = findMatchingCredentialProvider(providers, credentialDescriptor, providerId);
+        if (!resolvedProvider.assigned())
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                 "Authentication is required but no credential provider supporting a compatible format is registered");
+
+        const PropertyObjectPtr credentials = resolvedProvider.requestCredentials(credentialRequest);
+        if (!secretShapeMatches(credentials, credentialDescriptor))
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                 "Credential provider \"{}\" returned credentials that do not match the expected shape",
+                                 resolvedProvider.getId());
+
+        return credentials;
+    }
+
+    // Structural check: does `secret` have exactly the property names `credentialDescriptor.createEmptySecret()`
+    // would produce? Doesn't check provenance, only shape.
+    static bool secretShapeMatches(const PropertyObjectPtr& secret, const CredentialDescriptorPtr& credentialDescriptor)
+    {
+        if (!secret.assigned() || !credentialDescriptor.assigned())
+            return false;
+
+        const PropertyObjectPtr templateObj = credentialDescriptor.createEmptySecret();
+        const auto templateProps = templateObj.getAllProperties();
+
+        if (templateProps.getCount() != secret.getAllProperties().getCount())
+            return false;
+
+        for (const auto& prop : templateProps)
+        {
+            if (!secret.hasProperty(prop.getName()))
+                return false;
+        }
+
+        return true;
+    }
+
+    static bool supportsCredentialFormat(const CredentialProviderPtr& provider, const CredentialDescriptorPtr& credentialDescriptor)
+    {
+        for (const auto& format : provider.getSupportedFormats())
+        {
+            if (static_cast<CredentialFormat>(static_cast<Int>(format)) == credentialDescriptor.getFormat())
+                return true;
+        }
+
+        return false;
+    }
+
+    // Looks up `providerId` among the registered `providers` and validates it supports `credentialDescriptor`'s
+    // format. `providerId` is expected to already be whatever `authenticationConfig.getCredentialProviderId()`
+    // currently returns, pre-filtered to compatible providers. An unassigned `providerId` simply returns
+    // unassigned; it is the caller's job (`obtainCredentials`) to treat that as a failure.
+    //
+    // Throws `AuthenticationFailedException` if `providerId` is assigned but:
+    // - names no registered provider, or
+    // - names a provider that no longer supports the required format.
+    static CredentialProviderPtr findMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
+                                                                const CredentialDescriptorPtr& credentialDescriptor,
+                                                                const StringPtr& providerId = nullptr)
+    {
+        if (!providerId.assigned())
+            return nullptr;
+
+        if (!providers.assigned() || !providers.hasKey(providerId))
+        {
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                                 "Authentication is required but the selected credential provider \"{}\" is not registered",
+                                 providerId);
+        }
+
+        auto provider = providers.get(providerId);
+        if (!supportsCredentialFormat(provider, credentialDescriptor))
+        {
+            DAQ_THROW_EXCEPTION(
+                AuthenticationFailedException,
+                "Authentication is required but the selected credential provider \"{}\" does not support the required format",
+                providerId);
+        }
+
+        return provider;
+    }
 
     StringPtr getPrefixFromConnectionString(const StringPtr& connectionString) const
     {

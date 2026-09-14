@@ -71,8 +71,6 @@ protected:
     virtual bool isAddedToLocalComponentTree();
     virtual StringPtr onGetRemoteId() const = 0;
 
-    void setAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig);
-
 private:
     void checkDuplicateStreamingSource(const StringPtr& connectionString) const;
     StreamingPtr registerStreamingSource(const StreamingPtr& streamingPtr);
@@ -80,7 +78,6 @@ private:
     std::vector<StreamingPtr> streamingSources;
     StreamingSourceManagerPtr streamingSourceManager;
     DeviceTypePtr mirroredDeviceType;
-    AuthenticationConfigPtr authenticationConfig;
 };
 
 template <typename... Interfaces>
@@ -298,16 +295,10 @@ ErrCode MirroredDeviceBase<Interfaces...>::setComponentConfig(IPropertyObject* c
         if (automaticallyConnectStreamings &&
             !(generalConfig.getPropertyValue("StreamingConnectionHeuristic") == 2)) // is not "NotConnected"
             streamingSourceManager =
-                std::make_shared<StreamingSourceManager>(this->context, deviceSelf, this->componentConfig, this->authenticationConfig);
+                std::make_shared<StreamingSourceManager>(this->context, deviceSelf, this->componentConfig);
     }
 
     return errCode;
-}
-
-template <typename... Interfaces>
-void MirroredDeviceBase<Interfaces...>::setAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig)
-{
-    this->authenticationConfig = authenticationConfig;
 }
 
 template <typename... Interfaces>

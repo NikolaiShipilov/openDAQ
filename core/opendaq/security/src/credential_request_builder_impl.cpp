@@ -93,31 +93,17 @@ ErrCode CredentialRequestBuilderImpl::getMetaData(IPropertyObject** metaData)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::setPayloadId(IString* payloadId)
+ErrCode CredentialRequestBuilderImpl::setDescriptor(ICredentialDescriptor* descriptor)
 {
-    this->payloadId = payloadId;
+    this->descriptor = descriptor;
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::getPayloadId(IString** payloadId)
-{
-    OPENDAQ_PARAM_NOT_NULL(payloadId);
-
-    *payloadId = this->payloadId.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode CredentialRequestBuilderImpl::setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor)
-{
-    this->payloadDescriptor = descriptor;
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode CredentialRequestBuilderImpl::getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor)
+ErrCode CredentialRequestBuilderImpl::getDescriptor(ICredentialDescriptor** descriptor)
 {
     OPENDAQ_PARAM_NOT_NULL(descriptor);
 
-    *descriptor = this->payloadDescriptor.addRefAndReturn();
+    *descriptor = this->descriptor.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

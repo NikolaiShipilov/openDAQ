@@ -34,6 +34,8 @@
 #include <opendaq/network_interface_factory.h>
 #include <opendaq/component_private_ptr.h>
 #include <opendaq/component_type_private_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
+#include <coretypes/dictobject_factory.h>
 
 #include <opendaq/thread_name.h>
 #include <opendaq/module_manager_check_dependencies.h>
@@ -826,7 +828,18 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
             if (!deviceType.assigned())
                 continue;
 
-            if (authenticated && !deviceType.isAuthenticationSupported())
+            StringPtr defaultAuthenticationMethodId;
+            OPENDAQ_RETURN_IF_FAILED(library.module->getDefaultAuthenticationMethodId(deviceType.getId(), &defaultAuthenticationMethodId));
+
+            DictPtr<IString, ICredentialDescriptor> supportedAuthenticationDescriptors;
+            if (defaultAuthenticationMethodId.assigned())
+                OPENDAQ_RETURN_IF_FAILED(
+                    library.module->getSupportedAuthenticationMethods(deviceType.getId(), &supportedAuthenticationDescriptors));
+
+            const bool authSupported = defaultAuthenticationMethodId.assigned() &&
+                                       supportedAuthenticationDescriptors.assigned() &&
+                                       supportedAuthenticationDescriptors.hasKey(defaultAuthenticationMethodId);
+            if (authenticated && !authSupported)
             {
                 deviceTypeFoundButAuthNotSupported = true;
                 continue;
@@ -1249,6 +1262,62 @@ ErrCode ModuleManagerImpl::getAvailableStreamingTypes(IDict** streamingTypes)
     }
 
     *streamingTypes = availableTypes.detach();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ModuleManagerImpl::getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors)
+{
+    OPENDAQ_PARAM_NOT_NULL(typeId);
+    OPENDAQ_PARAM_NOT_NULL(descriptors);
+
+    for (const auto& library : libraries)
+    {
+        DictPtr<IString, ICredentialDescriptor> moduleDescriptors;
+
+        const ErrCode err = library.module->getSupportedAuthenticationMethods(typeId, &moduleDescriptors);
+        if (err == OPENDAQ_ERR_NOTIMPLEMENTED)
+        {
+            daqClearErrorInfo();
+            continue;
+        }
+        OPENDAQ_RETURN_IF_FAILED(err);
+
+        if (moduleDescriptors.assigned() && moduleDescriptors.getCount() > 0)
+        {
+            *descriptors = moduleDescriptors.detach();
+            return OPENDAQ_SUCCESS;
+        }
+    }
+
+    *descriptors = Dict<IString, ICredentialDescriptor>().detach();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ModuleManagerImpl::getDefaultAuthenticationMethodId(IString* typeId, IString** defaultAuthenticationMethodId)
+{
+    OPENDAQ_PARAM_NOT_NULL(typeId);
+    OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationMethodId);
+
+    for (const auto& library : libraries)
+    {
+        StringPtr moduleDefaultAuthenticationMethodId;
+
+        const ErrCode err = library.module->getDefaultAuthenticationMethodId(typeId, &moduleDefaultAuthenticationMethodId);
+        if (err == OPENDAQ_ERR_NOTIMPLEMENTED)
+        {
+            daqClearErrorInfo();
+            continue;
+        }
+        OPENDAQ_RETURN_IF_FAILED(err);
+
+        if (moduleDefaultAuthenticationMethodId.assigned())
+        {
+            *defaultAuthenticationMethodId = moduleDefaultAuthenticationMethodId.detach();
+            return OPENDAQ_SUCCESS;
+        }
+    }
+
+    *defaultAuthenticationMethodId = nullptr;
     return OPENDAQ_SUCCESS;
 }
 

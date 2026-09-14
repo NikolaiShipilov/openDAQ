@@ -90,7 +90,7 @@ public:
     ErrCode INTERFACE_FUNC getLoadAuthenticatedModulesOnly(Bool* authenticatedOnly) override;
 
     ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) override;
-    ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerName, ICredentialProvider* provider) override;
+    ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) override;
 
 private:
     static DictPtr<IString, IBaseObject> GetDefaultOptions();

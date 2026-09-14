@@ -8,7 +8,6 @@
 #include <opendaq/server_capability_config.h>
 #include <opendaq/device_info_internal.h>
 #include <opendaq/streaming_ptr.h>
-#include <coreobjects/property_factory.h>
 #include <fmt/format.h>
 #include <string_view>
 
@@ -21,15 +20,13 @@ CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& conf
                                                    const ComponentPtr& parent,
                                                    const DeviceInfoPtr& info,
                                                    bool authenticated,
-                                                   const StringPtr& payloadId,
-                                                   const CredentialPayloadPtr& credentials,
-                                                   const AuthenticationConfigPtr& authenticationConfig)
+                                                   const StringPtr& authenticationMethodId,
+                                                   const PropertyObjectPtr& credentials)
     : MirroredDevice(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
     if (authenticated)
     {
-        authentication::Authenticate(ctx, credentials, payloadId);
-        this->setAuthenticationConfig(authenticationConfig);
+        authentication::Authenticate(ctx, credentials, authenticationMethodId);
     }
 
     this->deviceInfo = info;
@@ -79,26 +76,11 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
 {
-    auto userNamePasswordDescriptor = authentication::BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
-    auto pinDescriptor = authentication::BuildPinDescriptor(/*hidePin*/ true);
-    auto privateKeyDescriptor = authentication::BuildPrivateKeyFileDescriptor();
-    auto privateKeyBlobDescriptor = authentication::BuildPrivateKeyBlobDescriptor();
-
-    auto userNamePasswordConfig = authentication::BuildAdditionalConfig(UserNamePasswordPayloadId);
-    auto pinConfig = authentication::BuildAdditionalConfig(PinPayloadId);
-    auto privateKeyConfig = authentication::BuildAdditionalConfig(PrivateKeyFilePayloadId);
-    auto privateKeyBlobConfig = authentication::BuildAdditionalConfig(PrivateKeyBlobPayloadId);
-
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix("daq.credential_demo")
-        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor, userNamePasswordConfig)
-        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor, pinConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor, privateKeyConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyBlobPayloadId, privateKeyBlobDescriptor, privateKeyBlobConfig)
-        .setDefaultAuthenticationConfigId(UserNamePasswordPayloadId)
         .build();
 }
 

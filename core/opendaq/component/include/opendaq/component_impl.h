@@ -34,7 +34,7 @@
 #include <coreobjects/core_event_args_impl.h>
 #include <coretypes/recursive_search_ptr.h>
 #include <opendaq/component_private_ptr.h>
-#include <opendaq/credential_request_ptr.h>
+#include <opendaq/authentication_config_ptr.h>
 #include <opendaq/tags_impl.h>
 #include <cctype>
 #include <coretypes/coretype_utils.h>
@@ -107,8 +107,8 @@ public:
     ErrCode INTERFACE_FUNC updateOperationMode(OperationModeType modeType) override;
     ErrCode INTERFACE_FUNC setComponentConfig(IPropertyObject* config) override;
     ErrCode INTERFACE_FUNC getComponentConfig(IPropertyObject** config) override;
-    ErrCode INTERFACE_FUNC setCredentialRequest(ICredentialRequest* request) override;
-    ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) override;
+    ErrCode INTERFACE_FUNC setAuthenticationConfig(IAuthenticationConfig* authenticationConfig) override;
+    ErrCode INTERFACE_FUNC getAuthenticationConfig(IAuthenticationConfig** authenticationConfig) override;
     ErrCode INTERFACE_FUNC setParentActive(Bool parentActive, Bool onUpdate) override;
 
     // IRemovable
@@ -169,7 +169,7 @@ protected:
     StringPtr description;
     ComponentStatusContainerPtr statusContainer;
     PropertyObjectPtr componentConfig;
-    CredentialRequestPtr credentialRequest;
+    AuthenticationConfigPtr authenticationConfig;
 
     ErrCode serializeCustomValues(ISerializer* serializer, bool forUpdate) override;
 
@@ -895,17 +895,17 @@ ErrCode ComponentImpl<Intf, Intfs...>::getComponentConfig(IPropertyObject** conf
 }
 
 template <class Intf, class ... Intfs>
-ErrCode ComponentImpl<Intf, Intfs...>::setCredentialRequest(ICredentialRequest* request)
+ErrCode ComponentImpl<Intf, Intfs...>::setAuthenticationConfig(IAuthenticationConfig* authenticationConfig)
 {
-    credentialRequest = request;
+    this->authenticationConfig = authenticationConfig;
     return OPENDAQ_SUCCESS;
 }
 
 template <class Intf, class ... Intfs>
-ErrCode ComponentImpl<Intf, Intfs...>::getCredentialRequest(ICredentialRequest** request)
+ErrCode ComponentImpl<Intf, Intfs...>::getAuthenticationConfig(IAuthenticationConfig** authenticationConfig)
 {
-    OPENDAQ_PARAM_NOT_NULL(request);
-    *request = credentialRequest.addRefAndReturn();
+    OPENDAQ_PARAM_NOT_NULL(authenticationConfig);
+    *authenticationConfig = this->authenticationConfig.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
@@ -1339,10 +1339,10 @@ void ComponentImpl<Intf, Intfs...>::serializeCustomObjectValues(const Serializer
             componentConfig.serialize(serializer);
     }
 
-    if (credentialRequest.assigned())
+    if (authenticationConfig.assigned())
     {
-        serializer.key("CredentialRequest");
-        credentialRequest.serialize(serializer);
+        serializer.key("AuthenticationConfig");
+        authenticationConfig.serialize(serializer);
     }
 }
 

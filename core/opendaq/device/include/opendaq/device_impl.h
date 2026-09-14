@@ -30,6 +30,7 @@
 #include <opendaq/io_folder_factory.h>
 #include <coreobjects/property_object_impl.h>
 #include <coretypes/validation.h>
+#include <coretypes/ctutils.h>
 #include <opendaq/device_private.h>
 #include <tsl/ordered_set.h>
 #include <opendaq/component_keys.h>
@@ -37,6 +38,9 @@
 #include <coreobjects/property_object_factory.h>
 #include <opendaq/module_manager_ptr.h>
 #include <opendaq/module_manager_utils_ptr.h>
+#include <opendaq/streaming_type_ptr.h>
+#include <opendaq/authentication_config_factory.h>
+#include <opendaq/credential_descriptor_ptr.h>
 #include <opendaq/sync_component_factory.h>
 #include <opendaq/component_update_context_ptr.h>
 #include <set>
@@ -52,8 +56,6 @@
 #include <opendaq/component_type_private.h>
 #include <opendaq/mirrored_device_ptr.h>
 #include <opendaq/authentication_config_ptr.h>
-#include <opendaq/authentication_config_factory.h>
-#include <opendaq/credential_request_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 template <typename TInterface = IDevice, typename... Interfaces>
@@ -87,6 +89,7 @@ public:
 
     virtual ListPtr<IDeviceInfo> onGetAvailableDevices();
     virtual DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes();
+    virtual AuthenticationConfigPtr onCreateDefaultAuthenticationConfig(const StringPtr& typeId);
     virtual DevicePtr onAddDevice(const StringPtr& connectionString, const PropertyObjectPtr& config);
     virtual DevicePtr onAddAuthenticatedDevice(const StringPtr& connectionString,
                                                const PropertyObjectPtr& config,
@@ -154,6 +157,7 @@ public:
     // Client devices
     ErrCode INTERFACE_FUNC getAvailableDevices(IList** availableDevices) override;
     ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) override;
+    ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) override;
     ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config = nullptr) override;
     ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
                                                   IString* connectionString,
@@ -1346,6 +1350,47 @@ DictPtr<IString, IDeviceType> GenericDevice<TInterface, Interfaces...>::onGetAva
 }
 
 template <typename TInterface, typename... Interfaces>
+ErrCode GenericDevice<TInterface, Interfaces...>::createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig)
+{
+    OPENDAQ_PARAM_NOT_NULL(typeId);
+    OPENDAQ_PARAM_NOT_NULL(authenticationConfig);
+
+    if (this->isComponentRemoved)
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_COMPONENT_REMOVED);
+
+    AuthenticationConfigPtr configPtr;
+    const ErrCode errCode = wrapHandlerReturn(this, &Self::onCreateDefaultAuthenticationConfig, configPtr, typeId);
+    OPENDAQ_RETURN_IF_FAILED(errCode);
+
+    *authenticationConfig = configPtr.detach();
+    return errCode;
+}
+
+template <typename TInterface, typename... Interfaces>
+AuthenticationConfigPtr GenericDevice<TInterface, Interfaces...>::onCreateDefaultAuthenticationConfig(const StringPtr& typeId)
+{
+    auto lock = this->getRecursiveConfigLock2();
+    const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
+
+    const bool typeExists =
+        managerUtils.getAvailableDeviceTypes().hasKey(typeId) || managerUtils.getAvailableStreamingTypes().hasKey(typeId);
+    if (!typeExists)
+        DAQ_THROW_EXCEPTION(NotFoundException, "No available device or streaming type with id \"{}\" was found", typeId);
+
+    StringPtr defaultAuthenticationMethodId;
+    checkErrorInfo(managerUtils->getDefaultAuthenticationMethodId(typeId, &defaultAuthenticationMethodId));
+
+    DictPtr<IString, ICredentialDescriptor> descriptors;
+    if (defaultAuthenticationMethodId.assigned())
+        checkErrorInfo(managerUtils->getSupportedAuthenticationMethods(typeId, &descriptors));
+
+    if (!defaultAuthenticationMethodId.assigned() || !descriptors.assigned() || !descriptors.hasKey(defaultAuthenticationMethodId))
+        DAQ_THROW_EXCEPTION(NotSupportedException, "Component type \"{}\" does not support authentication", typeId);
+
+    return AuthenticationConfig(descriptors, defaultAuthenticationMethodId, this->context, typeId);
+}
+
+template <typename TInterface, typename... Interfaces>
 ErrCode GenericDevice<TInterface, Interfaces...>::addDevice(IDevice** device, IString* connectionString, IPropertyObject* config)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
@@ -2188,16 +2233,12 @@ void GenericDevice<TInterface, Interfaces...>::updateDevice(const std::string& d
         else if (serializedDevice.hasKey("ComponentConfig"))
             updatetableDeviceConfig.updateInternal(serializedDevice.readSerializedObject("ComponentConfig"), context);
 
-        // A device previously added with authentication carries the credential request it was authenticated
-        // with - never the authentication config or its secrets. Reconstructing it here lets the device be
-        // re-authenticated (the credential provider is asked again for real credentials) instead of silently
-        // reconnecting without any.
+        // A device previously added with authentication carries the whole authentication config it was
+        // authenticated with. Reconstructing it here lets the device be re-authenticated (the credential
+        // provider is asked again for real credentials) instead of silently reconnecting without any.
         AuthenticationConfigPtr authenticationConfig;
-        if (serializedDevice.hasKey("CredentialRequest"))
-        {
-            const CredentialRequestPtr credentialRequest = serializedDevice.readObject("CredentialRequest", context);
-            authenticationConfig = AuthenticationConfigFromCredentialRequest(credentialRequest);
-        }
+        if (serializedDevice.hasKey("AuthenticationConfig"))
+            authenticationConfig = serializedDevice.readObject("AuthenticationConfig", context);
 
         DeviceInfoPtr discoveredDeviceInfo;
         StringPtr manufacturer;

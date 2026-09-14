@@ -17,94 +17,106 @@
 #pragma once
 #include <coretypes/baseobject.h>
 #include <coreobjects/property_object.h>
-#include <opendaq/credential_payload_descriptor.h>
-#include <opendaq/credential_request.h>
+#include <opendaq/credential_descriptor.h>
+#include <opendaq/context.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
+ * [interfaceSmartPtr(IPropertyObject, GenericPropertyObjectPtr, "<coreobjects/property_object_ptr.h>", true)]
+ * [interfaceLibrary(IContext, "opendaq")]
  */
 
 /*!
  * @brief Carries the authentication settings used for a single connection attempt to a component.
  *
- * Credential settings do not live in the base add-component config or its default - they travel in a
- * dedicated authentication config object that exists alongside base config and is never serialized.
+ * A component created with authentication keeps the config it was authenticated with (see
+ * `IComponentPrivate::setAuthenticationConfig`), so that reloading it later goes through the same
+ * credential-request process again.
  *
- * An authentication config carries:
- * - The selected payload - its id and descriptor.
- * - The additional config - a property object, defined by the component type alongside the payload, carrying
- *   settings that might travel with the credential request to the provider (e.g. whether to hide secret input as it
- *   is typed) and, in some cases, even directly supplied credentials (e.g. a certificate file path).
- *   It is supplied for this connection attempt only, and is never saved.
+ * Is itself a Property object - the authentication method id and its corresponding credential descriptor are bound
+ * together as one `"AuthenticationMethod"` Selection property (its selection value is the
+ * `ICredentialDescriptor` Struct itself, so the two can never be set out of sync - the authentication
+ * method id is simply the selected descriptor's own `ICredentialDescriptor::getAuthenticationMethodId()`). Its current selection
+ * drives `"CredentialProviderId"`'s own candidates: `"CredentialProviderId"` is a Selection over
+ * `Context::getCredentialProviders()` filtered live to the *currently selected* `"AuthenticationMethod"`'s
+ * format - re-queried from `Context` and recomputed (candidates added, removed, or refreshed) every time
+ * `"AuthenticationMethod"` is written, never a cached snapshot. The property is entirely absent whenever no
+ * registered provider currently supports the selected format.
+ * A directly-supplied secret is carried, when present, as a `"SuppliedSecret"` property, validated on every
+ * write against whatever `"AuthenticationMethod"` is currently selected (its property names must match
+ * `descriptor.createEmptySecret()`'s exactly - the blessed workflow is to build from that template, fill
+ * it in, and submit it) - a mismatched write is rejected, and an already-set `"SuppliedSecret"` that a
+ * `"AuthenticationMethod"` change leaves incompatible is silently cleared. The typed getters below are a
+ * convenience layer on top of these properties; `"SuppliedSecret"`, `"CredentialProviderId"`, and
+ * `"AuthenticationMethod"` can all equally be read and set through the ordinary `IPropertyObject` interface this
+ * object also implements.
+ *
+ * Serialization is fully custom, not the generic `IPropertyObject` mechanism: the component type id (as
+ * passed by `IDevice::createDefaultAuthenticationConfig`), the selected `"AuthenticationMethod"`'s
+ * authentication method id, and - when present - the selected `"CredentialProviderId"` are written.
+ * `"SuppliedSecret"` (a secret) is never serialized. Deserializing re-resolves the saved type id against the
+ * live `Context` and rebuilds everything above fresh - it fails outright if the type no longer resolves, or
+ * the saved authentication method id is no longer among that type's currently supported descriptors. The
+ * saved provider id is restored only if it's still among the freshly-rebuilt `"CredentialProviderId"`
+ * candidates; otherwise the normal live default applies.
  */
-DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IBaseObject)
+DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
     /*!
-     * @brief Gets the id of the payload associated with selected authentication method.
-     * @param[out] payloadId The payload id.
+     * @brief Gets the id of the authentication method currently selected - the selected
+     * `"AuthenticationMethod"` property value's own `ICredentialDescriptor::getAuthenticationMethodId()`.
+     * @param[out] authenticationMethodId The authentication method id.
      */
-    virtual ErrCode INTERFACE_FUNC getCredentialPayloadId(IString** payloadId) = 0;
+    virtual ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) = 0;
 
     /*!
-     * @brief Gets the descriptor of the payload which selected authentication method uses.
-     * @param[out] descriptor The payload descriptor.
+     * @brief Gets the credential descriptor which selected authentication method uses - the current
+     * selection value of the `"AuthenticationMethod"` property.
+     * @param[out] descriptor The credential descriptor.
      */
-    virtual ErrCode INTERFACE_FUNC getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
+    virtual ErrCode INTERFACE_FUNC getCredentialDescriptor(ICredentialDescriptor** descriptor) = 0;
 
     /*!
-     * @brief Gets additional configuration specific to selected authentication method.
-     * @param[out] config The configuration property object.
-     */
-    virtual ErrCode INTERFACE_FUNC getConfig(IPropertyObject** config) = 0;
-
-    /*!
-     * @brief Gets the id of the credential provider to request credentials from.
-     * @param[out] providerId The credential provider id, or `nullptr` if none was explicitly selected - in
-     * which case the module auto-selects a registered provider supporting the payload descriptor's format,
-     * same as when this is left unset.
+     * @brief Gets the id of the credential provider to request credentials from - the current selection
+     * value of the `"CredentialProviderId"` property (see `IAuthenticationConfig`).
+     * @param[out] providerId The credential provider id, or `nullptr` if the config has no
+     * `"CredentialProviderId"` property at all - which only happens when no registered provider supports the
+     * currently selected descriptor's format; so authentication simply fails.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) = 0;
 
     /*!
-     * @brief Gets the secret supplied directly by the caller, to be used instead of a credential provider
-     * obtaining it (e.g. by prompting the user).
-     * @param[out] suppliedSecret The supplied secret, in the format described by `getCredentialPayloadDescriptor`
-     * (see `ICredentialPayload::getSecrets` for the expected concrete type per format), or `nullptr` (the
-     * default) if none was supplied - in which case the module obtains the secret from a credential
-     * provider as usual.
+     * @brief Gets the secret supplied directly by the caller - the value of the corresponding property.
+     * @param[out] secret The supplied secret, or `nullptr` if the config has no such property
+     * at all - in which case the module obtains one from a credential provider instead.
      */
-    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IBaseObject** suppliedSecret) = 0;
-
-    /*!
-     * @brief Gets the authentication configs nested under this one, accumulated via
-     * `IAuthenticationConfigBuilder::addStreamingAuthenticationConfig` - so a single authentication config,
-     * formed for connecting to a device, can also carry the settings needed to authenticate a streaming
-     * source attached to that device. Each is an ordinary authentication config in its own right, keyed by
-     * the streaming type's own id.
-     * @param[out] streamingAuthenticationConfigs The streaming type id -> authentication config dictionary.
-     */
-    // [templateType(streamingAuthenticationConfigs, IString, IAuthenticationConfig)]
-    virtual ErrCode INTERFACE_FUNC getStreamingAuthenticationConfigs(IDict** streamingAuthenticationConfigs) = 0;
+    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) = 0;
 };
 
+/*!
+ * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
+ * `credentialDescriptors`. Each entry becomes one candidate value of the resulting config's
+ * `"AuthenticationMethod"` Selection property (see `IAuthenticationConfig`), so a caller can later switch
+ * between methods just by changing that property's selection, rather than needing a different config
+ * object per method. `credentialDescriptors` is a dict keyed by each descriptor's own
+ * `ICredentialDescriptor::getAuthenticationMethodId()`; `defaultAuthenticationMethodId` names which one of those keys starts out
+ * selected.
+ *
+ * A config that only ever supports one method is simply the one-entry case of this: pass a
+ * `credentialDescriptors` dict with a single key/value pair.
+ * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
+ * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
+ * @param typeId The id of the component type this config was built for - carried through serialization so a
+ * reload can re-resolve `credentialDescriptors`/`context` fresh (see `IAuthenticationConfig`'s serialization
+ * notes) - required, no default; pass `nullptr` explicitly for a config with no type behind it (e.g. one
+ * built for its own sake, not via `IDevice::createDefaultAuthenticationConfig`), which then cannot
+ * meaningfully round-trip through save/reload.
+ */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IString*, payloadId, ICredentialPayloadDescriptor*, payloadDescriptor, IPropertyObject*, config
-)
-
-/*!
- * @brief Reconstructs an `AuthenticationConfig` from a previously formed, saved `CredentialRequest` - used
- * only when reloading a saved device that had previously been added with authentication. Never exposed to
- * other language bindings; not meant for regular user code, which should use the `AuthenticationConfig`
- * factory above instead.
- */
-//[factory(Hide)]
-OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
-    LIBRARY_FACTORY, AuthenticationConfigFromCredentialRequest, IAuthenticationConfig,
-    ICredentialRequest*, credentialRequest
+    IDict*, credentialDescriptors, IString*, defaultAuthenticationMethodId, IContext*, context, IString*, typeId
 )
 
 END_NAMESPACE_OPENDAQ

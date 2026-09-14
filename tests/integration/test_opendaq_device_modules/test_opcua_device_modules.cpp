@@ -1701,6 +1701,14 @@ public:
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }
+    daq::ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(daq::IString*, daq::IDict**) override
+    {
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+    }
+    daq::ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(daq::IString*, daq::IString**) override
+    {
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+    }
     daq::ErrCode INTERFACE_FUNC loadLicense(daq::Bool* succeeded, daq::IDict* licenseConfig) override
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);

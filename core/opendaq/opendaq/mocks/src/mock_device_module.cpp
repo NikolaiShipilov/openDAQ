@@ -179,6 +179,16 @@ ErrCode MockDeviceModuleImpl::getAvailableStreamingTypes(daq::IDict** /*streamin
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }
 
+ErrCode MockDeviceModuleImpl::getSupportedAuthenticationMethods(daq::IString* /*typeId*/, daq::IDict** /*descriptors*/)
+{
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+}
+
+ErrCode MockDeviceModuleImpl::getDefaultAuthenticationMethodId(daq::IString* /*typeId*/, daq::IString** /*defaultAuthenticationMethodId*/)
+{
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
+}
+
 ErrCode MockDeviceModuleImpl::loadLicense(daq::Bool* /*succeeded*/, daq::IDict* /*licenseConfig*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);

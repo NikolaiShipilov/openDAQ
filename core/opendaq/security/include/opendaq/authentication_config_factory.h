@@ -16,45 +16,31 @@
 
 #pragma once
 #include <opendaq/authentication_config_ptr.h>
-#include <opendaq/authentication_config_builder_ptr.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
-#include <opendaq/credential_request_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/context_ptr.h>
+#include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief Creates an `AuthenticationConfig` describing the credential payload expected by an authentication method.
- * @param payloadId The id of the payload the authentication method requires.
- * @param payloadDescriptor The descriptor of the payload the authentication method uses.
- * @param config Additional configuration defined by the component type alongside the specific authentication method and payload.
- * In case of a null value, an empty configuration is used.
+ * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
+ * `credentialDescriptors`. Each entry becomes one candidate value of the resulting config's
+ * `"AuthenticationMethod"` Selection property , so a caller can later switch between methods
+ * by changing that property's selection.
+ * @param credentialDescriptors The supported credential descriptors, keyed by their own id.
+ * @param defaultAuthenticationMethodId The id of the authentication method to select by default.
+ * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
+ * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
+ * @param typeId The id of the component type this config was built for, carried through serialization so a
+ * reload can re-resolve everything fresh - required, no default. Pass `nullptr` explicitly for a config with
+ * no type behind it; such a config can't meaningfully round-trip through save/reload.
  */
-inline AuthenticationConfigPtr AuthenticationConfig(const StringPtr& payloadId,
-                                                    const CredentialPayloadDescriptorPtr& payloadDescriptor,
-                                                    const PropertyObjectPtr& config = nullptr)
+inline AuthenticationConfigPtr AuthenticationConfig(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
+                                                     const StringPtr& defaultAuthenticationMethodId,
+                                                     const ContextPtr& context,
+                                                     const StringPtr& typeId)
 {
-    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadId, payloadDescriptor, config));
-    return obj;
-}
-
-/*!
- * @brief Reconstructs an `AuthenticationConfig` from a previously formed, saved `CredentialRequest`. Used only
- * when reloading a saved device that had previously been added with authentication - not meant for regular
- * user code, which should use the `AuthenticationConfig` factory above instead.
- * @param credentialRequest The previously formed credential request to reconstruct the config from.
- */
-inline AuthenticationConfigPtr AuthenticationConfigFromCredentialRequest(const CredentialRequestPtr& credentialRequest)
-{
-    AuthenticationConfigPtr obj(AuthenticationConfigFromCredentialRequest_Create(credentialRequest));
-    return obj;
-}
-
-/*!
- * @brief Creates an `AuthenticationConfigBuilder` with no values set.
- */
-inline AuthenticationConfigBuilderPtr AuthenticationConfigBuilder()
-{
-    AuthenticationConfigBuilderPtr obj(AuthenticationConfigBuilder_Create());
+    AuthenticationConfigPtr obj(AuthenticationConfig_Create(credentialDescriptors, defaultAuthenticationMethodId, context, typeId));
     return obj;
 }
 
