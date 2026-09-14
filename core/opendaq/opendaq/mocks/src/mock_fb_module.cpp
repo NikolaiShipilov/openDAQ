@@ -152,7 +152,7 @@ daq::ErrCode MockFunctionBlockModuleImpl::getSupportedAuthenticationMethods(daq:
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }
 
-daq::ErrCode MockFunctionBlockModuleImpl::getDefaultAuthenticationMethodId(daq::IString* /*typeId*/, daq::IString** /*defaultPayloadId*/)
+daq::ErrCode MockFunctionBlockModuleImpl::getDefaultAuthenticationMethodId(daq::IString* /*typeId*/, daq::IString** /*defaultAuthenticationMethodId*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }

@@ -55,7 +55,7 @@ public:
     daq::ErrCode INTERFACE_FUNC getAvailableStreamingTypes(daq::IDict** streamingTypes) override;
 
     daq::ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(daq::IString* typeId, daq::IDict** descriptors) override;
-    daq::ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(daq::IString* typeId, daq::IString** defaultPayloadId) override;
+    daq::ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(daq::IString* typeId, daq::IString** defaultAuthenticationMethodId) override;
 
     daq::ErrCode INTERFACE_FUNC loadLicense(daq::Bool* succeeded, daq::IDict* licenseConfig) override;
     daq::ErrCode INTERFACE_FUNC getLicenseConfig(daq::IDict** licenseConfig) override;

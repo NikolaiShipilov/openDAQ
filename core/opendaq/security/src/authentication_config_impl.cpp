@@ -11,34 +11,34 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-AuthenticationConfigImpl::AuthenticationConfigImpl(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
-                                                   const StringPtr& defaultPayloadId,
+AuthenticationConfigImpl::AuthenticationConfigImpl(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
+                                                   const StringPtr& defaultAuthenticationMethodId,
                                                    const ContextPtr& context,
                                                    const StringPtr& typeId)
     : Super()
     , context(context)
     , typeId(typeId)
 {
-    initProperties(payloadDescriptors, defaultPayloadId);
+    initProperties(credentialDescriptors, defaultAuthenticationMethodId);
 }
 
-void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
-                                              const StringPtr& defaultPayloadId)
+void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
+                                              const StringPtr& defaultAuthenticationMethodId)
 {
     if (!context.assigned())
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Context must be assigned when creating an authentication config");
 
-    if (!payloadDescriptors.assigned() || payloadDescriptors.getCount() == 0)
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "At least one payload descriptor must be supplied when creating an authentication config");
+    if (!credentialDescriptors.assigned() || credentialDescriptors.getCount() == 0)
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "At least one credential descriptor must be supplied when creating an authentication config");
 
-    ListPtr<IStruct> payloadDescriptorOptions = List<IStruct>();
+    ListPtr<IStruct> credentialDescriptorOptions = List<IStruct>();
     Int defaultIndex = 0;
     Int i = 0;
-    CredentialPayloadDescriptorPtr selectedDescriptor;
-    for (const auto& [id, descriptor] : payloadDescriptors)
+    CredentialDescriptorPtr selectedDescriptor;
+    for (const auto& [id, descriptor] : credentialDescriptors)
     {
-        payloadDescriptorOptions.pushBack(descriptor);
-        if (defaultPayloadId.assigned() && id == defaultPayloadId)
+        credentialDescriptorOptions.pushBack(descriptor);
+        if (defaultAuthenticationMethodId.assigned() && id == defaultAuthenticationMethodId)
         {
             defaultIndex = i;
             selectedDescriptor = descriptor;
@@ -47,18 +47,18 @@ void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredential
     }
     if (!selectedDescriptor.assigned())
     {
-        for (const auto& [id, descriptor] : payloadDescriptors)
+        for (const auto& [id, descriptor] : credentialDescriptors)
         {
             selectedDescriptor = descriptor;
             break;
         }
     }
 
-    Super::addProperty(SelectionProperty(PayloadDescriptorPropertyName, payloadDescriptorOptions, defaultIndex));
+    Super::addProperty(SelectionProperty(CredentialDescriptorPropertyName, credentialDescriptorOptions, defaultIndex));
     rebuildCredentialProviderCandidates(selectedDescriptor);
 }
 
-void AuthenticationConfigImpl::rebuildCredentialProviderCandidates(const CredentialPayloadDescriptorPtr& selectedDescriptor)
+void AuthenticationConfigImpl::rebuildCredentialProviderCandidates(const CredentialDescriptorPtr& selectedDescriptor)
 {
     if (objPtr.hasProperty(CredentialProviderIdPropertyName))
         Super::removeProperty(String(CredentialProviderIdPropertyName));
@@ -69,9 +69,9 @@ void AuthenticationConfigImpl::rebuildCredentialProviderCandidates(const Credent
     ListPtr<IString> compatibleProviderIds = List<IString>();
     for (const auto& [providerId, provider] : context.getCredentialProviders())
     {
-        for (const auto& format : provider.getSupportedPayloadFormats())
+        for (const auto& format : provider.getSupportedFormats())
         {
-            if (static_cast<CredentialPayloadFormat>(static_cast<Int>(format)) == selectedDescriptor.getFormat())
+            if (static_cast<CredentialFormat>(static_cast<Int>(format)) == selectedDescriptor.getFormat())
             {
                 compatibleProviderIds.pushBack(providerId);
                 break;
@@ -100,7 +100,7 @@ void AuthenticationConfigImpl::rebuildCredentialProviderCandidates(const Credent
     Super::addProperty(SelectionProperty(CredentialProviderIdPropertyName, compatibleProviderIds, defaultIndex));
 }
 
-void AuthenticationConfigImpl::clearSuppliedSecretIfIncompatible(const CredentialPayloadDescriptorPtr& selectedDescriptor)
+void AuthenticationConfigImpl::clearSuppliedSecretIfIncompatible(const CredentialDescriptorPtr& selectedDescriptor)
 {
     if (!objPtr.hasProperty(SuppliedSecretPropertyName))
         return;
@@ -110,17 +110,17 @@ void AuthenticationConfigImpl::clearSuppliedSecretIfIncompatible(const Credentia
         Super::removeProperty(String(SuppliedSecretPropertyName));
 }
 
-bool AuthenticationConfigImpl::IsSuppliedSecretShapeValid(const PropertyObjectPtr& secret, const CredentialPayloadDescriptorPtr& selectedDescriptor)
+bool AuthenticationConfigImpl::IsSuppliedSecretShapeValid(const PropertyObjectPtr& secret, const CredentialDescriptorPtr& selectedDescriptor)
 {
     if (!secret.assigned() || !selectedDescriptor.assigned())
         return false;
 
     // "None" requires no credentials at all - no secret is ever valid for it, and it has no
-    // `createDefaultPayload()` template to compare against in the first place.
-    if (selectedDescriptor.getFormat() == CredentialPayloadFormat::None)
+    // `createEmptySecret()` template to compare against in the first place.
+    if (selectedDescriptor.getFormat() == CredentialFormat::None)
         return false;
 
-    const PropertyObjectPtr templateObj = selectedDescriptor.createDefaultPayload();
+    const PropertyObjectPtr templateObj = selectedDescriptor.createEmptySecret();
     const auto templateProps = templateObj.getAllProperties();
 
     if (templateProps.getCount() != secret.getAllProperties().getCount())
@@ -135,26 +135,26 @@ bool AuthenticationConfigImpl::IsSuppliedSecretShapeValid(const PropertyObjectPt
     return true;
 }
 
-ErrCode AuthenticationConfigImpl::getCredentialPayloadId(IString** payloadId)
+ErrCode AuthenticationConfigImpl::getAuthenticationMethodId(IString** authenticationMethodId)
 {
-    OPENDAQ_PARAM_NOT_NULL(payloadId);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
 
     return daqTry([&]
     {
-        const StructPtr selected = objPtr.getPropertySelectionValue(PayloadDescriptorPropertyName);
-        *payloadId = selected.asPtr<ICredentialPayloadDescriptor>().getId().detach();
+        const StructPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
+        *authenticationMethodId = selected.asPtr<ICredentialDescriptor>().getAuthenticationMethodId().detach();
         return OPENDAQ_SUCCESS;
     });
 }
 
-ErrCode AuthenticationConfigImpl::getCredentialPayloadDescriptor(ICredentialPayloadDescriptor** descriptor)
+ErrCode AuthenticationConfigImpl::getCredentialDescriptor(ICredentialDescriptor** descriptor)
 {
     OPENDAQ_PARAM_NOT_NULL(descriptor);
 
     return daqTry([&]
     {
-        const StructPtr selected = objPtr.getPropertySelectionValue(PayloadDescriptorPropertyName);
-        *descriptor = selected.asPtr<ICredentialPayloadDescriptor>().detach();
+        const StructPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
+        *descriptor = selected.asPtr<ICredentialDescriptor>().detach();
         return OPENDAQ_SUCCESS;
     });
 }
@@ -202,11 +202,11 @@ ErrCode AuthenticationConfigImpl::setPropertySelectionValue(IString* propertyNam
 
     const StringPtr name = StringPtr::Borrow(propertyName);
 
-    if (name == PayloadDescriptorPropertyName)
+    if (name == CredentialDescriptorPropertyName)
     {
         return daqTry([&]
         {
-            const CredentialPayloadDescriptorPtr selected = objPtr.getPropertySelectionValue(PayloadDescriptorPropertyName);
+            const CredentialDescriptorPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
             rebuildCredentialProviderCandidates(selected);
             clearSuppliedSecretIfIncompatible(selected);
             return OPENDAQ_SUCCESS;
@@ -235,11 +235,11 @@ ErrCode AuthenticationConfigImpl::setPropertyValue(IString* propertyName, IBaseO
         return daqTry([&]
         {
             const PropertyObjectPtr secret = BaseObjectPtr::Borrow(value).asPtrOrNull<IPropertyObject>();
-            const CredentialPayloadDescriptorPtr selected = objPtr.getPropertySelectionValue(PayloadDescriptorPropertyName);
+            const CredentialDescriptorPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
             if (!IsSuppliedSecretShapeValid(secret, selected))
                 DAQ_THROW_EXCEPTION(InvalidParameterException,
-                                     "Supplied secret's shape does not match the currently selected payload descriptor \"{}\"",
-                                     selected.assigned() ? selected.getId() : StringPtr(""));
+                                     "Supplied secret's shape does not match the currently selected credential descriptor \"{}\"",
+                                     selected.assigned() ? selected.getAuthenticationMethodId() : StringPtr(""));
 
             // "SuppliedSecret" is never declared up front - added here on first write.
             if (!objPtr.hasProperty(SuppliedSecretPropertyName))
@@ -256,14 +256,14 @@ ErrCode AuthenticationConfigImpl::serialize(ISerializer* serializer)
 {
     return daqTry([&]
     {
-        const StructPtr selected = objPtr.getPropertySelectionValue(PayloadDescriptorPropertyName);
-        const StringPtr payloadId = selected.asPtr<ICredentialPayloadDescriptor>().getId();
+        const StructPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
+        const StringPtr authenticationMethodId = selected.asPtr<ICredentialDescriptor>().getAuthenticationMethodId();
 
         serializer->startTaggedObject(this);
         serializer->key(TypeIdSerializedKey);
         serializer->writeString(typeId.getCharPtr(), typeId.getLength());
-        serializer->key(PayloadIdSerializedKey);
-        serializer->writeString(payloadId.getCharPtr(), payloadId.getLength());
+        serializer->key(AuthenticationMethodIdSerializedKey);
+        serializer->writeString(authenticationMethodId.getCharPtr(), authenticationMethodId.getLength());
 
         if (objPtr.hasProperty(CredentialProviderIdPropertyName))
         {
@@ -300,7 +300,7 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
     {
         const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
         const StringPtr savedTypeId = serializedObj.readString(TypeIdSerializedKey);
-        const StringPtr savedPayloadId = serializedObj.readString(PayloadIdSerializedKey);
+        const StringPtr savedAuthenticationMethodId = serializedObj.readString(AuthenticationMethodIdSerializedKey);
 
         const auto contextObj = BaseObjectPtr::Borrow(context);
         ContextPtr daqContext;
@@ -319,16 +319,16 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
         if (!typeExists)
             DAQ_THROW_EXCEPTION(NotFoundException, "No available device or streaming type with id \"{}\" was found", savedTypeId);
 
-        DictPtr<IString, ICredentialPayloadDescriptor> descriptors;
+        DictPtr<IString, ICredentialDescriptor> descriptors;
         checkErrorInfo(managerUtils->getSupportedAuthenticationMethods(savedTypeId, &descriptors));
 
-        if (!descriptors.assigned() || !descriptors.hasKey(savedPayloadId))
+        if (!descriptors.assigned() || !descriptors.hasKey(savedAuthenticationMethodId))
             DAQ_THROW_EXCEPTION(NotSupportedException,
-                                 "Saved payload id \"{}\" is no longer supported by type \"{}\"",
-                                 savedPayloadId,
+                                 "Saved authentication method id \"{}\" is no longer supported by type \"{}\"",
+                                 savedAuthenticationMethodId,
                                  savedTypeId);
 
-        AuthenticationConfigPtr authConfig = AuthenticationConfig(descriptors, savedPayloadId, daqContext, savedTypeId);
+        AuthenticationConfigPtr authConfig = AuthenticationConfig(descriptors, savedAuthenticationMethodId, daqContext, savedTypeId);
 
         if (serializedObj.hasKey(ProviderIdSerializedKey) && authConfig.hasProperty(CredentialProviderIdPropertyName))
         {
@@ -356,7 +356,7 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IDict*, payloadDescriptors, IString*, defaultPayloadId, IContext*, context, IString*, typeId
+    IDict*, credentialDescriptors, IString*, defaultAuthenticationMethodId, IContext*, context, IString*, typeId
 )
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(AuthenticationConfigImpl)

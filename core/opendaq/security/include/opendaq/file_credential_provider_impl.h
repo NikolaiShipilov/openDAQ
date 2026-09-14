@@ -19,7 +19,7 @@
 #include <coretypes/impl.h>
 #include <opendaq/credential_provider.h>
 #include <opendaq/credential_request_ptr.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
 #include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -32,11 +32,11 @@ public:
     ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) override;
     ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* secret) override;
-    ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) override;
+    ErrCode INTERFACE_FUNC getSupportedFormats(IList** formats) override;
 
 private:
     static void printRequestDetails(const CredentialRequestPtr& request);
-    static PropertyObjectPtr readFilePath(const CredentialPayloadDescriptorPtr& descriptor);
+    static PropertyObjectPtr readFilePath(const CredentialDescriptorPtr& descriptor);
     static bool isFileAccessible(const std::string& path);
 };
 

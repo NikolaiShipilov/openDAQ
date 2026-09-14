@@ -33,26 +33,26 @@ void createJsonConfigFile()
 
 // `instance.createDefaultAuthenticationConfig(typeId)` returns one self-contained config listing every
 // authentication method the named component type supports (UserNamePassword, Pin, PrivateKeyFile) as a
-// candidate of its "PayloadDescriptor" selection property, defaulting to the type's own default method -
-// never a separate config per method. This switches that selection to the method named by `payloadId`,
+// candidate of its "CredentialDescriptor" selection property, defaulting to the type's own default method -
+// never a separate config per method. This switches that selection to the method named by `authenticationMethodId`,
 // entirely through plain property object calls: the candidates are read generically off the property
 // itself, and the match is found by comparing each candidate Struct's own "Id" field - no
-// `ICredentialPayloadDescriptor` cast needed for the comparison itself, only to read `getId()` off it.
-void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const StringPtr& payloadId)
+// `ICredentialDescriptor` cast needed for the comparison itself, only to read `getAuthenticationMethodId()` off it.
+void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const StringPtr& authenticationMethodId)
 {
-    ListPtr<IStruct> candidates = authConfig.getProperty("PayloadDescriptor").getSelectionValues();
+    ListPtr<IStruct> candidates = authConfig.getProperty("CredentialDescriptor").getSelectionValues();
     for (const auto& candidate : candidates)
     {
-        if (candidate.asPtr<ICredentialPayloadDescriptor>().getId() == payloadId)
+        if (candidate.asPtr<ICredentialDescriptor>().getAuthenticationMethodId() == authenticationMethodId)
         {
-            authConfig.setPropertySelectionValue("PayloadDescriptor", candidate);
+            authConfig.setPropertySelectionValue("CredentialDescriptor", candidate);
             return;
         }
     }
-    throw std::runtime_error("Unknown authentication method payload id: " + payloadId.toStdString());
+    throw std::runtime_error("Unknown authentication method id: " + authenticationMethodId.toStdString());
 }
 
-// PrivateKeyFile authentication - another String-format credential payload, but instead of comparing a
+// PrivateKeyFile authentication - another String-format credential, but instead of comparing a
 // fixed secret, the module verifies a signed challenge against the public key configured via the
 // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
 // to the matching private key.
@@ -77,7 +77,7 @@ void demoNoAuthentication(const InstancePtr& instance)
 }
 
 // authenticate with username and password
-// UserName/Password authentication - a KeyValuePairs-format credential payload. `createDefaultAuthenticationConfig`'s
+// UserName/Password authentication - a KeyValuePairs-format credential. `createDefaultAuthenticationConfig`'s
 // "CredentialProviderId" selection defaults to the first registered provider (fileCredentialProvider), which only
 // supports FilePath - explicitly switch it to credentialProvider, which supports every format.
 void demoUserNamePasswordAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
@@ -92,8 +92,8 @@ void demoUserNamePasswordAuthentication(const InstancePtr& instance, const Devic
 
 // Explicitly switches "CredentialProviderId" away from its live default (the config's own selection, not
 // something the module chooses - it only ever consumes whichever id is currently selected here), naming a
-// provider instead of leaving the default in place. This only makes an observable difference for a payload
-// format more than one registered provider supports - FilePath is one (both fileCredentialProvider and
+// provider instead of leaving the default in place. This only makes an observable difference for a format
+// more than one registered provider supports - FilePath is one (both fileCredentialProvider and
 // credentialProvider support it), and fileCredentialProvider - registered first - is the one the live
 // default (an unset id) would otherwise pick (see the comment where it's registered, below).
 void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
@@ -113,7 +113,7 @@ void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const 
 // typed getters used in every other demo, the exact same settings can be read and set with plain property
 // object calls instead. `instance.createDefaultAuthenticationConfig(deviceType.getId())` already returns one
 // self-contained config with every supported method (UserNamePassword, Pin, PrivateKeyFile) as a candidate
-// of its "PayloadDescriptor" selection property, defaulting to UserNamePassword -
+// of its "CredentialDescriptor" selection property, defaulting to UserNamePassword -
 // `SelectAuthenticationMethod` switches that selection to "Pin" via plain property object calls, no separate
 // per-method config fetched anywhere. The credential provider id is likewise a "CredentialProviderId"
 // Selection property (over every provider registered on the instance) - set the same way.
@@ -122,8 +122,8 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     auto authConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
     SelectAuthenticationMethod(authConfig, "Pin");
 
-    StructPtr payloadDescriptor = authConfig.getPropertySelectionValue("PayloadDescriptor");
-    std::cout << "Payload id, read as a plain property object selection value: " << payloadDescriptor.get("Id") << std::endl;
+    StructPtr credentialDescriptor = authConfig.getPropertySelectionValue("CredentialDescriptor");
+    std::cout << "Authentication method id, read as a plain property object selection value: " << credentialDescriptor.get("Id") << std::endl;
 
     authConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
     std::cout << "Credential provider id, read back as a Selection property: " << authConfig.getPropertySelectionValue("CredentialProviderId") << std::endl;
@@ -157,9 +157,9 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
     SelectAuthenticationMethod(deviceAuthConfig, "PrivateKeyFile");
     deviceAuthConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
 
-    // The supplied secret must be shaped like the descriptor's own `createDefaultPayload` template - here
+    // The supplied secret must be shaped like the descriptor's own `createEmptySecret` template - here
     // just a single "PrivateKeyFilePath" property, filled in with the private key's path.
-    auto suppliedSecret = deviceAuthConfig.getCredentialPayloadDescriptor().createDefaultPayload();
+    auto suppliedSecret = deviceAuthConfig.getCredentialDescriptor().createEmptySecret();
     suppliedSecret.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
     deviceAuthConfig.setPropertyValue("SuppliedSecret", suppliedSecret);
 
@@ -204,7 +204,7 @@ void demoDeviceAndStreamingAuthentication(const InstancePtr& instance, const Dev
     instance.removeDevice(device);
 }
 
-// PIN authentication - an alternative, String-format credential payload. The device is authenticated via
+// PIN authentication - an alternative, String-format credential. The device is authenticated via
 // PIN. Finally, the instance is saved and reloaded into a completely separate instance to show that a
 // previously authenticated device is re-authenticated (not silently reconnected) on load.
 void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
@@ -220,7 +220,7 @@ void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTyp
     std::cout << "Press \"enter\" to save the configuration and reload it into a new instance..." << std::endl;
     std::cin.get();
 
-    // Saving the instance carries the connected device's credential request along with it - its payload id,
+    // Saving the instance carries the connected device's credential request along with it - its authentication method id,
     // descriptor and non-secret metadata - but never the authentication config or the credentials themselves.
     auto savedConfiguration = instance.saveConfiguration();
 

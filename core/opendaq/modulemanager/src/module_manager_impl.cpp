@@ -34,7 +34,7 @@
 #include <opendaq/network_interface_factory.h>
 #include <opendaq/component_private_ptr.h>
 #include <opendaq/component_type_private_ptr.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
 #include <coretypes/dictobject_factory.h>
 
 #include <opendaq/thread_name.h>
@@ -828,17 +828,17 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
             if (!deviceType.assigned())
                 continue;
 
-            StringPtr defaultAuthConfigId;
-            OPENDAQ_RETURN_IF_FAILED(library.module->getDefaultAuthenticationMethodId(deviceType.getId(), &defaultAuthConfigId));
+            StringPtr defaultAuthenticationMethodId;
+            OPENDAQ_RETURN_IF_FAILED(library.module->getDefaultAuthenticationMethodId(deviceType.getId(), &defaultAuthenticationMethodId));
 
-            DictPtr<IString, ICredentialPayloadDescriptor> supportedAuthenticationDescriptors;
-            if (defaultAuthConfigId.assigned())
+            DictPtr<IString, ICredentialDescriptor> supportedAuthenticationDescriptors;
+            if (defaultAuthenticationMethodId.assigned())
                 OPENDAQ_RETURN_IF_FAILED(
                     library.module->getSupportedAuthenticationMethods(deviceType.getId(), &supportedAuthenticationDescriptors));
 
-            const bool authSupported = defaultAuthConfigId.assigned() &&
+            const bool authSupported = defaultAuthenticationMethodId.assigned() &&
                                        supportedAuthenticationDescriptors.assigned() &&
-                                       supportedAuthenticationDescriptors.hasKey(defaultAuthConfigId);
+                                       supportedAuthenticationDescriptors.hasKey(defaultAuthenticationMethodId);
             if (authenticated && !authSupported)
             {
                 deviceTypeFoundButAuthNotSupported = true;
@@ -1272,7 +1272,7 @@ ErrCode ModuleManagerImpl::getSupportedAuthenticationMethods(IString* typeId, ID
 
     for (const auto& library : libraries)
     {
-        DictPtr<IString, ICredentialPayloadDescriptor> moduleDescriptors;
+        DictPtr<IString, ICredentialDescriptor> moduleDescriptors;
 
         const ErrCode err = library.module->getSupportedAuthenticationMethods(typeId, &moduleDescriptors);
         if (err == OPENDAQ_ERR_NOTIMPLEMENTED)
@@ -1289,20 +1289,20 @@ ErrCode ModuleManagerImpl::getSupportedAuthenticationMethods(IString* typeId, ID
         }
     }
 
-    *descriptors = Dict<IString, ICredentialPayloadDescriptor>().detach();
+    *descriptors = Dict<IString, ICredentialDescriptor>().detach();
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ModuleManagerImpl::getDefaultAuthenticationMethodId(IString* typeId, IString** defaultPayloadId)
+ErrCode ModuleManagerImpl::getDefaultAuthenticationMethodId(IString* typeId, IString** defaultAuthenticationMethodId)
 {
     OPENDAQ_PARAM_NOT_NULL(typeId);
-    OPENDAQ_PARAM_NOT_NULL(defaultPayloadId);
+    OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationMethodId);
 
     for (const auto& library : libraries)
     {
-        StringPtr moduleDefaultPayloadId;
+        StringPtr moduleDefaultAuthenticationMethodId;
 
-        const ErrCode err = library.module->getDefaultAuthenticationMethodId(typeId, &moduleDefaultPayloadId);
+        const ErrCode err = library.module->getDefaultAuthenticationMethodId(typeId, &moduleDefaultAuthenticationMethodId);
         if (err == OPENDAQ_ERR_NOTIMPLEMENTED)
         {
             daqClearErrorInfo();
@@ -1310,14 +1310,14 @@ ErrCode ModuleManagerImpl::getDefaultAuthenticationMethodId(IString* typeId, ISt
         }
         OPENDAQ_RETURN_IF_FAILED(err);
 
-        if (moduleDefaultPayloadId.assigned())
+        if (moduleDefaultAuthenticationMethodId.assigned())
         {
-            *defaultPayloadId = moduleDefaultPayloadId.detach();
+            *defaultAuthenticationMethodId = moduleDefaultAuthenticationMethodId.detach();
             return OPENDAQ_SUCCESS;
         }
     }
 
-    *defaultPayloadId = nullptr;
+    *defaultAuthenticationMethodId = nullptr;
     return OPENDAQ_SUCCESS;
 }
 

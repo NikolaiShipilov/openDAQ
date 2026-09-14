@@ -21,12 +21,12 @@ ErrCode FileCredentialProviderImpl::getId(IString** id)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode FileCredentialProviderImpl::getSupportedPayloadFormats(IList** formats)
+ErrCode FileCredentialProviderImpl::getSupportedFormats(IList** formats)
 {
     OPENDAQ_PARAM_NOT_NULL(formats);
 
     auto supportedFormats = List<IInteger>();
-    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::FilePath));
+    supportedFormats.pushBack(static_cast<Int>(CredentialFormat::FilePath));
 
     *formats = supportedFormats.detach();
     return OPENDAQ_SUCCESS;
@@ -38,20 +38,20 @@ ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* reque
     OPENDAQ_PARAM_NOT_NULL(request);
 
     const auto requestPtr = CredentialRequestPtr::Borrow(request);
-    const auto descriptor = requestPtr.getPayloadDescriptor();
+    const auto descriptor = requestPtr.getDescriptor();
     if (!descriptor.assigned())
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no payload descriptor set");
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no descriptor set");
 
     switch (descriptor.getFormat())
     {
-        case CredentialPayloadFormat::FilePath:
+        case CredentialFormat::FilePath:
         {
             printRequestDetails(requestPtr);
             *credentials = readFilePath(descriptor).detach();
             return OPENDAQ_SUCCESS;
         }
         default:
-            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "Unsupported credential payload format");
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "Unsupported credential format");
     }
 }
 
@@ -61,11 +61,11 @@ ErrCode FileCredentialProviderImpl::cacheCredentials(ICredentialRequest* request
     OPENDAQ_PARAM_NOT_NULL(secret);
 
     // This provider never caches secrets obtained interactively either, so supplying one in advance has
-    // nothing to do here - the caller already wraps it into a credential payload itself.
+    // nothing to do here - the caller already wraps it into a secret itself.
     return OPENDAQ_SUCCESS;
 }
 
-PropertyObjectPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescriptorPtr& descriptor)
+PropertyObjectPtr FileCredentialProviderImpl::readFilePath(const CredentialDescriptorPtr& descriptor)
 {
     const StringPtr description = descriptor.getDescription();
     const std::string prompt = (description.assigned() ? description.toStdString() : "File path") + ": ";
@@ -81,9 +81,9 @@ PropertyObjectPtr FileCredentialProviderImpl::readFilePath(const CredentialPaylo
 
         if (isFileAccessible(value))
         {
-            auto payload = descriptor.createDefaultPayload();
-            payload.setPropertyValue(payload.getAllProperties()[0].getName(), String(value));
-            return payload;
+            auto secret = descriptor.createEmptySecret();
+            secret.setPropertyValue(secret.getAllProperties()[0].getName(), String(value));
+            return secret;
         }
 
         const int attemptsLeft = MaxFilePathAttempts - attempt;

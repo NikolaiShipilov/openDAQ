@@ -20,13 +20,13 @@ CredentialDemoDeviceImpl::CredentialDemoDeviceImpl(const PropertyObjectPtr& conf
                                                    const ComponentPtr& parent,
                                                    const DeviceInfoPtr& info,
                                                    bool authenticated,
-                                                   const StringPtr& payloadId,
+                                                   const StringPtr& authenticationMethodId,
                                                    const PropertyObjectPtr& credentials)
     : MirroredDevice(ctx, parent, fmt::format("{}_{}", info.getManufacturer(), info.getSerialNumber()), nullptr, info.getName())
 {
     if (authenticated)
     {
-        authentication::Authenticate(ctx, credentials, payloadId);
+        authentication::Authenticate(ctx, credentials, authenticationMethodId);
     }
 
     this->deviceInfo = info;

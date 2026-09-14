@@ -29,14 +29,14 @@ ErrCode CmdLineCredentialProviderImpl::getId(IString** id)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CmdLineCredentialProviderImpl::getSupportedPayloadFormats(IList** formats)
+ErrCode CmdLineCredentialProviderImpl::getSupportedFormats(IList** formats)
 {
     OPENDAQ_PARAM_NOT_NULL(formats);
 
     auto supportedFormats = List<IInteger>();
-    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::KeyValuePairs));
-    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::String));
-    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::FilePath));
+    supportedFormats.pushBack(static_cast<Int>(CredentialFormat::KeyValuePairs));
+    supportedFormats.pushBack(static_cast<Int>(CredentialFormat::String));
+    supportedFormats.pushBack(static_cast<Int>(CredentialFormat::FilePath));
 
     *formats = supportedFormats.detach();
     return OPENDAQ_SUCCESS;
@@ -48,31 +48,31 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
     OPENDAQ_PARAM_NOT_NULL(request);
 
     const auto requestPtr = CredentialRequestPtr::Borrow(request);
-    const auto descriptor = requestPtr.getPayloadDescriptor();
+    const auto descriptor = requestPtr.getDescriptor();
     if (!descriptor.assigned())
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no payload descriptor set");
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no descriptor set");
 
     switch (descriptor.getFormat())
     {
-        case CredentialPayloadFormat::KeyValuePairs:
+        case CredentialFormat::KeyValuePairs:
         {
             printRequestDetails(requestPtr);
             *credentials = readKeyValuePairs(descriptor).detach();
             return OPENDAQ_SUCCESS;
         }
-        case CredentialPayloadFormat::String:
+        case CredentialFormat::String:
         {
             printRequestDetails(requestPtr);
             *credentials = readStringSecret(descriptor).detach();
             return OPENDAQ_SUCCESS;
         }
-        case CredentialPayloadFormat::FilePath:
+        case CredentialFormat::FilePath:
         {
             *credentials = readFilePathSecretCached(requestPtr, descriptor).detach();
             return OPENDAQ_SUCCESS;
         }
         default:
-            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "Unsupported credential payload format");
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "Unsupported credential format");
     }
 }
 
@@ -82,18 +82,18 @@ ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* requ
     OPENDAQ_PARAM_NOT_NULL(secret);
 
     const auto requestPtr = CredentialRequestPtr::Borrow(request);
-    const auto descriptor = requestPtr.getPayloadDescriptor();
+    const auto descriptor = requestPtr.getDescriptor();
     if (!descriptor.assigned())
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no payload descriptor set");
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no descriptor set");
 
     // Only FilePath secrets are cached (see `readFilePathSecretCached`) - other formats are a no-op here,
     // since this provider never caches them either when obtaining them interactively.
-    if (descriptor.getFormat() == CredentialPayloadFormat::FilePath)
+    if (descriptor.getFormat() == CredentialFormat::FilePath)
     {
         const auto secretObj = PropertyObjectPtr::Borrow(secret);
-        const StringPtr propertyName = descriptor.createDefaultPayload().getAllProperties()[0].getName();
+        const StringPtr propertyName = descriptor.createEmptySecret().getAllProperties()[0].getName();
         if (!secretObj.hasProperty(propertyName))
-            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDTYPE, "Provided secret is not shaped like a FilePath-format payload");
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDTYPE, "Provided secret is not shaped like a FilePath-format secret");
 
         const StringPtr path = secretObj.getPropertyValue(propertyName);
         filePathSecretCache[MakeFilePathCacheKey(requestPtr)] = path.assigned() ? path.toStdString() : std::string();
@@ -102,28 +102,28 @@ ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* requ
     return OPENDAQ_SUCCESS;
 }
 
-PropertyObjectPtr CmdLineCredentialProviderImpl::readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor)
+PropertyObjectPtr CmdLineCredentialProviderImpl::readKeyValuePairs(const CredentialDescriptorPtr& descriptor)
 {
     const DictPtr<IString, IBoolean> keys = descriptor.getParameters().get("Keys");
 
-    auto payload = descriptor.createDefaultPayload();
+    auto secret = descriptor.createEmptySecret();
     for (const auto& [key, hidden] : keys)
-        payload.setPropertyValue(key, String(readLine(fmt::format("{}: ", key.toStdString()), hidden)));
+        secret.setPropertyValue(key, String(readLine(fmt::format("{}: ", key.toStdString()), hidden)));
 
-    return payload;
+    return secret;
 }
 
-PropertyObjectPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialPayloadDescriptorPtr& descriptor)
+PropertyObjectPtr CmdLineCredentialProviderImpl::readStringSecret(const CredentialDescriptorPtr& descriptor)
 {
     const StringPtr description = descriptor.getDescription();
     const auto parameters = descriptor.getParameters();
     const bool hidden = parameters.assigned() && parameters.hasField("Hidden") && (bool) parameters.get("Hidden");
 
-    auto secret = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
+    auto secretValue = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
 
-    auto payload = descriptor.createDefaultPayload();
-    payload.setPropertyValue(payload.getAllProperties()[0].getName(), String(secret));
-    return payload;
+    auto secret = descriptor.createEmptySecret();
+    secret.setPropertyValue(secret.getAllProperties()[0].getName(), String(secretValue));
+    return secret;
 }
 
 CmdLineCredentialProviderImpl::CacheKey CmdLineCredentialProviderImpl::MakeFilePathCacheKey(const CredentialRequestPtr& request)
@@ -149,22 +149,22 @@ CmdLineCredentialProviderImpl::CacheKey CmdLineCredentialProviderImpl::MakeFileP
                           hasSerialNumber ? serialNumber.toStdString() : std::string());
 }
 
-PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialPayloadDescriptorPtr& descriptor)
+PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialDescriptorPtr& descriptor)
 {
     const auto cacheKey = MakeFilePathCacheKey(request);
 
     if (const auto it = filePathSecretCache.find(cacheKey); it != filePathSecretCache.end())
     {
-        auto payload = descriptor.createDefaultPayload();
-        payload.setPropertyValue(payload.getAllProperties()[0].getName(), String(it->second));
-        return payload;
+        auto secret = descriptor.createEmptySecret();
+        secret.setPropertyValue(secret.getAllProperties()[0].getName(), String(it->second));
+        return secret;
     }
 
     printRequestDetails(request);
-    const auto payload = readStringSecret(descriptor);
-    const StringPtr secret = payload.getPropertyValue(payload.getAllProperties()[0].getName());
-    filePathSecretCache[cacheKey] = secret.toStdString();
-    return payload;
+    const auto secret = readStringSecret(descriptor);
+    const StringPtr secretValue = secret.getPropertyValue(secret.getAllProperties()[0].getName());
+    filePathSecretCache[cacheKey] = secretValue.toStdString();
+    return secret;
 }
 
 void CmdLineCredentialProviderImpl::printRequestDetails(const CredentialRequestPtr& request)

@@ -1,0 +1,190 @@
+#include <opendaq/credential_descriptor_impl.h>
+#include <opendaq/credential_descriptor_factory.h>
+#include <coretypes/dictobject_factory.h>
+#include <coreobjects/property_object_factory.h>
+
+BEGIN_NAMESPACE_OPENDAQ
+
+namespace detail
+{
+    inline StructTypePtr RequireRegisteredType(const TypeManagerPtr& typeManager, const StringPtr& typeName)
+    {
+        if (!typeManager.assigned())
+            DAQ_THROW_EXCEPTION(InvalidParameterException, "Type manager must be assigned when creating a \"{}\"", typeName);
+        if (!typeManager.hasType(typeName))
+            DAQ_THROW_EXCEPTION(InvalidParameterException, "Type \"{}\" is not registered in the type manager", typeName);
+        return typeManager.getType(typeName);
+    }
+
+    inline StringPtr RequireRegisteredClassName(const TypeManagerPtr& typeManager, const StringPtr& className)
+    {
+        if (!typeManager.assigned())
+            DAQ_THROW_EXCEPTION(InvalidParameterException, "Type manager must be assigned when creating a credential descriptor");
+        if (!className.assigned())
+            DAQ_THROW_EXCEPTION(InvalidParameterException, "Secret class name must be assigned");
+        if (!typeManager.hasType(className))
+            DAQ_THROW_EXCEPTION(InvalidParameterException, "Type \"{}\" is not registered in the type manager", className);
+        return className;
+    }
+}
+
+//
+// CredentialDescriptorParametersImpl
+//
+
+CredentialDescriptorParametersImpl::CredentialDescriptorParametersImpl(const StructTypePtr& structType,
+                                                                       const DictPtr<IString, IBaseObject>& fields)
+    : GenericStructImpl<IStruct>(structType, fields)
+{
+}
+
+//
+// CredentialDescriptorImpl
+//
+
+DictPtr<IString, IBaseObject> CredentialDescriptorImpl::BuildFields(
+    const StringPtr& id,
+    const DictPtr<IString, IBoolean>& keys,
+    const StringPtr& description,
+    const StructTypePtr& parametersType)
+{
+    if (!keys.assigned() || keys.getCount() == 0)
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Keys must be assigned and non-empty when creating a key-value credential descriptor");
+
+    const auto parameters =
+        createWithImplementation<IStruct, CredentialDescriptorParametersImpl>(parametersType, Dict<IString, IBaseObject>({{"Keys", keys}}));
+
+    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}, {"Parameters", parameters}});
+}
+
+DictPtr<IString, IBaseObject> CredentialDescriptorImpl::BuildFields(
+    const StringPtr& id,
+    const StringPtr& description,
+    Bool hidden,
+    const StructTypePtr& parametersType)
+{
+    const auto parameters = createWithImplementation<IStruct, CredentialDescriptorParametersImpl>(
+        parametersType, Dict<IString, IBaseObject>({{"Hidden", hidden}}));
+
+    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}, {"Parameters", parameters}});
+}
+
+DictPtr<IString, IBaseObject> CredentialDescriptorImpl::BuildFields(const StringPtr& id, const StringPtr& description)
+{
+    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}});
+}
+
+CredentialDescriptorImpl::CredentialDescriptorImpl(
+    const StringPtr& id,
+    const DictPtr<IString, IBoolean>& keys,
+    const StringPtr& description,
+    const TypeManagerPtr& typeManager,
+    const StringPtr& secretClassName)
+    : CredentialDescriptorImpl(
+          CredentialFormat::KeyValuePairs,
+          detail::RequireRegisteredType(typeManager, KeyValueDescriptorStructType().getName()),
+          BuildFields(id, keys, description, detail::RequireRegisteredType(typeManager, KeyValueDescriptorParametersStructType().getName())),
+          typeManager,
+          detail::RequireRegisteredClassName(typeManager, secretClassName))
+{
+}
+
+CredentialDescriptorImpl::CredentialDescriptorImpl(
+    const StringPtr& id, const StringPtr& description, Bool hidden, const TypeManagerPtr& typeManager, const StringPtr& secretClassName)
+    : CredentialDescriptorImpl(
+          CredentialFormat::String,
+          detail::RequireRegisteredType(typeManager, StringDescriptorStructType().getName()),
+          BuildFields(id, description, hidden, detail::RequireRegisteredType(typeManager, StringDescriptorParametersStructType().getName())),
+          typeManager,
+          detail::RequireRegisteredClassName(typeManager, secretClassName))
+{
+}
+
+CredentialDescriptorImpl::CredentialDescriptorImpl(
+    const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager, const StringPtr& secretClassName)
+    : CredentialDescriptorImpl(
+          CredentialFormat::FilePath,
+          detail::RequireRegisteredType(typeManager, FilePathDescriptorStructType().getName()),
+          BuildFields(id, description),
+          typeManager,
+          detail::RequireRegisteredClassName(typeManager, secretClassName))
+{
+}
+
+CredentialDescriptorImpl::CredentialDescriptorImpl(const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager)
+    : CredentialDescriptorImpl(
+          CredentialFormat::None,
+          detail::RequireRegisteredType(typeManager, NoneDescriptorStructType().getName()),
+          BuildFields(id, description),
+          typeManager,
+          nullptr)
+{
+}
+
+CredentialDescriptorImpl::CredentialDescriptorImpl(CredentialFormat format,
+                                                    const StructTypePtr& structType,
+                                                    const DictPtr<IString, IBaseObject>& fields,
+                                                    const TypeManagerPtr& typeManager,
+                                                    const StringPtr& secretClassName)
+    : GenericStructImpl<ICredentialDescriptor, IStruct>(structType, fields)
+    , format(format)
+    , typeManager(typeManager)
+    , secretClassName(secretClassName)
+{
+}
+
+ErrCode CredentialDescriptorImpl::getAuthenticationMethodId(IString** authenticationMethodId)
+{
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
+
+    *authenticationMethodId = this->fields.get("Id").template asPtr<IString>().addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialDescriptorImpl::getFormat(CredentialFormat* formatOut)
+{
+    OPENDAQ_PARAM_NOT_NULL(formatOut);
+
+    *formatOut = this->format;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialDescriptorImpl::getParameters(IStruct** parameters)
+{
+    OPENDAQ_PARAM_NOT_NULL(parameters);
+
+    if (!this->fields.hasKey("Parameters"))
+    {
+        *parameters = nullptr;
+        return OPENDAQ_SUCCESS;
+    }
+
+    *parameters = this->fields.get("Parameters").template asPtr<IStruct>().addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialDescriptorImpl::getDescription(IString** description)
+{
+    OPENDAQ_PARAM_NOT_NULL(description);
+
+    *description = this->fields.get("Description").template asPtr<IString>().addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialDescriptorImpl::createEmptySecret(IPropertyObject** secret)
+{
+    OPENDAQ_PARAM_NOT_NULL(secret);
+
+    if (format == CredentialFormat::None)
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "The \"None\" format requires no credentials, so it has no secret to build");
+
+    *secret = PropertyObject(typeManager, secretClassName).detach();
+    return OPENDAQ_SUCCESS;
+}
+
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValueDescriptor, ICredentialDescriptor, IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, secretClassName)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringDescriptor, ICredentialDescriptor, IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, secretClassName)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathDescriptor, ICredentialDescriptor, IString*, id, IString*, description, ITypeManager*, typeManager, IString*, secretClassName)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, NoneDescriptor, ICredentialDescriptor, IString*, id, IString*, description, ITypeManager*, typeManager)
+
+END_NAMESPACE_OPENDAQ

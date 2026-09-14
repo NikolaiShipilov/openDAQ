@@ -93,31 +93,31 @@ ErrCode CredentialRequestBuilderImpl::getMetaData(IPropertyObject** metaData)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::setPayloadId(IString* payloadId)
+ErrCode CredentialRequestBuilderImpl::setAuthenticationMethodId(IString* authenticationMethodId)
 {
-    this->payloadId = payloadId;
+    this->authenticationMethodId = authenticationMethodId;
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::getPayloadId(IString** payloadId)
+ErrCode CredentialRequestBuilderImpl::getAuthenticationMethodId(IString** authenticationMethodId)
 {
-    OPENDAQ_PARAM_NOT_NULL(payloadId);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
 
-    *payloadId = this->payloadId.addRefAndReturn();
+    *authenticationMethodId = this->authenticationMethodId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor)
+ErrCode CredentialRequestBuilderImpl::setDescriptor(ICredentialDescriptor* descriptor)
 {
-    this->payloadDescriptor = descriptor;
+    this->descriptor = descriptor;
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor)
+ErrCode CredentialRequestBuilderImpl::getDescriptor(ICredentialDescriptor** descriptor)
 {
     OPENDAQ_PARAM_NOT_NULL(descriptor);
 
-    *descriptor = this->payloadDescriptor.addRefAndReturn();
+    *descriptor = this->descriptor.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

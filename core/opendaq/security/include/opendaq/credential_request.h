@@ -17,15 +17,15 @@
 #pragma once
 #include <coretypes/baseobject.h>
 #include <coreobjects/property_object_ptr.h>
-#include <opendaq/credential_payload_descriptor.h>
+#include <opendaq/credential_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
- * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
+ * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
  * [interfaceLibrary(IComponentType, "opendaq")]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr, "<opendaq/component_type_ptr.h>")]
  */
@@ -38,8 +38,8 @@ struct IComponentType;
  * when authentication is required for a connection attempt.
  *
  * Built via `ICredentialRequestBuilder`. Never carries the actual secrets - only
- * enough context (the component type, connection details, and the negotiated payload's id and descriptor)
- * for the provider to determine how to provide the secrets.
+ * enough context (the component type, connection details, and the negotiated authentication method id and
+ * its credential descriptor) for the provider to determine how to provide the secrets.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
 {
@@ -82,18 +82,18 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
     /*!
-     * @brief Gets the id of the negotiated payload, read from `IAuthenticationConfig` when the request was
-     * built.
-     * @param[out] payloadId The payload id.
+     * @brief Gets the id of the negotiated authentication method, read from `IAuthenticationConfig` when
+     * the request was built.
+     * @param[out] authenticationMethodId The authentication method id.
      */
-    virtual ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) = 0;
+    virtual ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) = 0;
 
     /*!
-     * @brief Gets the descriptor of the payload the provider must provide, read from `IAuthenticationConfig`
-     * when the request was built.
-     * @param[out] descriptor The payload descriptor.
+     * @brief Gets the credential descriptor the provider must provide a secret for, read from
+     * `IAuthenticationConfig` when the request was built.
+     * @param[out] descriptor The credential descriptor.
      */
-    virtual ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
+    virtual ErrCode INTERFACE_FUNC getDescriptor(ICredentialDescriptor** descriptor) = 0;
 };
 
 /*!

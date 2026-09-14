@@ -38,7 +38,7 @@
 #include <coretypes/dictobject_factory.h>
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/authentication_config_factory.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
 #include <opendaq/credential_provider_ptr.h>
 #include <opendaq/credential_request_ptr.h>
 #include <opendaq/credential_request_factory.h>
@@ -204,7 +204,7 @@ public:
             this, &Module::requestCredentials, credentials, authConfigPtr, connectionString, manufacturer, serialNumber, deviceType, resolvedProvider);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
-        const StringPtr payloadId = authConfigPtr.getCredentialPayloadId();
+        const StringPtr authenticationMethodId = authConfigPtr.getAuthenticationMethodId();
 
         DevicePtr createdDevice;
         errCode = wrapHandlerReturn(this,
@@ -213,7 +213,7 @@ public:
                                     connectionString,
                                     parent,
                                     mergeConfig(config, deviceType),
-                                    payloadId,
+                                    authenticationMethodId,
                                     credentials);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
@@ -379,7 +379,7 @@ public:
      *
      * The credentials are resolved (`requestCredentials`) before `onCreateStreaming` is called -
      * `authenticationConfig` itself never reaches the final module's own implementation, only the
-     * credentials and the resolved payload id (to enable correct authentication method) do.
+     * credentials and the resolved authentication method id (to verify them against the right method) do.
      */
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                            IString* connectionString,
@@ -422,7 +422,7 @@ public:
                                     streamingType.getId());
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
-        StringPtr payloadId;
+        StringPtr authenticationMethodId;
         PropertyObjectPtr credentials;
         if (resolvedAuthConfig.assigned())
         {
@@ -438,7 +438,7 @@ public:
                                         resolvedProvider);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
-            payloadId = resolvedAuthConfig.getCredentialPayloadId();
+            authenticationMethodId = resolvedAuthConfig.getAuthenticationMethodId();
         }
 
         StreamingPtr createdStreaming;
@@ -447,7 +447,7 @@ public:
                                     createdStreaming,
                                     connectionString,
                                     mergeConfig(config, streamingType),
-                                    payloadId,
+                                    authenticationMethodId,
                                     credentials);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
@@ -486,16 +486,16 @@ public:
     }
 
     /*!
-     * @brief Returns the payload descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @brief Returns the credential descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
      * @param typeId The id of a device or streaming type this module offers.
-     * @param[out] descriptors The supported authentication payload descriptors, keyed by their own id.
+     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id.
      */
     ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) override
     {
         OPENDAQ_PARAM_NOT_NULL(typeId);
         OPENDAQ_PARAM_NOT_NULL(descriptors);
 
-        DictPtr<IString, ICredentialPayloadDescriptor> descriptorsPtr;
+        DictPtr<IString, ICredentialDescriptor> descriptorsPtr;
         const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetSupportedAuthenticationMethods, descriptorsPtr, typeId);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
@@ -504,20 +504,20 @@ public:
     }
 
     /*!
-     * @brief Returns the id of the payload descriptor the type identified by `typeId` supports authenticating with by default.
+     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default.
      * @param typeId The id of a device or streaming type this module offers.
-     * @param[out] defaultPayloadId The id of the payload descriptor to select by default.
+     * @param[out] defaultAuthenticationMethodId The id of the authentication method to select by default.
      */
-    ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultPayloadId) override
+    ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultAuthenticationMethodId) override
     {
         OPENDAQ_PARAM_NOT_NULL(typeId);
-        OPENDAQ_PARAM_NOT_NULL(defaultPayloadId);
+        OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationMethodId);
 
-        StringPtr defaultPayloadIdPtr;
-        const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetDefaultAuthenticationMethodId, defaultPayloadIdPtr, typeId);
+        StringPtr defaultAuthenticationMethodIdPtr;
+        const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetDefaultAuthenticationMethodId, defaultAuthenticationMethodIdPtr, typeId);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
-        *defaultPayloadId = defaultPayloadIdPtr.detach();
+        *defaultAuthenticationMethodId = defaultAuthenticationMethodIdPtr.detach();
         return errCode;
     }
 
@@ -579,9 +579,9 @@ public:
      * @param connectionString Describes the connection info of the device to connect to.
      * @param parent The parent component/device to which the device attaches.
      * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
-     * @param payloadId The id of the authentication method the resolved `credentials` are shaped for (see
-     * `IAuthenticationConfig::getCredentialPayloadId`).
-     * @param credentials The already-resolved credential payload to authenticate with - `createAuthenticatedDevice`
+     * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for (see
+     * `IAuthenticationConfig::getAuthenticationMethodId`).
+     * @param credentials The already-resolved credentials to authenticate with - `createAuthenticatedDevice`
      * has already obtained this (via `requestCredentials`, from a supplied secret or a credential provider)
      * before calling this method, so the implementation only needs to verify it, never to resolve it itself.
      * @returns The device object created to communicate with and control the device.
@@ -589,7 +589,7 @@ public:
     virtual DevicePtr onCreateAuthenticatedDevice(const StringPtr& connectionString,
                                                   const ComponentPtr& parent,
                                                   const PropertyObjectPtr& config,
-                                                  const StringPtr& payloadId,
+                                                  const StringPtr& authenticationMethodId,
                                                   const PropertyObjectPtr& credentials)
     {
         return nullptr;
@@ -640,9 +640,9 @@ public:
      * optionally authenticating the connection with the given, already-resolved credentials.
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
-     * @param payloadId The id of the authentication method the resolved `credentials` are shaped for, or
+     * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for, or
      * unassigned if the connection is unauthenticated (see `createStreaming`).
-     * @param credentials The already-resolved credential payload to authenticate with, or unassigned if the
+     * @param credentials The already-resolved credentials to authenticate with, or unassigned if the
      * connection is unauthenticated - `createStreaming` has already obtained this (via `requestCredentials`,
      * from a supplied secret or a credential provider) before calling this method, so the implementation
      * only needs to verify it, never to resolve it itself.
@@ -650,7 +650,7 @@ public:
      */
     virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString,
                                            const PropertyObjectPtr& config,
-                                           const StringPtr& payloadId,
+                                           const StringPtr& authenticationMethodId,
                                            const PropertyObjectPtr& credentials)
     {
         return nullptr;
@@ -662,24 +662,24 @@ public:
     }
 
     /*!
-     * @brief Returns the payload descriptors the type identified by `typeId` supports authenticating with,
+     * @brief Returns the credential descriptors the type identified by `typeId` supports authenticating with,
      * keyed by their own id. A concrete module overrides this for each device/streaming type id it declares
      * authentication support for. The base implementation declares no authentication support for any type.
      * @param typeId The id of a device or streaming type this module offers.
-     * @returns The supported authentication payload descriptors, keyed by their own id. Empty if `typeId`
+     * @returns The supported authentication credential descriptors, keyed by their own id. Empty if `typeId`
      * isn't recognized or doesn't support authentication.
      */
-    virtual DictPtr<IString, ICredentialPayloadDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId)
+    virtual DictPtr<IString, ICredentialDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId)
     {
-        return Dict<IString, ICredentialPayloadDescriptor>();
+        return Dict<IString, ICredentialDescriptor>();
     }
 
     /*!
-     * @brief Returns the id of the payload descriptor the type identified by `typeId` supports authenticating with by default.
+     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default.
      * A concrete module overrides this for each device/streaming type id it declares authentication support for. The base
      * implementation declares no authentication support for any type.
      * @param typeId The id of a device or streaming type this module offers.
-     * @returns The default payload id, or unassigned if `typeId` isn't recognized or doesn't support
+     * @returns The default authentication method id, or unassigned if `typeId` isn't recognized or doesn't support
      * authentication.
      */
     virtual StringPtr onGetDefaultAuthenticationMethodId(const StringPtr& typeId)
@@ -786,20 +786,20 @@ private:
         if (authenticationConfig.assigned() || !typeId.assigned())
             return authenticationConfig;
 
-        const StringPtr defaultPayloadId = onGetDefaultAuthenticationMethodId(typeId);
-        if (!defaultPayloadId.assigned())
+        const StringPtr defaultAuthenticationMethodId = onGetDefaultAuthenticationMethodId(typeId);
+        if (!defaultAuthenticationMethodId.assigned())
             return authenticationConfig;
 
         const auto descriptors = onGetSupportedAuthenticationMethods(typeId);
-        return AuthenticationConfig(descriptors, defaultPayloadId, context, typeId);
+        return AuthenticationConfig(descriptors, defaultAuthenticationMethodId, context, typeId);
     }
 
-    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload, then resolves
-    // credentials for it via `obtainCredentials` (see it for details on `resolvedProvider`). Throws
-    // `AuthenticationFailedException` if `authenticationConfig` is unassigned.
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
+    // then resolves credentials for it via `obtainCredentials` (see it for details on `resolvedProvider`).
+    // Throws `AuthenticationFailedException` if `authenticationConfig` is unassigned.
     //
-    // A `None`-format payload needs no credentials at all, so it is resolved directly here, as an unassigned
-    // payload - `createDefaultPayload()` doesn't apply to it either, there being no payload to build. No
+    // A `None`-format method needs no credentials at all, so it is resolved directly here, as unassigned
+    // credentials - `createEmptySecret()` doesn't apply to it either, there being no secret to build. No
     // `ICredentialRequest` is even formed for it, since nothing will ever be requested with it: not from a
     // credential provider (none is expected to declare support for `None` - there is nothing for one to
     // provide) and not via a caller-supplied secret either.
@@ -813,16 +813,16 @@ private:
         if (!authenticationConfig.assigned())
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
 
-        const auto payloadDescriptor = authenticationConfig.getCredentialPayloadDescriptor();
-        if (payloadDescriptor.getFormat() == CredentialPayloadFormat::None)
+        const auto credentialDescriptor = authenticationConfig.getCredentialDescriptor();
+        if (credentialDescriptor.getFormat() == CredentialFormat::None)
             return nullptr;
 
         const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, componentType);
 
-        return obtainCredentials(authenticationConfig, credentialRequest, payloadDescriptor, resolvedProvider);
+        return obtainCredentials(authenticationConfig, credentialRequest, credentialDescriptor, resolvedProvider);
     }
 
-    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected payload id/descriptor,
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected authentication method id/descriptor,
     // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`,
     // and `componentType`. Split out of `requestCredentials` so `createAuthenticatedDevice` can call it a
     // second time, with manufacturer/serial number resolved from the created device's own info, to re-cache
@@ -837,14 +837,14 @@ private:
         requestBuilder.setConnectionString(onGetCanonicalConnectionString(connectionString));
         requestBuilder.setManufacturer(manufacturer);
         requestBuilder.setSerialNumber(serialNumber);
-        requestBuilder.setPayloadId(authenticationConfig.getCredentialPayloadId());
-        requestBuilder.setPayloadDescriptor(authenticationConfig.getCredentialPayloadDescriptor());
+        requestBuilder.setAuthenticationMethodId(authenticationConfig.getAuthenticationMethodId());
+        requestBuilder.setDescriptor(authenticationConfig.getCredentialDescriptor());
         requestBuilder.setComponentType(componentType);
 
         return requestBuilder.build();
     }
 
-    // Resolves the credential payload for `credentialRequest` - always a non-`None`-format payload (see
+    // Resolves the credentials for `credentialRequest` - always a non-`None`-format method (see
     // `requestCredentials`, its only caller, which resolves `None` itself beforehand). Consumes whichever
     // provider id `authenticationConfig.getCredentialProviderId()` currently returns. If
     // `authenticationConfig.getSuppliedSecret()` returns one, it is used directly instead of asking a
@@ -855,12 +855,12 @@ private:
     // Throws `AuthenticationFailedException` if:
     // - `getCredentialProviderId()` returns nothing at all,
     // - the returned provider id no longer names a registered provider,
-    // - the returned provider no longer supports the required payload format, or
-    // - the resolved payload (supplied by the caller, or obtained from a provider) doesn't match
-    //   `payloadDescriptor`'s expected shape.
+    // - the returned provider no longer supports the required format, or
+    // - the resolved credentials (supplied by the caller, or obtained from a provider) don't match
+    //   `credentialDescriptor`'s expected shape.
     PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
                                        const CredentialRequestPtr& credentialRequest,
-                                       const CredentialPayloadDescriptorPtr& payloadDescriptor,
+                                       const CredentialDescriptorPtr& credentialDescriptor,
                                        CredentialProviderPtr& resolvedProvider)
     {
         const auto providers = context.getCredentialProviders();
@@ -869,19 +869,19 @@ private:
 
         if (suppliedSecret.assigned())
         {
-            if (!payloadShapeMatches(suppliedSecret, payloadDescriptor))
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret does not match the expected payload shape");
+            if (!secretShapeMatches(suppliedSecret, credentialDescriptor))
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret does not match the expected shape");
 
-            // Already shaped like the payload descriptor's `createDefaultPayload` template (filled in by the
-            // caller), so it is used directly as the credential payload, no provider asked to obtain anything.
+            // Already shaped like the credential descriptor's `createEmptySecret` template (filled in by the
+            // caller), so it is used directly as the credential, no provider asked to obtain anything.
             // If a provider is currently selected too, it still gets a chance to cache the secret, so a later
             // interactive request for the same context reuses it.
             if (providerId.assigned())
             {
-                resolvedProvider = findMatchingCredentialProvider(providers, payloadDescriptor, providerId);
+                resolvedProvider = findMatchingCredentialProvider(providers, credentialDescriptor, providerId);
                 if (!resolvedProvider.assigned())
                     DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                         "Authentication is required but no credential provider supporting a compatible payload format is registered");
+                                         "Authentication is required but no credential provider supporting a compatible format is registered");
 
                 resolvedProvider.cacheCredentials(credentialRequest, suppliedSecret);
             }
@@ -889,54 +889,54 @@ private:
             return suppliedSecret;
         }
 
-        resolvedProvider = findMatchingCredentialProvider(providers, payloadDescriptor, providerId);
+        resolvedProvider = findMatchingCredentialProvider(providers, credentialDescriptor, providerId);
         if (!resolvedProvider.assigned())
             DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                 "Authentication is required but no credential provider supporting a compatible payload format is registered");
+                                 "Authentication is required but no credential provider supporting a compatible format is registered");
 
         const PropertyObjectPtr credentials = resolvedProvider.requestCredentials(credentialRequest);
-        if (!payloadShapeMatches(credentials, payloadDescriptor))
+        if (!secretShapeMatches(credentials, credentialDescriptor))
             DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                 "Credential provider \"{}\" returned credentials that do not match the expected payload shape",
+                                 "Credential provider \"{}\" returned credentials that do not match the expected shape",
                                  resolvedProvider.getId());
 
         return credentials;
     }
 
-    // Structural check: does `payload` have exactly the property names `payloadDescriptor.createDefaultPayload()`
+    // Structural check: does `secret` have exactly the property names `credentialDescriptor.createEmptySecret()`
     // would produce? Doesn't check provenance, only shape.
-    static bool payloadShapeMatches(const PropertyObjectPtr& payload, const CredentialPayloadDescriptorPtr& payloadDescriptor)
+    static bool secretShapeMatches(const PropertyObjectPtr& secret, const CredentialDescriptorPtr& credentialDescriptor)
     {
-        if (!payload.assigned() || !payloadDescriptor.assigned())
+        if (!secret.assigned() || !credentialDescriptor.assigned())
             return false;
 
-        const PropertyObjectPtr templateObj = payloadDescriptor.createDefaultPayload();
+        const PropertyObjectPtr templateObj = credentialDescriptor.createEmptySecret();
         const auto templateProps = templateObj.getAllProperties();
 
-        if (templateProps.getCount() != payload.getAllProperties().getCount())
+        if (templateProps.getCount() != secret.getAllProperties().getCount())
             return false;
 
         for (const auto& prop : templateProps)
         {
-            if (!payload.hasProperty(prop.getName()))
+            if (!secret.hasProperty(prop.getName()))
                 return false;
         }
 
         return true;
     }
 
-    static bool supportsPayloadFormat(const CredentialProviderPtr& provider, const CredentialPayloadDescriptorPtr& payloadDescriptor)
+    static bool supportsCredentialFormat(const CredentialProviderPtr& provider, const CredentialDescriptorPtr& credentialDescriptor)
     {
-        for (const auto& format : provider.getSupportedPayloadFormats())
+        for (const auto& format : provider.getSupportedFormats())
         {
-            if (static_cast<CredentialPayloadFormat>(static_cast<Int>(format)) == payloadDescriptor.getFormat())
+            if (static_cast<CredentialFormat>(static_cast<Int>(format)) == credentialDescriptor.getFormat())
                 return true;
         }
 
         return false;
     }
 
-    // Looks up `providerId` among the registered `providers` and validates it supports `payloadDescriptor`'s
+    // Looks up `providerId` among the registered `providers` and validates it supports `credentialDescriptor`'s
     // format. `providerId` is expected to already be whatever `authenticationConfig.getCredentialProviderId()`
     // currently returns, pre-filtered to compatible providers. An unassigned `providerId` simply returns
     // unassigned; it is the caller's job (`obtainCredentials`) to treat that as a failure.
@@ -945,7 +945,7 @@ private:
     // - names no registered provider, or
     // - names a provider that no longer supports the required format.
     static CredentialProviderPtr findMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
-                                                                const CredentialPayloadDescriptorPtr& payloadDescriptor,
+                                                                const CredentialDescriptorPtr& credentialDescriptor,
                                                                 const StringPtr& providerId = nullptr)
     {
         if (!providerId.assigned())
@@ -959,11 +959,11 @@ private:
         }
 
         auto provider = providers.get(providerId);
-        if (!supportsPayloadFormat(provider, payloadDescriptor))
+        if (!supportsCredentialFormat(provider, credentialDescriptor))
         {
             DAQ_THROW_EXCEPTION(
                 AuthenticationFailedException,
-                "Authentication is required but the selected credential provider \"{}\" does not support the required payload format",
+                "Authentication is required but the selected credential provider \"{}\" does not support the required format",
                 providerId);
         }
 

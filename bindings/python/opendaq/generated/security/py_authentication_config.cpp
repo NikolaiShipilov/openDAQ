@@ -41,27 +41,27 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
 {
     cls.doc() = "Carries the authentication settings used for a single connection attempt to a component.";
 
-    m.def("AuthenticationConfig", [](std::variant<daq::IDict*, py::dict>& payloadDescriptors, std::variant<daq::IString*, py::str, daq::IEvalValue*>& defaultPayloadId, daq::IContext* context, std::variant<daq::IString*, py::str, daq::IEvalValue*>& typeId){
-        return daq::AuthenticationConfig_Create(getVariantValue<daq::IDict*>(payloadDescriptors), getVariantValue<daq::IString*>(defaultPayloadId), context, getVariantValue<daq::IString*>(typeId));
-    }, py::arg("payload_descriptors"), py::arg("default_payload_id"), py::arg("context"), py::arg("type_id"));
+    m.def("AuthenticationConfig", [](std::variant<daq::IDict*, py::dict>& credentialDescriptors, std::variant<daq::IString*, py::str, daq::IEvalValue*>& defaultAuthenticationMethodId, daq::IContext* context, std::variant<daq::IString*, py::str, daq::IEvalValue*>& typeId){
+        return daq::AuthenticationConfig_Create(getVariantValue<daq::IDict*>(credentialDescriptors), getVariantValue<daq::IString*>(defaultAuthenticationMethodId), context, getVariantValue<daq::IString*>(typeId));
+    }, py::arg("credential_descriptors"), py::arg("default_authentication_method_id"), py::arg("context"), py::arg("type_id"));
 
-    cls.def_property_readonly("credential_payload_id",
+    cls.def_property_readonly("authentication_method_id",
         [](daq::IAuthenticationConfig *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getCredentialPayloadId().toStdString();
+            return objectPtr.getAuthenticationMethodId().toStdString();
         },
-        "Gets the id of the payload associated with selected authentication method - the selected `\"PayloadDescriptor\"` property value's own `ICredentialPayloadDescriptor::getId()`.");
-    cls.def_property_readonly("credential_payload_descriptor",
+        "Gets the id of the authentication method currently selected - the selected `\"CredentialDescriptor\"` property value's own `ICredentialDescriptor::getAuthenticationMethodId()`.");
+    cls.def_property_readonly("credential_descriptor",
         [](daq::IAuthenticationConfig *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getCredentialPayloadDescriptor().detach();
+            return objectPtr.getCredentialDescriptor().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the descriptor of the payload which selected authentication method uses - the current selection value of the `\"PayloadDescriptor\"` property.");
+        "Gets the credential descriptor which selected authentication method uses - the current selection value of the `\"CredentialDescriptor\"` property.");
     cls.def_property_readonly("credential_provider_id",
         [](daq::IAuthenticationConfig *object)
         {

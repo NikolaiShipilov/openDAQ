@@ -40,16 +40,16 @@ public:
     DevicePtr onCreateAuthenticatedDevice(const StringPtr& connectionString,
                                           const ComponentPtr& parent,
                                           const PropertyObjectPtr& config,
-                                          const StringPtr& payloadId,
+                                          const StringPtr& authenticationMethodId,
                                           const PropertyObjectPtr& credentials) override;
 
     DictPtr<IString, IStreamingType> onGetAvailableStreamingTypes() override;
     StreamingPtr onCreateStreaming(const StringPtr& connectionString,
                                    const PropertyObjectPtr& config,
-                                   const StringPtr& payloadId,
+                                   const StringPtr& authenticationMethodId,
                                    const PropertyObjectPtr& credentials) override;
 
-    DictPtr<IString, ICredentialPayloadDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId) override;
+    DictPtr<IString, ICredentialDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId) override;
     StringPtr onGetDefaultAuthenticationMethodId(const StringPtr& typeId) override;
 
 private:

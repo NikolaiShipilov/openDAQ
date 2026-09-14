@@ -2,7 +2,7 @@
 #include <coretypes/validation.h>
 #include <coretypes/intfs.h>
 #include <opendaq/module_manager_ptr.h>
-#include <opendaq/credential_payload_descriptor_factory.h>
+#include <opendaq/credential_descriptor_factory.h>
 #include <opendaq/component_private_ptr.h>
 #include <opendaq/custom_log.h>
 #include <coretypes/type_manager_private.h>
@@ -320,10 +320,10 @@ void ContextImpl::registerOpenDaqTypes()
     const auto connectionStatusType = EnumerationType("ConnectionStatusType", List<IString>("Connected", "Reconnecting", "Unrecoverable", "Removed"));
     checkErrorInfoExcept(typeManager->addType(connectionStatusType), OPENDAQ_ERR_ALREADYEXISTS);
 
-    // Standard authentication payload descriptor types - registered here, before any module is loaded, so
+    // Standard authentication credential descriptor types - registered here, before any module is loaded, so
     // they're globally known from the start the same way as the well-known types above, rather than each
     // module registering them (redundantly) on demand.
-    RegisterCredentialPayloadDescriptorTypes(typeManager);
+    RegisterCredentialDescriptorTypes(typeManager);
 }
 
 OPENDAQ_DEFINE_CLASS_FACTORY(

@@ -19,7 +19,7 @@
 #include <coretypes/impl.h>
 #include <opendaq/credential_provider.h>
 #include <opendaq/credential_request_ptr.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
 #include <coreobjects/property_object_ptr.h>
 #include <map>
 #include <utility>
@@ -34,14 +34,14 @@ public:
     ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) override;
     ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* secret) override;
-    ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) override;
+    ErrCode INTERFACE_FUNC getSupportedFormats(IList** formats) override;
 
 private:
     using CacheKey = std::pair<std::string, std::string>;
 
     static void printRequestDetails(const CredentialRequestPtr& request);
-    static PropertyObjectPtr readKeyValuePairs(const CredentialPayloadDescriptorPtr& descriptor);
-    static PropertyObjectPtr readStringSecret(const CredentialPayloadDescriptorPtr& descriptor);
+    static PropertyObjectPtr readKeyValuePairs(const CredentialDescriptorPtr& descriptor);
+    static PropertyObjectPtr readStringSecret(const CredentialDescriptorPtr& descriptor);
     static std::string readLine(const std::string& prompt, bool hide);
     static CacheKey MakeFilePathCacheKey(const CredentialRequestPtr& request);
 
@@ -49,7 +49,7 @@ private:
     // session) - keyed by (manufacturer, serialNumber), so re-authenticating a second connection to the
     // same device (e.g. attaching streaming after the device itself) reuses the path already entered
     // instead of prompting again.
-    PropertyObjectPtr readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialPayloadDescriptorPtr& descriptor);
+    PropertyObjectPtr readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialDescriptorPtr& descriptor);
 
     std::map<CacheKey, std::string> filePathSecretCache;
 };

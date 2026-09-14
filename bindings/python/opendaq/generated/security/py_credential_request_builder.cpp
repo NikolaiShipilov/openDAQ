@@ -49,7 +49,7 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
             return objectPtr.build().detach();
         },
-        "Builds and returns a `CredentialRequest` using the currently configured values. Fails if component_type, connection_string, payload_id, or payload_descriptor was never set.");
+        "Builds and returns a `CredentialRequest` using the currently configured values. Fails if component_type, connection_string, authentication_method_id, or descriptor was never set.");
     cls.def_property("component_type",
         [](daq::ICredentialRequestBuilder *object)
         {
@@ -125,33 +125,33 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
         },
         py::return_value_policy::take_ownership,
         "Gets the metadata property object accumulated via `addMetaDataProperty`.");
-    cls.def_property("payload_id",
+    cls.def_property("authentication_method_id",
         [](daq::ICredentialRequestBuilder *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
-            return objectPtr.getPayloadId().toStdString();
+            return objectPtr.getAuthenticationMethodId().toStdString();
         },
-        [](daq::ICredentialRequestBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& payloadId)
+        [](daq::ICredentialRequestBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& authenticationMethodId)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
-            objectPtr.setPayloadId(getVariantValue<daq::IString*>(payloadId));
+            objectPtr.setAuthenticationMethodId(getVariantValue<daq::IString*>(authenticationMethodId));
         },
-        "Gets the payload id currently set on the builder. / Sets the id of the negotiated payload - typically read from `IAuthenticationConfig` when the request is being built. Required.");
-    cls.def_property("payload_descriptor",
+        "Gets the authentication method id currently set on the builder. / Sets the id of the negotiated authentication method - typically read from `IAuthenticationConfig` when the request is being built. Required.");
+    cls.def_property("descriptor",
         [](daq::ICredentialRequestBuilder *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
-            return objectPtr.getPayloadDescriptor().detach();
+            return objectPtr.getDescriptor().detach();
         },
-        [](daq::ICredentialRequestBuilder *object, daq::ICredentialPayloadDescriptor* descriptor)
+        [](daq::ICredentialRequestBuilder *object, daq::ICredentialDescriptor* descriptor)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
-            objectPtr.setPayloadDescriptor(descriptor);
+            objectPtr.setDescriptor(descriptor);
         },
         py::return_value_policy::take_ownership,
-        "Gets the payload descriptor currently set on the builder. / Sets the descriptor of the payload the provider must provide - typically read from `IAuthenticationConfig` when the request is being built. Required.");
+        "Gets the credential descriptor currently set on the builder. / Sets the credential descriptor the provider must provide a secret for - typically read from `IAuthenticationConfig` when the request is being built. Required.");
 }

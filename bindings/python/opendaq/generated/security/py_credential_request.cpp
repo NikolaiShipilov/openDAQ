@@ -82,21 +82,21 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             return objectPtr.getSerialNumber().toStdString();
         },
         "Gets the serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection.");
-    cls.def_property_readonly("payload_id",
+    cls.def_property_readonly("authentication_method_id",
         [](daq::ICredentialRequest *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
-            return objectPtr.getPayloadId().toStdString();
+            return objectPtr.getAuthenticationMethodId().toStdString();
         },
-        "Gets the id of the negotiated payload, read from `IAuthenticationConfig` when the request was built.");
-    cls.def_property_readonly("payload_descriptor",
+        "Gets the id of the negotiated authentication method, read from `IAuthenticationConfig` when the request was built.");
+    cls.def_property_readonly("descriptor",
         [](daq::ICredentialRequest *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
-            return objectPtr.getPayloadDescriptor().detach();
+            return objectPtr.getDescriptor().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the descriptor of the payload the provider must provide, read from `IAuthenticationConfig` when the request was built.");
+        "Gets the credential descriptor the provider must provide a secret for, read from `IAuthenticationConfig` when the request was built.");
 }

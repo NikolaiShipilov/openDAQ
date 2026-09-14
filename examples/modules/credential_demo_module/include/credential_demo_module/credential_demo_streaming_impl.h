@@ -35,7 +35,7 @@ class CredentialDemoStreamingImpl final : public Streaming
 public:
     explicit CredentialDemoStreamingImpl(const StringPtr& connectionString,
                                          const ContextPtr& ctx,
-                                         const StringPtr& payloadId,
+                                         const StringPtr& authenticationMethodId,
                                          const PropertyObjectPtr& credentials);
 
     static StreamingTypePtr CreateType();

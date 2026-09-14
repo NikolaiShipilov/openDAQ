@@ -13,8 +13,8 @@ CredentialRequestImpl::CredentialRequestImpl(ICredentialRequestBuilder* credenti
     metaData = builderPtr.getMetaData();
     manufacturer = builderPtr.getManufacturer();
     serialNumber = builderPtr.getSerialNumber();
-    payloadId = builderPtr.getPayloadId();
-    payloadDescriptor = builderPtr.getPayloadDescriptor();
+    authenticationMethodId = builderPtr.getAuthenticationMethodId();
+    descriptor = builderPtr.getDescriptor();
 
     if (!componentType.assigned())
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Component type must be assigned when creating a credential request");
@@ -22,11 +22,11 @@ CredentialRequestImpl::CredentialRequestImpl(ICredentialRequestBuilder* credenti
     if (!connectionString.assigned() || connectionString.getLength() == 0)
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Connection string must be assigned when creating a credential request");
 
-    if (!payloadId.assigned() || payloadId.getLength() == 0)
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "Payload id must be assigned when creating a credential request");
+    if (!authenticationMethodId.assigned() || authenticationMethodId.getLength() == 0)
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Authentication method id must be assigned when creating a credential request");
 
-    if (!payloadDescriptor.assigned())
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "Payload descriptor must be assigned when creating a credential request");
+    if (!descriptor.assigned())
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Credential descriptor must be assigned when creating a credential request");
 }
 
 ErrCode CredentialRequestImpl::getComponentType(IComponentType** componentType)
@@ -69,19 +69,19 @@ ErrCode CredentialRequestImpl::getSerialNumber(IString** serialNumber)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestImpl::getPayloadId(IString** payloadId)
+ErrCode CredentialRequestImpl::getAuthenticationMethodId(IString** authenticationMethodId)
 {
-    OPENDAQ_PARAM_NOT_NULL(payloadId);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
 
-    *payloadId = this->payloadId.addRefAndReturn();
+    *authenticationMethodId = this->authenticationMethodId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestImpl::getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor)
+ErrCode CredentialRequestImpl::getDescriptor(ICredentialDescriptor** descriptor)
 {
     OPENDAQ_PARAM_NOT_NULL(descriptor);
 
-    *descriptor = this->payloadDescriptor.addRefAndReturn();
+    *descriptor = this->descriptor.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

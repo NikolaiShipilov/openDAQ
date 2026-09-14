@@ -26,8 +26,8 @@ BEGIN_NAMESPACE_OPENDAQ
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
  * [interfaceLibrary(IProperty, "coreobjects")]
  * [interfaceSmartPtr(IProperty, PropertyPtr, "<coreobjects/property_ptr.h>")]
- * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
+ * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
  * [interfaceLibrary(IComponentType, "opendaq")]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr, "<opendaq/component_type_ptr.h>")]
  */
@@ -40,7 +40,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequestBuilder, IBaseObject)
 {
 /*!
  * @brief Builds and returns a `CredentialRequest` using the currently configured values. Fails if
- * `componentType`, `connectionString`, `payloadId`, or `payloadDescriptor` was never set.
+ * `componentType`, `connectionString`, `authenticationMethodId`, or `descriptor` was never set.
  * @param[out] request The built credential request.
  */
 virtual ErrCode INTERFACE_FUNC build(ICredentialRequest** request) = 0;
@@ -123,32 +123,32 @@ virtual ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) = 0;
 virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;
 
 /*!
- * @brief Sets the id of the negotiated payload - typically read from `IAuthenticationConfig` when the
- * request is being built. Required - `build()` fails if never set.
- * @param payloadId The payload id.
+ * @brief Sets the id of the negotiated authentication method - typically read from `IAuthenticationConfig`
+ * when the request is being built. Required - `build()` fails if never set.
+ * @param authenticationMethodId The authentication method id.
  */
 // [returnSelf]
-virtual ErrCode INTERFACE_FUNC setPayloadId(IString* payloadId) = 0;
+virtual ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) = 0;
 
 /*!
- * @brief Gets the payload id currently set on the builder.
- * @param[out] payloadId The payload id.
+ * @brief Gets the authentication method id currently set on the builder.
+ * @param[out] authenticationMethodId The authentication method id.
  */
-virtual ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) = 0;
+virtual ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) = 0;
 
 /*!
- * @brief Sets the descriptor of the payload the provider must provide - typically read from
+ * @brief Sets the credential descriptor the provider must provide a secret for - typically read from
  * `IAuthenticationConfig` when the request is being built. Required - `build()` fails if never set.
- * @param descriptor The payload descriptor.
+ * @param descriptor The credential descriptor.
  */
 // [returnSelf]
-virtual ErrCode INTERFACE_FUNC setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor) = 0;
+virtual ErrCode INTERFACE_FUNC setDescriptor(ICredentialDescriptor* descriptor) = 0;
 
 /*!
- * @brief Gets the payload descriptor currently set on the builder.
- * @param[out] descriptor The payload descriptor.
+ * @brief Gets the credential descriptor currently set on the builder.
+ * @param[out] descriptor The credential descriptor.
  */
-virtual ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
+virtual ErrCode INTERFACE_FUNC getDescriptor(ICredentialDescriptor** descriptor) = 0;
 };
 
 /*!

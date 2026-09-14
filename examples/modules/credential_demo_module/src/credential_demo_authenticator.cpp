@@ -1,7 +1,7 @@
 #include <credential_demo_module/credential_demo_authenticator.h>
 #include <credential_demo_module/common.h>
 
-#include <opendaq/credential_payload_descriptor_factory.h>
+#include <opendaq/credential_descriptor_factory.h>
 #include <coreobjects/exceptions.h>
 #include <vector>
 #include <memory>
@@ -70,13 +70,13 @@ namespace crypto
 namespace authentication
 {
 
-void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& payloadId)
+void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& authenticationMethodId)
 {
-    const std::string payloadIdStr = payloadId.toStdString();
+    const std::string authenticationMethodIdStr = authenticationMethodId.toStdString();
 
     // Anonymous requires no credentials at all - connects the same way the plain, non-authenticated path
     // does, so there's nothing to check.
-    if (payloadIdStr == StandardAnonymousPayloadId)
+    if (authenticationMethodIdStr == StandardAnonymousId)
     {
         return;
     }
@@ -86,7 +86,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
         DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no credentials provided");
     }
 
-    if (payloadIdStr == StandardPinPayloadId)
+    if (authenticationMethodIdStr == StandardPinId)
     {
         const StringPtr pin = credentials.hasProperty("Pin") ? credentials.getPropertyValue("Pin") : nullptr;
         if (!pin.assigned() || pin != "1234")
@@ -94,7 +94,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - wrong pin-code");
         }
     }
-    else if (payloadIdStr == StandardPrivateKeyFilePayloadId)
+    else if (authenticationMethodIdStr == StandardPrivateKeyFileId)
     {
         const StringPtr privateKeyPath = credentials.hasProperty("PrivateKeyFilePath") ? credentials.getPropertyValue("PrivateKeyFilePath") : nullptr;
         if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)
@@ -122,7 +122,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - private key challenge verification failed");
         }
     }
-    else if (payloadIdStr == StandardUserNamePasswordPayloadId)
+    else if (authenticationMethodIdStr == StandardUserNamePasswordId)
     {
         const StringPtr userName = credentials.hasProperty("UserName") ? credentials.getPropertyValue("UserName") : nullptr;
         const StringPtr password = credentials.hasProperty("Password") ? credentials.getPropertyValue("Password") : nullptr;
@@ -133,7 +133,7 @@ void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, c
     }
     else
     {
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - unknown payload id \"{}\"", payloadIdStr);
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - unknown authentication method id \"{}\"", authenticationMethodIdStr);
     }
 }
 

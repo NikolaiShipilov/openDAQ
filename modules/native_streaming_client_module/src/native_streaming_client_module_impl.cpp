@@ -607,7 +607,7 @@ StreamingPtr NativeStreamingClientModule::createNativeStreaming(const StringPtr&
 
 StreamingPtr NativeStreamingClientModule::onCreateStreaming(const StringPtr& connectionString,
                                                             const PropertyObjectPtr& config,
-                                                            const StringPtr& /*payloadId*/,
+                                                            const StringPtr& /*authenticationMethodId*/,
                                                             const PropertyObjectPtr& /*credentials*/)
 {
     if (!acceptsStreamingConnectionParameters(connectionString, config))

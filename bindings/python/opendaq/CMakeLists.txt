@@ -111,7 +111,7 @@ set(SRC_Cpp
     generated/modulemanager/py_module_info.cpp
     generated/component/py_component_type.cpp
     generated/utility/py_device_update_options.cpp
-    generated/security/py_credential_payload_descriptor.cpp
+    generated/security/py_credential_descriptor.cpp
     generated/security/py_authentication_config.cpp
     generated/security/py_credential_provider.cpp
     generated/security/py_credential_request.cpp

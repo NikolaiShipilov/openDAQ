@@ -16,7 +16,7 @@
 
 #pragma once
 #include <opendaq/authentication_config_ptr.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
 #include <opendaq/context_ptr.h>
 #include <coretypes/dictobject_factory.h>
 
@@ -24,23 +24,23 @@ BEGIN_NAMESPACE_OPENDAQ
 
 /*!
  * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
- * `payloadDescriptors`. Each entry becomes one candidate value of the resulting config's
- * `"PayloadDescriptor"` Selection property , so a caller can later switch between methods
+ * `credentialDescriptors`. Each entry becomes one candidate value of the resulting config's
+ * `"CredentialDescriptor"` Selection property , so a caller can later switch between methods
  * by changing that property's selection.
- * @param payloadDescriptors The supported payload descriptors, keyed by their own id.
- * @param defaultPayloadId The payload id of the descriptor to select by default.
+ * @param credentialDescriptors The supported credential descriptors, keyed by their own id.
+ * @param defaultAuthenticationMethodId The id of the authentication method to select by default.
  * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
  * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
  * @param typeId The id of the component type this config was built for, carried through serialization so a
  * reload can re-resolve everything fresh - required, no default. Pass `nullptr` explicitly for a config with
  * no type behind it; such a config can't meaningfully round-trip through save/reload.
  */
-inline AuthenticationConfigPtr AuthenticationConfig(const DictPtr<IString, ICredentialPayloadDescriptor>& payloadDescriptors,
-                                                     const StringPtr& defaultPayloadId,
+inline AuthenticationConfigPtr AuthenticationConfig(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
+                                                     const StringPtr& defaultAuthenticationMethodId,
                                                      const ContextPtr& context,
                                                      const StringPtr& typeId)
 {
-    AuthenticationConfigPtr obj(AuthenticationConfig_Create(payloadDescriptors, defaultPayloadId, context, typeId));
+    AuthenticationConfigPtr obj(AuthenticationConfig_Create(credentialDescriptors, defaultAuthenticationMethodId, context, typeId));
     return obj;
 }
 

@@ -28,7 +28,7 @@ namespace authentication
      * PrivateKeyFile, Anonymous). Shared by both the device (authenticating a connection to it) and the
      * streaming implementation (authenticating a streaming connection).
      */
-    void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& payloadId);
+    void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& authenticationMethodId);
 }
 
 END_NAMESPACE_CREDENTIAL_DEMO_MODULE
