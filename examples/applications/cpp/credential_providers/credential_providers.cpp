@@ -33,19 +33,19 @@ void createJsonConfigFile()
 
 // `instance.createDefaultAuthenticationConfig(typeId)` returns one self-contained config listing every
 // authentication method the named component type supports (UserNamePassword, Pin, PrivateKeyFile) as a
-// candidate of its "CredentialDescriptor" selection property, defaulting to the type's own default method -
+// candidate of its "AuthenticationMethod" selection property, defaulting to the type's own default method -
 // never a separate config per method. This switches that selection to the method named by `authenticationMethodId`,
 // entirely through plain property object calls: the candidates are read generically off the property
 // itself, and the match is found by comparing each candidate Struct's own "Id" field - no
 // `ICredentialDescriptor` cast needed for the comparison itself, only to read `getAuthenticationMethodId()` off it.
 void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const StringPtr& authenticationMethodId)
 {
-    ListPtr<IStruct> candidates = authConfig.getProperty("CredentialDescriptor").getSelectionValues();
+    ListPtr<IStruct> candidates = authConfig.getProperty("AuthenticationMethod").getSelectionValues();
     for (const auto& candidate : candidates)
     {
         if (candidate.asPtr<ICredentialDescriptor>().getAuthenticationMethodId() == authenticationMethodId)
         {
-            authConfig.setPropertySelectionValue("CredentialDescriptor", candidate);
+            authConfig.setPropertySelectionValue("AuthenticationMethod", candidate);
             return;
         }
     }
@@ -113,7 +113,7 @@ void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const 
 // typed getters used in every other demo, the exact same settings can be read and set with plain property
 // object calls instead. `instance.createDefaultAuthenticationConfig(deviceType.getId())` already returns one
 // self-contained config with every supported method (UserNamePassword, Pin, PrivateKeyFile) as a candidate
-// of its "CredentialDescriptor" selection property, defaulting to UserNamePassword -
+// of its "AuthenticationMethod" selection property, defaulting to UserNamePassword -
 // `SelectAuthenticationMethod` switches that selection to "Pin" via plain property object calls, no separate
 // per-method config fetched anywhere. The credential provider id is likewise a "CredentialProviderId"
 // Selection property (over every provider registered on the instance) - set the same way.
@@ -122,7 +122,7 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     auto authConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
     SelectAuthenticationMethod(authConfig, "Pin");
 
-    StructPtr credentialDescriptor = authConfig.getPropertySelectionValue("CredentialDescriptor");
+    StructPtr credentialDescriptor = authConfig.getPropertySelectionValue("AuthenticationMethod");
     std::cout << "Authentication method id, read as a plain property object selection value: " << credentialDescriptor.get("Id") << std::endl;
 
     authConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);

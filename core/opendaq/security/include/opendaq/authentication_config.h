@@ -36,25 +36,25 @@ BEGIN_NAMESPACE_OPENDAQ
  * credential-request process again.
  *
  * Is itself a Property object - the authentication method id and its corresponding credential descriptor are bound
- * together as one `"CredentialDescriptor"` Selection property (its selection value is the
+ * together as one `"AuthenticationMethod"` Selection property (its selection value is the
  * `ICredentialDescriptor` Struct itself, so the two can never be set out of sync - the authentication
  * method id is simply the selected descriptor's own `ICredentialDescriptor::getAuthenticationMethodId()`). Its current selection
  * drives `"CredentialProviderId"`'s own candidates: `"CredentialProviderId"` is a Selection over
- * `Context::getCredentialProviders()` filtered live to the *currently selected* `"CredentialDescriptor"`'s
+ * `Context::getCredentialProviders()` filtered live to the *currently selected* `"AuthenticationMethod"`'s
  * format - re-queried from `Context` and recomputed (candidates added, removed, or refreshed) every time
- * `"CredentialDescriptor"` is written, never a cached snapshot. The property is entirely absent whenever no
+ * `"AuthenticationMethod"` is written, never a cached snapshot. The property is entirely absent whenever no
  * registered provider currently supports the selected format.
  * A directly-supplied secret is carried, when present, as a `"SuppliedSecret"` property, validated on every
- * write against whatever `"CredentialDescriptor"` is currently selected (its property names must match
+ * write against whatever `"AuthenticationMethod"` is currently selected (its property names must match
  * `descriptor.createEmptySecret()`'s exactly - the blessed workflow is to build from that template, fill
  * it in, and submit it) - a mismatched write is rejected, and an already-set `"SuppliedSecret"` that a
- * `"CredentialDescriptor"` change leaves incompatible is silently cleared. The typed getters below are a
+ * `"AuthenticationMethod"` change leaves incompatible is silently cleared. The typed getters below are a
  * convenience layer on top of these properties; `"SuppliedSecret"`, `"CredentialProviderId"`, and
- * `"CredentialDescriptor"` can all equally be read and set through the ordinary `IPropertyObject` interface this
+ * `"AuthenticationMethod"` can all equally be read and set through the ordinary `IPropertyObject` interface this
  * object also implements.
  *
  * Serialization is fully custom, not the generic `IPropertyObject` mechanism: the component type id (as
- * passed by `IDevice::createDefaultAuthenticationConfig`), the selected `"CredentialDescriptor"`'s
+ * passed by `IDevice::createDefaultAuthenticationConfig`), the selected `"AuthenticationMethod"`'s
  * authentication method id, and - when present - the selected `"CredentialProviderId"` are written.
  * `"SuppliedSecret"` (a secret) is never serialized. Deserializing re-resolves the saved type id against the
  * live `Context` and rebuilds everything above fresh - it fails outright if the type no longer resolves, or
@@ -66,14 +66,14 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
     /*!
      * @brief Gets the id of the authentication method currently selected - the selected
-     * `"CredentialDescriptor"` property value's own `ICredentialDescriptor::getAuthenticationMethodId()`.
+     * `"AuthenticationMethod"` property value's own `ICredentialDescriptor::getAuthenticationMethodId()`.
      * @param[out] authenticationMethodId The authentication method id.
      */
     virtual ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) = 0;
 
     /*!
      * @brief Gets the credential descriptor which selected authentication method uses - the current
-     * selection value of the `"CredentialDescriptor"` property.
+     * selection value of the `"AuthenticationMethod"` property.
      * @param[out] descriptor The credential descriptor.
      */
     virtual ErrCode INTERFACE_FUNC getCredentialDescriptor(ICredentialDescriptor** descriptor) = 0;
@@ -98,7 +98,7 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 /*!
  * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
  * `credentialDescriptors`. Each entry becomes one candidate value of the resulting config's
- * `"CredentialDescriptor"` Selection property (see `IAuthenticationConfig`), so a caller can later switch
+ * `"AuthenticationMethod"` Selection property (see `IAuthenticationConfig`), so a caller can later switch
  * between methods just by changing that property's selection, rather than needing a different config
  * object per method. `credentialDescriptors` is a dict keyed by each descriptor's own
  * `ICredentialDescriptor::getAuthenticationMethodId()`; `defaultAuthenticationMethodId` names which one of those keys starts out

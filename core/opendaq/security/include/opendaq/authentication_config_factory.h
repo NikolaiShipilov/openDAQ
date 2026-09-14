@@ -25,7 +25,7 @@ BEGIN_NAMESPACE_OPENDAQ
 /*!
  * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
  * `credentialDescriptors`. Each entry becomes one candidate value of the resulting config's
- * `"CredentialDescriptor"` Selection property , so a caller can later switch between methods
+ * `"AuthenticationMethod"` Selection property , so a caller can later switch between methods
  * by changing that property's selection.
  * @param credentialDescriptors The supported credential descriptors, keyed by their own id.
  * @param defaultAuthenticationMethodId The id of the authentication method to select by default.

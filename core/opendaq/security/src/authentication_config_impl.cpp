@@ -54,7 +54,7 @@ void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredential
         }
     }
 
-    Super::addProperty(SelectionProperty(CredentialDescriptorPropertyName, credentialDescriptorOptions, defaultIndex));
+    Super::addProperty(SelectionProperty(AuthenticationMethodPropertyName, credentialDescriptorOptions, defaultIndex));
     rebuildCredentialProviderCandidates(selectedDescriptor);
 }
 
@@ -141,7 +141,7 @@ ErrCode AuthenticationConfigImpl::getAuthenticationMethodId(IString** authentica
 
     return daqTry([&]
     {
-        const StructPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
+        const StructPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
         *authenticationMethodId = selected.asPtr<ICredentialDescriptor>().getAuthenticationMethodId().detach();
         return OPENDAQ_SUCCESS;
     });
@@ -153,7 +153,7 @@ ErrCode AuthenticationConfigImpl::getCredentialDescriptor(ICredentialDescriptor*
 
     return daqTry([&]
     {
-        const StructPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
+        const StructPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
         *descriptor = selected.asPtr<ICredentialDescriptor>().detach();
         return OPENDAQ_SUCCESS;
     });
@@ -202,11 +202,11 @@ ErrCode AuthenticationConfigImpl::setPropertySelectionValue(IString* propertyNam
 
     const StringPtr name = StringPtr::Borrow(propertyName);
 
-    if (name == CredentialDescriptorPropertyName)
+    if (name == AuthenticationMethodPropertyName)
     {
         return daqTry([&]
         {
-            const CredentialDescriptorPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
+            const CredentialDescriptorPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
             rebuildCredentialProviderCandidates(selected);
             clearSuppliedSecretIfIncompatible(selected);
             return OPENDAQ_SUCCESS;
@@ -235,7 +235,7 @@ ErrCode AuthenticationConfigImpl::setPropertyValue(IString* propertyName, IBaseO
         return daqTry([&]
         {
             const PropertyObjectPtr secret = BaseObjectPtr::Borrow(value).asPtrOrNull<IPropertyObject>();
-            const CredentialDescriptorPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
+            const CredentialDescriptorPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
             if (!IsSuppliedSecretShapeValid(secret, selected))
                 DAQ_THROW_EXCEPTION(InvalidParameterException,
                                      "Supplied secret's shape does not match the currently selected credential descriptor \"{}\"",
@@ -256,7 +256,7 @@ ErrCode AuthenticationConfigImpl::serialize(ISerializer* serializer)
 {
     return daqTry([&]
     {
-        const StructPtr selected = objPtr.getPropertySelectionValue(CredentialDescriptorPropertyName);
+        const StructPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
         const StringPtr authenticationMethodId = selected.asPtr<ICredentialDescriptor>().getAuthenticationMethodId();
 
         serializer->startTaggedObject(this);

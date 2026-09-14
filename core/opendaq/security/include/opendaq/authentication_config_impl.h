@@ -44,8 +44,8 @@ public:
     ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
     ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) override;
 
-    // Intercepted to keep "CredentialProviderId" live and dependent on "CredentialDescriptor" (recomputed from
-    // `context` on every "CredentialDescriptor" write, added/removed as compatibility changes), to remember the
+    // Intercepted to keep "CredentialProviderId" live and dependent on "AuthenticationMethod" (recomputed from
+    // `context` on every "AuthenticationMethod" write, added/removed as compatibility changes), to remember the
     // user's last explicit provider choice, and to validate/auto-clear "SuppliedSecret" against whichever
     // descriptor is currently selected.
     ErrCode INTERFACE_FUNC setPropertyValue(IString* propertyName, IBaseObject* value) override;
@@ -61,7 +61,7 @@ public:
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
 private:
-    static constexpr const char* CredentialDescriptorPropertyName = "CredentialDescriptor";
+    static constexpr const char* AuthenticationMethodPropertyName = "AuthenticationMethod";
     static constexpr const char* CredentialProviderIdPropertyName = "CredentialProviderId";
     static constexpr const char* SuppliedSecretPropertyName = "SuppliedSecret";
     static constexpr const char* TypeIdSerializedKey = "TypeId";

@@ -16,7 +16,7 @@ As an application developer, I want to check whether a given device/streaming ty
 
 - **Given** a type id whose module declares supported authentication descriptors and a default one for it (e.g. `"CredentialDemoDevice"`)
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
-  **Then** it succeeds and returns a config whose `"CredentialDescriptor"` selection has at least one candidate.
+  **Then** it succeeds and returns a config whose `"AuthenticationMethod"` selection has at least one candidate.
 - **Given** a type id whose module declares no authentication support for it
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
   **Then** it fails with `OPENDAQ_ERR_NOT_SUPPORTED` - not a crash, not an empty-but-successful config.
@@ -33,7 +33,7 @@ As an application developer, I want to know not just whether a type *supports* a
 
 - **Given** a type supporting only a `String`-format method (e.g. `"Pin"`), and only a `FileCredentialProvider` (FilePath-only) registered
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)` and check `hasProperty("CredentialProviderId")`
-  **Then** its absence tells me, entirely client-side and without attempting a connection, that authentication would fail before ever calling `addAuthenticatedDevice` - `"CredentialProviderId"`'s live, format-filtered candidates (see the API reference, §1) already reflect the answer for whichever `"CredentialDescriptor"` is currently selected, with no separate cross-reference of `context.getCredentialProviders()` against the type's descriptors needed. For a *non-default* method, select it first (`SelectAuthenticationMethod`, §7) and re-check `hasProperty` - the live dependency between the two properties recomputes it for whatever is currently selected, not just the default.
+  **Then** its absence tells me, entirely client-side and without attempting a connection, that authentication would fail before ever calling `addAuthenticatedDevice` - `"CredentialProviderId"`'s live, format-filtered candidates (see the API reference, §1) already reflect the answer for whichever `"AuthenticationMethod"` is currently selected, with no separate cross-reference of `context.getCredentialProviders()` against the type's descriptors needed. For a *non-default* method, select it first (`SelectAuthenticationMethod`, §7) and re-check `hasProperty` - the live dependency between the two properties recomputes it for whatever is currently selected, not just the default.
 - **Given** zero credential providers registered on the instance at all
   **When** I build the default config and call `addAuthenticatedDevice`
   **Then** it fails with `AuthenticationFailedException` ("no credential provider supporting a compatible format is registered") - a good negative-path example distinct from 1.1's "type doesn't support auth" case: here the *type* supports it, the *instance* just can't currently serve it.
@@ -57,7 +57,7 @@ The user's original bullets, filled in.
 As an application developer, I want the simplest possible path to work: get the default config, hand it straight to `addAuthenticatedDevice` with no changes, and have it succeed when the user enters correct credentials.
 
 - **Given** a `CmdLineCredentialProvider` (or equivalent, supporting the default method's format) registered on the instance
-  **And** `authConfig = instance.createDefaultAuthenticationConfig(typeId)` used as-is (default `"CredentialDescriptor"` selection, default `"CredentialProviderId"` selection - see the gotcha in §4.1 below)
+  **And** `authConfig = instance.createDefaultAuthenticationConfig(typeId)` used as-is (default `"AuthenticationMethod"` selection, default `"CredentialProviderId"` selection - see the gotcha in §4.1 below)
   **When** I call `instance.addAuthenticatedDevice(connectionString, nullptr, authConfig)` and supply correct credentials at the prompt
   **Then** the device is added, `device.getInfo()` is queryable, and `device.getAvailableDeviceTypes()`/other calls on it work normally.
 
@@ -79,7 +79,7 @@ As an application developer, I want the simplest possible path to work: get the 
 
 ### 3.1 — Correct supplied secret, provider registered and explicitly named
 
-- **Given** `authConfig = instance.createDefaultAuthenticationConfig(typeId)` with the desired `"CredentialDescriptor"` selected (`SelectAuthenticationMethod`), `"CredentialProviderId"` explicitly set to `providerId`, and `"SuppliedSecret"` set to a correctly-shaped, correct `secret`
+- **Given** `authConfig = instance.createDefaultAuthenticationConfig(typeId)` with the desired `"AuthenticationMethod"` selected (`SelectAuthenticationMethod`), `"CredentialProviderId"` explicitly set to `providerId`, and `"SuppliedSecret"` set to a correctly-shaped, correct `secret`
   **When** I call `addAuthenticatedDevice`
   **Then** authentication succeeds with **no interactive prompt at all** (verify via a non-interactive/scripted run - if the harness would hang on stdin, that's a bug or a wrong assumption about this path), and the named provider's `cacheCredentials(request, secret)` is invoked - confirmed indirectly by then making a *second*, separate connection attempt (same manufacturer/serial or canonical connection string) using only `requestCredentials` (no supplied secret) and observing it also completes without a prompt.
 
@@ -111,7 +111,7 @@ Between "use the unmodified default" (§2) and "supply a secret directly" (§3),
 
 ### 4.1 — The default config's provider selection is always format-compatible
 
-As an application developer, I want the unmodified default config to just work: `"CredentialProviderId"`'s candidates are always filtered live to whichever format the currently-selected `"CredentialDescriptor"` needs, so the default (first compatible provider) can never be an incompatible pick the way an unfiltered "first registered" default could be.
+As an application developer, I want the unmodified default config to just work: `"CredentialProviderId"`'s candidates are always filtered live to whichever format the currently-selected `"AuthenticationMethod"` needs, so the default (first compatible provider) can never be an incompatible pick the way an unfiltered "first registered" default could be.
 
 - **Given** two providers registered, `FileCredentialProvider` (FilePath-only) registered before `CmdLineCredentialProvider` (all formats)
   **And** the type's default method is `KeyValuePairs` or `String` (not `FilePath`)
@@ -120,7 +120,7 @@ As an application developer, I want the unmodified default config to just work: 
 
 ### 4.2 — Selecting a non-default method live-refilters the provider candidates
 
-- **Given** the default config lists more than one `"CredentialDescriptor"` candidate, each needing a different format, with providers registered that don't all support every format
+- **Given** the default config lists more than one `"AuthenticationMethod"` candidate, each needing a different format, with providers registered that don't all support every format
   **When** I switch the selection to a non-default one (matching by candidate `Id`, the pattern already in `credential_providers.cpp`'s `SelectAuthenticationMethod`) and then inspect `"CredentialProviderId"`'s current candidates (`getProperty("CredentialProviderId").getSelectionValues()`)
   **Then** the candidate list reflects the *new* method's format, not the old one - confirming the dependency between the two properties is genuinely live (re-queried from `Context`), not just correct at construction. Calling `addAuthenticatedDevice` afterward requests/verifies the *new* method's credentials, not the default's.
   **And**, if no registered provider supports the newly-selected format, `hasProperty("CredentialProviderId")` becomes `false` - the property is removed, not left present with a stale or empty candidate list.
@@ -130,25 +130,25 @@ As an application developer, I want the unmodified default config to just work: 
 - **Given** two format-compatible providers registered
   **When** I set `"CredentialProviderId"` (via `setPropertySelectionValue`, since it's a Selection when the config was built with a `Context`) to the *second* one before calling `addAuthenticatedDevice`
   **Then** the second provider - not the auto/default-selected first one - is the one whose `requestCredentials`/`cacheCredentials` gets called; verify by checking which provider's cache holds the entry afterward (§3.1's technique), or by giving each provider observably different prompts/behavior.
-  **And** this choice is "sticky" across a later `"CredentialDescriptor"` change: switching to a different method that the second provider *also* supports keeps it selected (not silently reverting to whichever provider is first in the new candidate list) - confirming the config remembers the caller's last explicit provider choice, not just the current one.
+  **And** this choice is "sticky" across a later `"AuthenticationMethod"` change: switching to a different method that the second provider *also* supports keeps it selected (not silently reverting to whichever provider is first in the new candidate list) - confirming the config remembers the caller's last explicit provider choice, not just the current one.
 
 ### 4.4 — Explicit provider id that's format-incompatible or unregistered is unreachable through the public API
 
-`"CredentialProviderId"`'s candidates are always pre-filtered live to providers compatible with the currently-selected `"CredentialDescriptor"` (see §4.1/§4.2) - there is no config shape through which a caller can select a format-incompatible or nonexistent provider id at all, so `FindMatchingCredentialProvider`'s corresponding "explicit id names no compatible/no registered provider" failure paths are module-internal defensive code only, not something an application-level scenario can exercise.
+`"CredentialProviderId"`'s candidates are always pre-filtered live to providers compatible with the currently-selected `"AuthenticationMethod"` (see §4.1/§4.2) - there is no config shape through which a caller can select a format-incompatible or nonexistent provider id at all, so `FindMatchingCredentialProvider`'s corresponding "explicit id names no compatible/no registered provider" failure paths are module-internal defensive code only, not something an application-level scenario can exercise.
 
 - **Given** `"CredentialProviderId"` is always a live Selection property, filtered to compatible providers, with no way to assign it an arbitrary string
   **Then** these two failure paths have no application-reachable trigger - worth a code-level note (not a runnable example) so a future change to this filtering doesn't silently reopen this gap without matching test coverage.
 
 ### 4.6 — An incompatible `"SuppliedSecret"` write is rejected
 
-- **Given** a config with `"CredentialDescriptor"` selected to a `KeyValuePairs`-format method (e.g. `UserNamePassword`)
+- **Given** a config with `"AuthenticationMethod"` selected to a `KeyValuePairs`-format method (e.g. `UserNamePassword`)
   **When** I call `setPropertyValue("SuppliedSecret", ...)` with an object shaped for a *different* format (e.g. a single `"Pin"` property, matching `String`/`FilePath` instead)
   **Then** the write throws and `"SuppliedSecret"` is not set - confirming validation happens against the object's actual property names/count, not just "any object goes."
 
 ### 4.7 — Changing the selected authentication method silently clears an incompatible `"SuppliedSecret"`
 
-- **Given** a config with a valid `"SuppliedSecret"` set for the currently-selected `"CredentialDescriptor"`
-  **When** I switch `"CredentialDescriptor"` to a different method whose `createEmptySecret()` shape doesn't match the existing secret
+- **Given** a config with a valid `"SuppliedSecret"` set for the currently-selected `"AuthenticationMethod"`
+  **When** I switch `"AuthenticationMethod"` to a different method whose `createEmptySecret()` shape doesn't match the existing secret
   **Then** the selection change succeeds (no exception) and `hasProperty("SuppliedSecret")` becomes `false` afterward - the stale secret is silently cleared, not left in place mismatched with the new selection, and not blocking the method switch. Calling `addAuthenticatedDevice` afterward with no secret re-supplied falls through to the normal provider-based path (§2), prompting or using the (now re-filtered) `"CredentialProviderId"` selection.
 
 ---
@@ -263,7 +263,7 @@ A `None`-format method needs no credentials at all - selecting it is the entire 
 
 ### 9.4 — Switching *to* a `None`-format method clears an existing `"SuppliedSecret"`
 
-- **Given** a config with a valid `"SuppliedSecret"` set for the currently-selected, non-`None` `"CredentialDescriptor"`
+- **Given** a config with a valid `"SuppliedSecret"` set for the currently-selected, non-`None` `"AuthenticationMethod"`
   **When** I switch the selection to a `None`-format method
   **Then** the selection change succeeds and `hasProperty("SuppliedSecret")` becomes `false` afterward - the same clearing behavior as §4.7, here covering the case where the new selection accepts no secret at all.
 
