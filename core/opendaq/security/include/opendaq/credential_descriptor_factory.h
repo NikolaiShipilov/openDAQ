@@ -248,7 +248,7 @@ inline constexpr const char* StandardPrivateKeyFileId = "PrivateKeyFile";
 inline constexpr const char* StandardAnonymousId = "Anonymous";
 
 /*!
- * @brief The standard `UserName`/`Password` authentication method's `CredentialDescriptor` - a
+ * @brief The credential descriptor for the standard `UserName`/`Password` authentication method - a
  * `KeyValuePairs`-format secret with the password hidden as typed.
  * @param typeManager See `KeyValueDescriptor`.
  */
@@ -262,7 +262,7 @@ inline CredentialDescriptorPtr StandardUserNamePasswordCredentialDescriptor(cons
 }
 
 /*!
- * @brief The standard PIN authentication method's `CredentialDescriptor` - a `String`-format
+ * @brief The credential descriptor for the standard PIN authentication method - a `String`-format
  * secret, hidden as typed.
  * @param typeManager See `StringDescriptor`.
  */
@@ -272,7 +272,7 @@ inline CredentialDescriptorPtr StandardPinCredentialDescriptor(const TypeManager
 }
 
 /*!
- * @brief The standard private-key-file authentication method's `CredentialDescriptor` - a
+ * @brief The credential descriptor for the standard private-key-file authentication method - a
  * `FilePath`-format secret.
  * @param typeManager See `FilePathDescriptor`.
  */
@@ -283,7 +283,7 @@ inline CredentialDescriptorPtr StandardPrivateKeyFileCredentialDescriptor(const 
 }
 
 /*!
- * @brief The standard anonymous authentication method's `CredentialDescriptor` - a `None`-format
+ * @brief The credential descriptor for the standard anonymous authentication method - a `None`-format
  * method, requiring no credentials at all.
  * @param typeManager See `NoneDescriptor`.
  */

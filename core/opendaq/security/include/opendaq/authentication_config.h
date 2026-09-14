@@ -35,7 +35,7 @@ BEGIN_NAMESPACE_OPENDAQ
  * `IComponentPrivate::setAuthenticationConfig`), so that reloading it later goes through the same
  * credential-request process again.
  *
- * Is itself a Property object - the authentication method id and its descriptor are bound
+ * Is itself a Property object - the authentication method id and its corresponding credential descriptor are bound
  * together as one `"CredentialDescriptor"` Selection property (its selection value is the
  * `ICredentialDescriptor` Struct itself, so the two can never be set out of sync - the authentication
  * method id is simply the selected descriptor's own `ICredentialDescriptor::getAuthenticationMethodId()`). Its current selection
