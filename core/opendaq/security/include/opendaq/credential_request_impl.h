@@ -34,7 +34,6 @@ public:
     ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) override;
     ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) override;
     ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) override;
-    ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) override;
     ErrCode INTERFACE_FUNC getDescriptor(ICredentialDescriptor** descriptor) override;
 
 private:
@@ -43,7 +42,6 @@ private:
     PropertyObjectPtr metaData;
     StringPtr manufacturer;
     StringPtr serialNumber;
-    StringPtr authenticationMethodId;
     CredentialDescriptorPtr descriptor;
 };
 

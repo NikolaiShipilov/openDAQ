@@ -93,20 +93,6 @@ ErrCode CredentialRequestBuilderImpl::getMetaData(IPropertyObject** metaData)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::setAuthenticationMethodId(IString* authenticationMethodId)
-{
-    this->authenticationMethodId = authenticationMethodId;
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode CredentialRequestBuilderImpl::getAuthenticationMethodId(IString** authenticationMethodId)
-{
-    OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
-
-    *authenticationMethodId = this->authenticationMethodId.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
 ErrCode CredentialRequestBuilderImpl::setDescriptor(ICredentialDescriptor* descriptor)
 {
     this->descriptor = descriptor;

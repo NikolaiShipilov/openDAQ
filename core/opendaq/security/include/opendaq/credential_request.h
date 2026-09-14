@@ -38,8 +38,8 @@ struct IComponentType;
  * when authentication is required for a connection attempt.
  *
  * Built via `ICredentialRequestBuilder`. Never carries the actual secrets - only
- * enough context (the component type, connection details, and the negotiated authentication method id and
- * its credential descriptor) for the provider to determine how to provide the secrets.
+ * enough context (the component type, connection details, and the negotiated credential descriptor - whose
+ * own id names the authentication method) for the provider to determine how to provide the secrets.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
 {
@@ -80,13 +80,6 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
      * @param[out] serialNumber The device serial number.
      */
     virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
-
-    /*!
-     * @brief Gets the id of the negotiated authentication method, read from `IAuthenticationConfig` when
-     * the request was built.
-     * @param[out] authenticationMethodId The authentication method id.
-     */
-    virtual ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) = 0;
 
     /*!
      * @brief Gets the credential descriptor the provider must provide a secret for, read from

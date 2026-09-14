@@ -822,7 +822,7 @@ private:
         return obtainCredentials(authenticationConfig, credentialRequest, credentialDescriptor, resolvedProvider);
     }
 
-    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected authentication method id/descriptor,
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
     // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`,
     // and `componentType`. Split out of `requestCredentials` so `createAuthenticatedDevice` can call it a
     // second time, with manufacturer/serial number resolved from the created device's own info, to re-cache
@@ -837,7 +837,6 @@ private:
         requestBuilder.setConnectionString(onGetCanonicalConnectionString(connectionString));
         requestBuilder.setManufacturer(manufacturer);
         requestBuilder.setSerialNumber(serialNumber);
-        requestBuilder.setAuthenticationMethodId(authenticationConfig.getAuthenticationMethodId());
         requestBuilder.setDescriptor(authenticationConfig.getCredentialDescriptor());
         requestBuilder.setComponentType(componentType);
 

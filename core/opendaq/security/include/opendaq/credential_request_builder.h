@@ -40,7 +40,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequestBuilder, IBaseObject)
 {
 /*!
  * @brief Builds and returns a `CredentialRequest` using the currently configured values. Fails if
- * `componentType`, `connectionString`, `authenticationMethodId`, or `descriptor` was never set.
+ * `componentType`, `connectionString`, or `descriptor` was never set.
  * @param[out] request The built credential request.
  */
 virtual ErrCode INTERFACE_FUNC build(ICredentialRequest** request) = 0;
@@ -121,20 +121,6 @@ virtual ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) = 0;
  * @param[out] property The metadata property object.
  */
 virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;
-
-/*!
- * @brief Sets the id of the negotiated authentication method - typically read from `IAuthenticationConfig`
- * when the request is being built. Required - `build()` fails if never set.
- * @param authenticationMethodId The authentication method id.
- */
-// [returnSelf]
-virtual ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) = 0;
-
-/*!
- * @brief Gets the authentication method id currently set on the builder.
- * @param[out] authenticationMethodId The authentication method id.
- */
-virtual ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) = 0;
 
 /*!
  * @brief Sets the credential descriptor the provider must provide a secret for - typically read from

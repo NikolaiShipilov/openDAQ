@@ -49,7 +49,7 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
             return objectPtr.build().detach();
         },
-        "Builds and returns a `CredentialRequest` using the currently configured values. Fails if component_type, connection_string, authentication_method_id, or descriptor was never set.");
+        "Builds and returns a `CredentialRequest` using the currently configured values. Fails if component_type, connection_string, or descriptor was never set.");
     cls.def_property("component_type",
         [](daq::ICredentialRequestBuilder *object)
         {
@@ -125,20 +125,6 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
         },
         py::return_value_policy::take_ownership,
         "Gets the metadata property object accumulated via `addMetaDataProperty`.");
-    cls.def_property("authentication_method_id",
-        [](daq::ICredentialRequestBuilder *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
-            return objectPtr.getAuthenticationMethodId().toStdString();
-        },
-        [](daq::ICredentialRequestBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& authenticationMethodId)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
-            objectPtr.setAuthenticationMethodId(getVariantValue<daq::IString*>(authenticationMethodId));
-        },
-        "Gets the authentication method id currently set on the builder. / Sets the id of the negotiated authentication method - typically read from `IAuthenticationConfig` when the request is being built. Required.");
     cls.def_property("descriptor",
         [](daq::ICredentialRequestBuilder *object)
         {
