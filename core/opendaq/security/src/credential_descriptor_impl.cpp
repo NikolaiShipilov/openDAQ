@@ -54,7 +54,7 @@ DictPtr<IString, IBaseObject> CredentialDescriptorImpl::BuildFields(
     const auto parameters =
         createWithImplementation<IStruct, CredentialDescriptorParametersImpl>(parametersType, Dict<IString, IBaseObject>({{"Keys", keys}}));
 
-    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}, {"Parameters", parameters}});
+    return Dict<IString, IBaseObject>({{"AuthenticationMethodId", id}, {"Description", description}, {"Parameters", parameters}});
 }
 
 DictPtr<IString, IBaseObject> CredentialDescriptorImpl::BuildFields(
@@ -66,12 +66,12 @@ DictPtr<IString, IBaseObject> CredentialDescriptorImpl::BuildFields(
     const auto parameters = createWithImplementation<IStruct, CredentialDescriptorParametersImpl>(
         parametersType, Dict<IString, IBaseObject>({{"Hidden", hidden}}));
 
-    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}, {"Parameters", parameters}});
+    return Dict<IString, IBaseObject>({{"AuthenticationMethodId", id}, {"Description", description}, {"Parameters", parameters}});
 }
 
 DictPtr<IString, IBaseObject> CredentialDescriptorImpl::BuildFields(const StringPtr& id, const StringPtr& description)
 {
-    return Dict<IString, IBaseObject>({{"Id", id}, {"Description", description}});
+    return Dict<IString, IBaseObject>({{"AuthenticationMethodId", id}, {"Description", description}});
 }
 
 CredentialDescriptorImpl::CredentialDescriptorImpl(
@@ -137,7 +137,7 @@ ErrCode CredentialDescriptorImpl::getAuthenticationMethodId(IString** authentica
 {
     OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
 
-    *authenticationMethodId = this->fields.get("Id").template asPtr<IString>().addRefAndReturn();
+    *authenticationMethodId = this->fields.get("AuthenticationMethodId").template asPtr<IString>().addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

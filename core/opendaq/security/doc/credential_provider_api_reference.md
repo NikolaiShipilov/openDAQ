@@ -342,7 +342,7 @@ auto authConfig = instance.createDefaultAuthenticationConfig(deviceType.getId())
 SelectAuthenticationMethod(authConfig, "Pin");
 
 StructPtr credentialDescriptor = authConfig.getPropertySelectionValue("AuthenticationMethod");
-std::cout << "Authentication method id: " << credentialDescriptor.get("Id") << std::endl; // "Pin" - no ICredentialDescriptor cast needed
+std::cout << "Authentication method id: " << credentialDescriptor.get("AuthenticationMethodId") << std::endl; // "Pin" - no ICredentialDescriptor cast needed
 
 authConfig.setPropertySelectionValue("CredentialProviderId", credentialProvider.getId());
 std::cout << "Credential provider id: " << authConfig.getPropertySelectionValue("CredentialProviderId") << std::endl;

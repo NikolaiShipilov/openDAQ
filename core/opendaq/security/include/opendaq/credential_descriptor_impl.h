@@ -81,7 +81,7 @@ private:
                                                      const StringPtr& description,
                                                      const StructTypePtr& parametersType);
     static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const StringPtr& description, Bool hidden, const StructTypePtr& parametersType);
-    // For a format with no format-specific parameters - "Id"/"Description" only, no "Parameters" field.
+    // For a format with no format-specific parameters - "AuthenticationMethodId"/"Description" only, no "Parameters" field.
     static DictPtr<IString, IBaseObject> BuildFields(const StringPtr& id, const StringPtr& description);
 
     CredentialFormat format;

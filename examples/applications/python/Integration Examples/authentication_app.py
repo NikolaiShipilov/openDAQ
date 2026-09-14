@@ -82,13 +82,16 @@ def create_authentication_config(instance, device_type):
 
 
 # Lists the authentication methods an authentication config offers - the candidates of its
-# "AuthenticationMethod" selection property, one per method the type's module supports.
+# "AuthenticationMethod" selection property, one per method the type's module supports. Each
+# candidate is a plain Struct (the "AuthenticationMethodId"/"Description"/"Parameters" fields
+# every credential descriptor carries) - no ICredentialDescriptor cast needed just to read them.
 def authentication_methods(authentication_config):
-    candidates = authentication_config.get_property("AuthenticationMethod").selection_values
-    return [daq.ICredentialDescriptor.cast_from(candidate) for candidate in candidates]
+    return authentication_config.get_property("AuthenticationMethod").selection_values
 
 
-# Selects one of the supported methods by authentication method id
+# Selects one of the supported methods by authentication method id. Casts to ICredentialDescriptor
+# here instead of reading the "AuthenticationMethodId" field directly, to show both ways of getting
+# at a candidate's id.
 def select_authentication_method(authentication_config, authentication_method_id):
     candidates = authentication_config.get_property("AuthenticationMethod").selection_values
     for candidate in candidates:
@@ -107,7 +110,7 @@ def print_authentication_support(authentication_config):
         return
 
     descriptors = authentication_methods(authentication_config)
-    daq_utils.print_indented('- Authentication methods: ' + ', '.join(d.authentication_method_id for d in descriptors), 1)
+    daq_utils.print_indented('- Authentication methods: ' + ', '.join(d.get("AuthenticationMethodId") for d in descriptors), 1)
 
     selected = authentication_config.credential_descriptor
     daq_utils.print_indented('- Selected method: ' + selected.authentication_method_id +

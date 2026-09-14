@@ -121,7 +121,7 @@ As an application developer, I want the unmodified default config to just work: 
 ### 4.2 — Selecting a non-default method live-refilters the provider candidates
 
 - **Given** the default config lists more than one `"AuthenticationMethod"` candidate, each needing a different format, with providers registered that don't all support every format
-  **When** I switch the selection to a non-default one (matching by candidate `Id`, the pattern already in `credential_providers.cpp`'s `SelectAuthenticationMethod`) and then inspect `"CredentialProviderId"`'s current candidates (`getProperty("CredentialProviderId").getSelectionValues()`)
+  **When** I switch the selection to a non-default one (matching by candidate `AuthenticationMethodId`, the pattern already in `credential_providers.cpp`'s `SelectAuthenticationMethod`) and then inspect `"CredentialProviderId"`'s current candidates (`getProperty("CredentialProviderId").getSelectionValues()`)
   **Then** the candidate list reflects the *new* method's format, not the old one - confirming the dependency between the two properties is genuinely live (re-queried from `Context`), not just correct at construction. Calling `addAuthenticatedDevice` afterward requests/verifies the *new* method's credentials, not the default's.
   **And**, if no registered provider supports the newly-selected format, `hasProperty("CredentialProviderId")` becomes `false` - the property is removed, not left present with a stale or empty candidate list.
 

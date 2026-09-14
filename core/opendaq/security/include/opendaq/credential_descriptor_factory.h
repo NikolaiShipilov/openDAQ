@@ -93,7 +93,7 @@ inline StructTypePtr StringDescriptorParametersStructType()
 inline StructTypePtr KeyValueDescriptorStructType()
 {
     return StructType("KeyValueDescriptor",
-                      List<IString>("Id", "Description", "Parameters"),
+                      List<IString>("AuthenticationMethodId", "Description", "Parameters"),
                       List<IType>(SimpleType(ctString), SimpleType(ctString), KeyValueDescriptorParametersStructType()));
 }
 
@@ -103,7 +103,7 @@ inline StructTypePtr KeyValueDescriptorStructType()
 inline StructTypePtr StringDescriptorStructType()
 {
     return StructType("StringDescriptor",
-                      List<IString>("Id", "Description", "Parameters"),
+                      List<IString>("AuthenticationMethodId", "Description", "Parameters"),
                       List<IType>(SimpleType(ctString), SimpleType(ctString), StringDescriptorParametersStructType()));
 }
 
@@ -114,7 +114,7 @@ inline StructTypePtr StringDescriptorStructType()
 inline StructTypePtr FilePathDescriptorStructType()
 {
     return StructType("FilePathDescriptor",
-                      List<IString>("Id", "Description"),
+                      List<IString>("AuthenticationMethodId", "Description"),
                       List<IType>(SimpleType(ctString), SimpleType(ctString)));
 }
 
@@ -125,7 +125,7 @@ inline StructTypePtr FilePathDescriptorStructType()
 inline StructTypePtr NoneDescriptorStructType()
 {
     return StructType("NoneDescriptor",
-                      List<IString>("Id", "Description"),
+                      List<IString>("AuthenticationMethodId", "Description"),
                       List<IType>(SimpleType(ctString), SimpleType(ctString)));
 }
 
