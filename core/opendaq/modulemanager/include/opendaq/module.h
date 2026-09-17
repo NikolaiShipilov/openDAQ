@@ -190,21 +190,12 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
     virtual ErrCode INTERFACE_FUNC licenseLoaded(Bool* loaded) = 0;
 
     /*!
-     * @brief Returns the credential descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`.
      * @param typeId The id of a device or streaming type this module offers.
-     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id. Empty
-     * if `typeId` is unrecognized or does not support authentication.
+     * @param[out] authenticationConfig The built authentication config.
+     * @retval OPENDAQ_ERR_NOTFOUND if `typeId` isn't one of this module's own device/streaming types.
      */
-    // [templateType(descriptors, IString, ICredentialDescriptor)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) = 0;
-
-    /*!
-     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default.
-     * @param typeId The id of a device or streaming type this module offers.
-     * @param[out] defaultAuthenticationMethodId The id of the authentication method to select by default, or
-     * `nullptr` if `typeId` is unrecognized or does not support authentication.
-     */
-    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultAuthenticationMethodId) = 0;
+    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
 };
 /*!@}*/
 

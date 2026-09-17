@@ -39,8 +39,6 @@
 #include <opendaq/module_manager_ptr.h>
 #include <opendaq/module_manager_utils_ptr.h>
 #include <opendaq/streaming_type_ptr.h>
-#include <opendaq/authentication_config_factory.h>
-#include <opendaq/credential_descriptor_ptr.h>
 #include <opendaq/sync_component_factory.h>
 #include <opendaq/component_update_context_ptr.h>
 #include <set>
@@ -1372,22 +1370,9 @@ AuthenticationConfigPtr GenericDevice<TInterface, Interfaces...>::onCreateDefaul
     auto lock = this->getRecursiveConfigLock2();
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
 
-    const bool typeExists =
-        managerUtils.getAvailableDeviceTypes().hasKey(typeId) || managerUtils.getAvailableStreamingTypes().hasKey(typeId);
-    if (!typeExists)
-        DAQ_THROW_EXCEPTION(NotFoundException, "No available device or streaming type with id \"{}\" was found", typeId);
-
-    StringPtr defaultAuthenticationMethodId;
-    checkErrorInfo(managerUtils->getDefaultAuthenticationMethodId(typeId, &defaultAuthenticationMethodId));
-
-    DictPtr<IString, ICredentialDescriptor> descriptors;
-    if (defaultAuthenticationMethodId.assigned())
-        checkErrorInfo(managerUtils->getSupportedAuthenticationMethods(typeId, &descriptors));
-
-    if (!defaultAuthenticationMethodId.assigned() || !descriptors.assigned() || !descriptors.hasKey(defaultAuthenticationMethodId))
-        DAQ_THROW_EXCEPTION(NotSupportedException, "Component type \"{}\" does not support authentication", typeId);
-
-    return AuthenticationConfig(descriptors, defaultAuthenticationMethodId, this->context, typeId);
+    AuthenticationConfigPtr authenticationConfig;
+    checkErrorInfo(managerUtils->createDefaultAuthenticationConfig(typeId, &authenticationConfig));
+    return authenticationConfig;
 }
 
 template <typename TInterface, typename... Interfaces>

@@ -17,7 +17,9 @@ As an application developer, I want to check whether a given device/streaming ty
 - **Given** a type id whose module declares supported authentication descriptors and a default one for it (e.g. `"CredentialDemoDevice"`)
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
   **Then** it succeeds and returns a config whose `"AuthenticationMethod"` selection has at least one candidate.
-- **Given** a type id whose module declares no authentication support for it
+- **Given** a type id whose module explicitly overrides both authentication hooks to declare no authentication
+  support for it at all (the base `Module` implementation instead offers the standard `"Anonymous"` method,
+  requiring no credentials, by default for every device/streaming type a module declares)
   **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
   **Then** it fails with `OPENDAQ_ERR_NOT_SUPPORTED` - not a crash, not an empty-but-successful config.
 - **Given** a type id that names neither an available device type nor an available streaming type

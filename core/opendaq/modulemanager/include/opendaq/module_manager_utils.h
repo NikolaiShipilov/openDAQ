@@ -233,26 +233,12 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getDiscoveryInfo(IDeviceInfo** deviceInfo, IString* manufacturer, IString* serialNumber) = 0;
 
     /*!
-     * @brief Returns the credential descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`.
      * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
-     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id. Empty
-     * if no loaded module recognizes `typeId` as supporting authentication.
-     *
-     * Tries each loaded module in turn, returning the first that recognizes `typeId`.
+     * @param[out] authenticationConfig The built authentication config.
+     * @retval OPENDAQ_ERR_NOTFOUND if `typeId` names neither an available device type nor an available streaming type.
      */
-    // [templateType(descriptors, IString, ICredentialDescriptor)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) = 0;
-
-    /*!
-     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default (see
-     * `getSupportedAuthenticationMethods`).
-     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
-     * @param[out] defaultAuthenticationMethodId The id of the authentication method to select by default, or
-     * `nullptr` if no loaded module recognizes `typeId` as supporting authentication.
-     *
-     * Tries each loaded module in turn, returning the first that recognizes `typeId`.
-     */
-    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultAuthenticationMethodId) = 0;
+    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
 };
 /*!@}*/
 

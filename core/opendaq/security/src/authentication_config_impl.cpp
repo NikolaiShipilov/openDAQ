@@ -314,21 +314,26 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
 
         const ModuleManagerUtilsPtr managerUtils = daqContext.getModuleManager().asPtr<IModuleManagerUtils>();
 
-        const bool typeExists =
-            managerUtils.getAvailableDeviceTypes().hasKey(savedTypeId) || managerUtils.getAvailableStreamingTypes().hasKey(savedTypeId);
-        if (!typeExists)
-            DAQ_THROW_EXCEPTION(NotFoundException, "No available device or streaming type with id \"{}\" was found", savedTypeId);
+        AuthenticationConfigPtr authConfig;
+        checkErrorInfo(managerUtils->createDefaultAuthenticationConfig(savedTypeId, &authConfig));
 
-        DictPtr<IString, ICredentialDescriptor> descriptors;
-        checkErrorInfo(managerUtils->getSupportedAuthenticationMethods(savedTypeId, &descriptors));
+        const ListPtr<IStruct> methodCandidates = authConfig.getProperty(AuthenticationMethodPropertyName).getSelectionValues();
+        bool methodFound = false;
+        for (const auto& candidate : methodCandidates)
+        {
+            if (candidate.asPtr<ICredentialDescriptor>().getAuthenticationMethodId() == savedAuthenticationMethodId)
+            {
+                authConfig.setPropertySelectionValue(AuthenticationMethodPropertyName, candidate);
+                methodFound = true;
+                break;
+            }
+        }
 
-        if (!descriptors.assigned() || !descriptors.hasKey(savedAuthenticationMethodId))
+        if (!methodFound)
             DAQ_THROW_EXCEPTION(NotSupportedException,
                                  "Saved authentication method id \"{}\" is no longer supported by type \"{}\"",
                                  savedAuthenticationMethodId,
                                  savedTypeId);
-
-        AuthenticationConfigPtr authConfig = AuthenticationConfig(descriptors, savedAuthenticationMethodId, daqContext, savedTypeId);
 
         if (serializedObj.hasKey(ProviderIdSerializedKey) && authConfig.hasProperty(CredentialProviderIdPropertyName))
         {

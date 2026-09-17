@@ -1701,11 +1701,7 @@ public:
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }
-    daq::ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(daq::IString*, daq::IDict**) override
-    {
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
-    }
-    daq::ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(daq::IString*, daq::IString**) override
+    daq::ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(daq::IString*, daq::IAuthenticationConfig**) override
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }

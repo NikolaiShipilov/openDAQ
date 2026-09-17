@@ -48,7 +48,8 @@ enum class CredentialFormat : EnumType
  * A descriptor carries the method's id, format, its format-specific parameter set (if any), and a
  * human-readable description. The id uniquely identifies the authentication method at least within the module that
  * offers it (e.g. `"UserNamePassword"`, `"Pin"`) - the same id the module's
- * `IModule::getSupportedAuthenticationMethods` uses to key the method. In practice the id is often unique
+ * `IModule::createDefaultAuthenticationConfig` keys the resulting config's `"AuthenticationMethod"` candidates
+ * by. In practice the id is often unique
  * system-wide, deliberately reused across modules: the `Standard*CredentialDescriptor`
  * factories below key off shared, well-known ids and resolve their Struct/secret class from the one
  * `ITypeManager` shared by the whole `Context`, so any two modules using the same standard id (with the same

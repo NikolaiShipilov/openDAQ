@@ -43,6 +43,7 @@
 #include <opendaq/credential_request_ptr.h>
 #include <opendaq/credential_request_factory.h>
 #include <coreobjects/exceptions.h>
+#include <opendaq/credential_descriptor_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -486,38 +487,20 @@ public:
     }
 
     /*!
-     * @brief Returns the credential descriptors the type identified by `typeId` supports authenticating with, keyed by their own id.
+     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`.
      * @param typeId The id of a device or streaming type this module offers.
-     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id.
+     * @param[out] authenticationConfig The built authentication config.
      */
-    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IString* typeId, IDict** descriptors) override
+    ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) override
     {
         OPENDAQ_PARAM_NOT_NULL(typeId);
-        OPENDAQ_PARAM_NOT_NULL(descriptors);
+        OPENDAQ_PARAM_NOT_NULL(authenticationConfig);
 
-        DictPtr<IString, ICredentialDescriptor> descriptorsPtr;
-        const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetSupportedAuthenticationMethods, descriptorsPtr, typeId);
+        AuthenticationConfigPtr authenticationConfigPtr;
+        const ErrCode errCode = wrapHandlerReturn(this, &Module::onCreateDefaultAuthenticationConfig, authenticationConfigPtr, typeId);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
-        *descriptors = descriptorsPtr.detach();
-        return errCode;
-    }
-
-    /*!
-     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default.
-     * @param typeId The id of a device or streaming type this module offers.
-     * @param[out] defaultAuthenticationMethodId The id of the authentication method to select by default.
-     */
-    ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString* typeId, IString** defaultAuthenticationMethodId) override
-    {
-        OPENDAQ_PARAM_NOT_NULL(typeId);
-        OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationMethodId);
-
-        StringPtr defaultAuthenticationMethodIdPtr;
-        const ErrCode errCode = wrapHandlerReturn(this, &Module::onGetDefaultAuthenticationMethodId, defaultAuthenticationMethodIdPtr, typeId);
-        OPENDAQ_RETURN_IF_FAILED(errCode);
-
-        *defaultAuthenticationMethodId = defaultAuthenticationMethodIdPtr.detach();
+        *authenticationConfig = authenticationConfigPtr.detach();
         return errCode;
     }
 
@@ -664,27 +647,52 @@ public:
     /*!
      * @brief Returns the credential descriptors the type identified by `typeId` supports authenticating with,
      * keyed by their own id. A concrete module overrides this for each device/streaming type id it declares
-     * authentication support for. The base implementation declares no authentication support for any type.
+     * richer authentication support for. The base implementation offers the standard `"Anonymous"` method -
+     * no credentials required - for every device/streaming type this module itself declares (see
+     * `onGetAvailableDeviceTypes`/`onGetAvailableStreamingTypes`).
      * @param typeId The id of a device or streaming type this module offers.
-     * @returns The supported authentication credential descriptors, keyed by their own id. Empty if `typeId`
-     * isn't recognized or doesn't support authentication.
+     * @returns The supported authentication credential descriptors, keyed by their own id.
+     * @throws NotFoundException if `typeId` isn't one of this module's own device/streaming types.
      */
     virtual DictPtr<IString, ICredentialDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId)
     {
-        return Dict<IString, ICredentialDescriptor>();
+        if (!onGetAvailableDeviceTypes().hasKey(typeId) && !onGetAvailableStreamingTypes().hasKey(typeId))
+            DAQ_THROW_EXCEPTION(NotFoundException, "Type \"{}\" is not one of this module's own device/streaming types", typeId);
+
+        const auto anonymous = StandardAnonymousCredentialDescriptor(context.getTypeManager());
+        return Dict<IString, ICredentialDescriptor>({{anonymous.getAuthenticationMethodId(), anonymous}});
     }
 
     /*!
-     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default.
-     * A concrete module overrides this for each device/streaming type id it declares authentication support for. The base
-     * implementation declares no authentication support for any type.
+     * @brief Returns the id of the authentication method the type identified by `typeId` supports by default -
+     * the first entry of `onGetSupportedAuthenticationMethods(typeId)`. The base implementation therefore defaults to
+     * `"Anonymous"`, the only candidate `onGetSupportedAuthenticationMethods` offers unless overridden.
      * @param typeId The id of a device or streaming type this module offers.
-     * @returns The default authentication method id, or unassigned if `typeId` isn't recognized or doesn't support
-     * authentication.
+     * @returns The default authentication method id.
+     * @throws NotFoundException if `typeId` isn't one of this module's own device/streaming types - propagated
+     * from `onGetSupportedAuthenticationMethods`.
+     * @throws NotSupportedException if `onGetSupportedAuthenticationMethods` returns no candidates for `typeId`.
      */
     virtual StringPtr onGetDefaultAuthenticationMethodId(const StringPtr& typeId)
     {
-        return nullptr;
+        const auto ids = onGetSupportedAuthenticationMethods(typeId).getKeyList();
+        if (ids.getCount() == 0)
+            DAQ_THROW_EXCEPTION(NotSupportedException, "Type \"{}\" does not support any authentication method", typeId);
+
+        return ids[0];
+    }
+
+    /*!
+     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`, out
+     * of `onGetSupportedAuthenticationMethods(typeId)` and `onGetDefaultAuthenticationMethodId(typeId)`.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @returns The built authentication config.
+     * @throws NotFoundException if `typeId` isn't one of this module's own device/streaming types - propagated
+     * from `onGetSupportedAuthenticationMethods`.
+     */
+    virtual AuthenticationConfigPtr onCreateDefaultAuthenticationConfig(const StringPtr& typeId)
+    {
+        return AuthenticationConfig(onGetSupportedAuthenticationMethods(typeId), onGetDefaultAuthenticationMethodId(typeId), context, typeId);
     }
 
     virtual ErrCode INTERFACE_FUNC loadLicense(Bool* succeded, IDict* licenseConfig) override
@@ -779,19 +787,12 @@ private:
     // authentication support (`onGetDefaultAuthenticationMethodId` returns one), builds and returns its own
     // default config instead - so `createStreaming` (the only caller) still authenticates a connection to a
     // type that supports it even when the caller left `authenticationConfig` unspecified, rather than
-    // silently connecting without any. Returns unassigned only when `authenticationConfig` was unassigned and
-    // `typeId` is either unassigned or doesn't support authentication at all.
+    // silently connecting without any.
     AuthenticationConfigPtr resolveDefaultAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig, const StringPtr& typeId)
     {
-        if (authenticationConfig.assigned() || !typeId.assigned())
+        if (authenticationConfig.assigned())
             return authenticationConfig;
-
-        const StringPtr defaultAuthenticationMethodId = onGetDefaultAuthenticationMethodId(typeId);
-        if (!defaultAuthenticationMethodId.assigned())
-            return authenticationConfig;
-
-        const auto descriptors = onGetSupportedAuthenticationMethods(typeId);
-        return AuthenticationConfig(descriptors, defaultAuthenticationMethodId, context, typeId);
+        return onCreateDefaultAuthenticationConfig(typeId);
     }
 
     // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,

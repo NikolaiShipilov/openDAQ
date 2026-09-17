@@ -127,12 +127,7 @@ ErrCode MockServerModuleImpl::getAvailableStreamingTypes(daq::IDict** /*streamin
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }
 
-ErrCode MockServerModuleImpl::getSupportedAuthenticationMethods(daq::IString* /*typeId*/, daq::IDict** /*descriptors*/)
-{
-    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
-}
-
-ErrCode MockServerModuleImpl::getDefaultAuthenticationMethodId(daq::IString* /*typeId*/, daq::IString** /*defaultAuthenticationMethodId*/)
+ErrCode MockServerModuleImpl::createDefaultAuthenticationConfig(daq::IString* /*typeId*/, daq::IAuthenticationConfig** /*authenticationConfig*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }
