@@ -489,7 +489,10 @@ ErrCode InstanceBuilderImpl::addCredentialProvider(IString* providerId, ICredent
     OPENDAQ_PARAM_NOT_NULL(providerId);
     OPENDAQ_PARAM_NOT_NULL(provider);
 
-    return credentialProviders->set(providerId, provider);
+    if (this->credentialProviders.hasKey(providerId))
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_ALREADYEXISTS, fmt::format(R"("A credential provider is already added under the id '{}'.)", StringPtr::Borrow(providerId)));
+
+    return this->credentialProviders->set(providerId, provider);
 }
 
 /////////////////////

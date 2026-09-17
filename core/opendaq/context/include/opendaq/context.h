@@ -124,8 +124,9 @@ DECLARE_OPENDAQ_INTERFACE(IContext, IBaseObject)
 
     /*!
      * @brief Registers a credential provider on this context, in addition to whatever is already registered.
-     * @param providerId The id to key the provider by.
+     * @param providerId The id to key the provider by. Must be unique among the registered providers.
      * @param provider The credential provider to register.
+     * @retval OPENDAQ_ERR_ALREADYEXISTS if a provider is already registered under `providerId`.
      *
      * Unlike `IInstanceBuilder::addCredentialProvider`, which only affects the instance being built, this
      * registers directly on an already-built `Context`.

@@ -250,6 +250,9 @@ ErrCode ContextImpl::addCredentialProvider(IString* providerId, ICredentialProvi
     if (!this->credentialProviders.assigned())
         this->credentialProviders = Dict<IString, ICredentialProvider>();
 
+    if (this->credentialProviders.hasKey(providerId))
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_ALREADYEXISTS, fmt::format(R"("A credential provider is already registered under the id '{}'.)", StringPtr::Borrow(providerId)));
+
     return this->credentialProviders->set(providerId, provider);
 }
 
