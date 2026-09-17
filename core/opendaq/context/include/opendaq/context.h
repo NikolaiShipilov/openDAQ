@@ -25,6 +25,7 @@ BEGIN_NAMESPACE_OPENDAQ
 
 struct IScheduler;
 struct IModuleManager;
+struct ICredentialProvider;
 
 /*!
  * @ingroup opendaq_utility
@@ -115,7 +116,21 @@ DECLARE_OPENDAQ_INTERFACE(IContext, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getDiscoveryServers(IDict** servers) = 0;
 
     // [templateType(providers, IString, ICredentialProvider)]
+    /*!
+     * @brief Gets the dictionary of registered credential providers, keyed by their own id.
+     * @param[out] providers The dictionary of registered credential providers.
+     */
     virtual ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) = 0;
+
+    /*!
+     * @brief Registers a credential provider on this context, in addition to whatever is already registered.
+     * @param providerId The id to key the provider by.
+     * @param provider The credential provider to register.
+     *
+     * Unlike `IInstanceBuilder::addCredentialProvider`, which only affects the instance being built, this
+     * registers directly on an already-built `Context`.
+     */
+    virtual ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) = 0;
 };
 /*!@}*/
 

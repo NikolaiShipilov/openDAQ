@@ -107,9 +107,9 @@ public:
     ErrCode INTERFACE_FUNC updateOperationMode(OperationModeType modeType) override;
     ErrCode INTERFACE_FUNC setComponentConfig(IPropertyObject* config) override;
     ErrCode INTERFACE_FUNC getComponentConfig(IPropertyObject** config) override;
+    ErrCode INTERFACE_FUNC setParentActive(Bool parentActive, Bool onUpdate) override;
     ErrCode INTERFACE_FUNC setAuthenticationConfig(IAuthenticationConfig* authenticationConfig) override;
     ErrCode INTERFACE_FUNC getAuthenticationConfig(IAuthenticationConfig** authenticationConfig) override;
-    ErrCode INTERFACE_FUNC setParentActive(Bool parentActive, Bool onUpdate) override;
 
     // IRemovable
     ErrCode INTERFACE_FUNC remove() override;

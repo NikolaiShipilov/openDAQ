@@ -159,7 +159,7 @@ Component types (`IComponentType` and everything derived from it, including `IDe
 
 ### `IContext`
 
-Extended with an additional `credentialProviders` parameter (`DictPtr<IString, ICredentialProvider>`) on the `Context` factory, and `getCredentialProviders(IDict**)` to retrieve them — providers registered on the instance builder flow through to the context, from which modules resolve them at authentication time.
+Extended with an additional `credentialProviders` parameter (`DictPtr<IString, ICredentialProvider>`) on the `Context` factory, `getCredentialProviders(IDict**)` to retrieve them, and `addCredentialProvider(IString* providerId, ICredentialProvider*)` to register one directly on an already-built `Context` - providers registered on the instance builder flow into the same registry, from which modules resolve them at authentication time.
 
 ---
 
@@ -297,7 +297,7 @@ instanceBuilder.addCredentialProvider(credentialProvider.getId(), credentialProv
 auto instance = instanceBuilder.build();
 ```
 
-Provider registration happens once, at instance-build time, and is **never serialized** — a reloaded instance must register its own providers independently, since provider setup is platform-/host-specific. Multiple providers can be registered; when more than one supports the same format, the first one registered is the one the config's own `"CredentialProviderId"` defaults to selecting (see [§5](#5-credential-provider-selection--supplied-secrets)) - the module itself never re-enumerates them at request time, it only consumes that already-made selection, which the caller can also override to a different compatible provider.
+Provider registration is **never serialized** — a reloaded instance must register its own providers independently, since provider setup is platform-/host-specific. Providers are usually registered at instance-build time (`IInstanceBuilder::addCredentialProvider`), but a caller that only decides which providers to offer after `Instance::build()` has already run can register one directly on the instance's `Context` instead (`IContext::addCredentialProvider`) - both flow into the same registry modules resolve from. Multiple providers can be registered; when more than one supports the same format, the first one registered is the one the config's own `"CredentialProviderId"` defaults to selecting (see [§5](#5-credential-provider-selection--supplied-secrets)) - the module itself never re-enumerates them at request time, it only consumes that already-made selection, which the caller can also override to a different compatible provider.
 
 ### Selecting an authentication method
 

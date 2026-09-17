@@ -86,9 +86,21 @@ DECLARE_OPENDAQ_INTERFACE(IComponentPrivate, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getComponentConfig(IPropertyObject** config) = 0;
 
     /*!
+     * @brief Called by parent component to notify this component about parent's active state change.
+     * @param parentActive True if parent is active.
+     * @param onUpdate True if the call is triggered from config update, false if the call is triggered by a change of the active state.
+     *
+     * The component updates its internal parentActive flag and recomputes its effective active state.
+     * If the effective active state changes, triggers an AttributeChanged event.
+     * Container components (folders, devices) propagate this call to their children.
+     */
+    virtual ErrCode INTERFACE_FUNC setParentActive(Bool parentActive, Bool onUpdate) = 0;
+
+    /*!
      * @brief Sets the authentication config the module was given when the component was created with
      * authentication, if any.
-     * @param authenticationConfig The authentication config the component was authenticated with.
+     * @param authenticationConfig The authentication config that named the method - and, if supplied
+     * directly rather than obtained from a provider, the credentials - used to authenticate the component.
      *
      * Kept alongside the component so a reload can re-request credentials for it. Note that this stores the
      * config exactly as given - including a directly-supplied secret (`IAuthenticationConfig`'s
@@ -104,17 +116,6 @@ DECLARE_OPENDAQ_INTERFACE(IComponentPrivate, IBaseObject)
      * with authentication.
      */
     virtual ErrCode INTERFACE_FUNC getAuthenticationConfig(IAuthenticationConfig** authenticationConfig) = 0;
-
-    /*!
-     * @brief Called by parent component to notify this component about parent's active state change.
-     * @param parentActive True if parent is active.
-     * @param onUpdate True if the call is triggered from config update, false if the call is triggered by a change of the active state.
-     *
-     * The component updates its internal parentActive flag and recomputes its effective active state.
-     * If the effective active state changes, triggers an AttributeChanged event.
-     * Container components (folders, devices) propagate this call to their children.
-     */
-    virtual ErrCode INTERFACE_FUNC setParentActive(Bool parentActive, Bool onUpdate) = 0;
 };
 
 END_NAMESPACE_OPENDAQ

@@ -261,8 +261,11 @@ int main(int argc, const char* argv[])
     // Registered first, so it - not CmdLineCredentialProvider - becomes the live default "CredentialProviderId"
     // selection for FilePath-format requests (e.g. the PrivateKeyFile auth method below), unless overridden.
     instanceBuilder.addCredentialProvider(fileCredentialProvider.getId(), fileCredentialProvider);
-    instanceBuilder.addCredentialProvider(credentialProvider.getId(), credentialProvider);
     auto instance = instanceBuilder.build();
+
+    // CmdLineCredentialProvider is registered here instead, directly on the already-built instance's Context
+    // via `IContext::addCredentialProvider` - show-casing that credential providers aren't limited to instance-build time.
+    instance.getContext().addCredentialProvider(credentialProvider.getId(), credentialProvider);
 
     // get the type to obtain default authentication settings
     auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");

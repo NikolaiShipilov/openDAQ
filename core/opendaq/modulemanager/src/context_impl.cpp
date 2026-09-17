@@ -242,6 +242,17 @@ ErrCode ContextImpl::getCredentialProviders(IDict** providers)
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode ContextImpl::addCredentialProvider(IString* providerId, ICredentialProvider* provider)
+{
+    OPENDAQ_PARAM_NOT_NULL(providerId);
+    OPENDAQ_PARAM_NOT_NULL(provider);
+
+    if (!this->credentialProviders.assigned())
+        this->credentialProviders = Dict<IString, ICredentialProvider>();
+
+    return this->credentialProviders->set(providerId, provider);
+}
+
 void ContextImpl::registerOpenDaqTypes()
 {
     if (typeManager == nullptr)

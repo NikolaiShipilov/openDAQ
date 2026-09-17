@@ -51,6 +51,7 @@ public:
     ErrCode INTERFACE_FUNC getModuleOptions(IString* moduleId, IDict** options) override;
     ErrCode INTERFACE_FUNC getDiscoveryServers(IDict** servers) override;
     ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) override;
+    ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) override;
 
 private:
     void componentCoreEventCallback(ComponentPtr& component, CoreEventArgsPtr& eventArgs);
