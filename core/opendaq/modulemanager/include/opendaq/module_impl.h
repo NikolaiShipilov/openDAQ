@@ -202,7 +202,7 @@ public:
         PropertyObjectPtr credentials;
 
         errCode = wrapHandlerReturn(
-            this, &Module::requestCredentials, credentials, authConfigPtr, connectionString, manufacturer, serialNumber, deviceType, resolvedProvider);
+            this, &Module::obtainCredentials, credentials, authConfigPtr, connectionString, manufacturer, serialNumber, deviceType, resolvedProvider);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         const StringPtr authenticationMethodId = authConfigPtr.getAuthenticationMethodId();
@@ -429,7 +429,7 @@ public:
         {
             CredentialProviderPtr resolvedProvider;
             errCode = wrapHandlerReturn(this,
-                                        &Module::requestCredentials,
+                                        &Module::obtainCredentials,
                                         credentials,
                                         resolvedAuthConfig,
                                         connectionString,
@@ -804,7 +804,7 @@ private:
     // `ICredentialRequest` is even formed for it, since nothing will ever be requested with it: not from a
     // credential provider (none is expected to declare support for `None` - there is nothing for one to
     // provide) and not via a caller-supplied secret either.
-    PropertyObjectPtr requestCredentials(const AuthenticationConfigPtr& authenticationConfig,
+    PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
                                         const StringPtr& connectionString,
                                         const StringPtr& manufacturer,
                                         const StringPtr& serialNumber,
@@ -814,13 +814,11 @@ private:
         if (!authenticationConfig.assigned())
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
 
-        const auto credentialDescriptor = authenticationConfig.getCredentialDescriptor();
-        if (credentialDescriptor.getFormat() == CredentialFormat::None)
+        if (authenticationConfig.getCredentialDescriptor().getFormat() == CredentialFormat::None)
             return nullptr;
 
         const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, componentType);
-
-        return obtainCredentials(authenticationConfig, credentialRequest, credentialDescriptor, resolvedProvider);
+        return resolveCredentials(authenticationConfig, credentialRequest, resolvedProvider);
     }
 
     // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
@@ -858,10 +856,9 @@ private:
     // - the returned provider no longer supports the required format, or
     // - the resolved credentials (supplied by the caller, or obtained from a provider) don't match
     //   `credentialDescriptor`'s expected shape.
-    PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
-                                       const CredentialRequestPtr& credentialRequest,
-                                       const CredentialDescriptorPtr& credentialDescriptor,
-                                       CredentialProviderPtr& resolvedProvider)
+    PropertyObjectPtr resolveCredentials(const AuthenticationConfigPtr& authenticationConfig,
+                                         const CredentialRequestPtr& credentialRequest,
+                                         CredentialProviderPtr& resolvedProvider)
     {
         const auto providers = context.getCredentialProviders();
         const auto providerId = authenticationConfig.getCredentialProviderId();
@@ -869,7 +866,7 @@ private:
 
         if (suppliedSecret.assigned())
         {
-            if (!secretShapeMatches(suppliedSecret, credentialDescriptor))
+            if (!secretShapeMatches(suppliedSecret, credentialRequest.getDescriptor()))
                 DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret does not match the expected shape");
 
             // Already shaped like the credential descriptor's `createEmptySecret` template (filled in by the
@@ -878,7 +875,7 @@ private:
             // interactive request for the same context reuses it.
             if (providerId.assigned())
             {
-                resolvedProvider = findMatchingCredentialProvider(providers, credentialDescriptor, providerId);
+                resolvedProvider = findMatchingCredentialProvider(providers, credentialRequest.getDescriptor(), providerId);
                 if (!resolvedProvider.assigned())
                     DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                                          "Authentication is required but no credential provider supporting a compatible format is registered");
@@ -889,13 +886,13 @@ private:
             return suppliedSecret;
         }
 
-        resolvedProvider = findMatchingCredentialProvider(providers, credentialDescriptor, providerId);
+        resolvedProvider = findMatchingCredentialProvider(providers, credentialRequest.getDescriptor(), providerId);
         if (!resolvedProvider.assigned())
             DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                                  "Authentication is required but no credential provider supporting a compatible format is registered");
 
         const PropertyObjectPtr credentials = resolvedProvider.requestCredentials(credentialRequest);
-        if (!secretShapeMatches(credentials, credentialDescriptor))
+        if (!secretShapeMatches(credentials, credentialRequest.getDescriptor()))
             DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                                  "Credential provider \"{}\" returned credentials that do not match the expected shape",
                                  resolvedProvider.getId());
