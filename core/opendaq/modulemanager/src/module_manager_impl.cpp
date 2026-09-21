@@ -9,6 +9,7 @@
 #include <opendaq/orphaned_modules.h>
 #include <opendaq/device_info_config_ptr.h>
 #include <opendaq/device_info_internal_ptr.h>
+#include <coretypes/ctutils.h>
 #include <coretypes/validation.h>
 #include <opendaq/device_private.h>
 #include <string>
@@ -62,6 +63,7 @@ ModuleManagerImpl::ModuleManagerImpl(const BaseObjectPtr& path)
     , work(ioContext.get_executor())
     , rescanTimer(DefaultrescanTimer)
     , safeLoadingMode(False)
+    , scanOnAdd(True)
 {
     if (const StringPtr pathStr = path.asPtrOrNull<IString>(true); pathStr.assigned())
     {
@@ -182,6 +184,10 @@ ErrCode ModuleManagerImpl::loadModules(IContext* context)
             if (inner.hasKey("SafeLoadingMode"))
             {
                 this->safeLoadingMode = static_cast<bool>(inner.get("SafeLoadingMode"));
+            }
+            if (inner.hasKey("ScanOnAdd"))
+            {
+                this->scanOnAdd = static_cast<bool>(inner.get("ScanOnAdd"));
             }
         }
 
@@ -501,6 +507,8 @@ void ModuleManagerImpl::checkNetworkSettings(ListPtr<IDeviceInfo>& list)
 #endif
     {
         const auto icmp = IcmpPing::Create(ioContext, logger);
+        Finally stopPing([&icmp] { icmp->stop(); });
+
         icmp->setMaxHops(1);
         icmp->start(ipv4Addresses);
         icmp->waitSendAndReply();
@@ -571,19 +579,25 @@ void ModuleManagerImpl::setAddressesReachable(const std::map<std::string, Addres
                 }
             }
 
+            // Prefer Reachable, otherwise the first Unknown. AddressInfo is populated IPv4-then-IPv6,
+            // so taking the first Unknown keeps IPv4 as the primary connection when ICMP ping is
+            // unavailable (non-root on macOS/Linux) instead of letting the last IPv6 Unknown win.
+            StringPtr unknownConnectionString;
+            bool primarySet = false;
             for (const auto& addressInfo : addressInfos)
             {
                 auto reachability = addressInfo.getReachabilityStatus();
-                if (reachability == AddressReachabilityStatus::Unknown)
+                if (reachability == AddressReachabilityStatus::Reachable)
                 {
                     cap.asPtr<IServerCapabilityConfig>(true).setConnectionString(addressInfo.getConnectionString());
-                }
-                else if (reachability == AddressReachabilityStatus::Reachable)
-                {
-                    cap.asPtr<IServerCapabilityConfig>(true).setConnectionString(addressInfo.getConnectionString());
+                    primarySet = true;
                     break;
                 }
+                if (reachability == AddressReachabilityStatus::Unknown && !unknownConnectionString.assigned())
+                    unknownConnectionString = addressInfo.getConnectionString();
             }
+            if (!primarySet && unknownConnectionString.assigned())
+                cap.asPtr<IServerCapabilityConfig>(true).setConnectionString(unknownConnectionString);
         }
     }
 }
@@ -800,19 +814,25 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
         if (!connectionStringPtr.assigned() || connectionStringPtr.getLength() == 0)
             return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_ARGUMENT_NULL, "Connection string is not set or empty");
 
+        // Connection strings with the "daq" prefix automatically choose the best method of connection
+        const bool useSmartConnection = connectionStringPtr.toStdString().find("daq://") == 0;
+
+        bool scanForDevices = scanOnAdd;
+        if (generalConfig.assigned() && generalConfig.hasProperty("ScanOnAdd"))
+            scanForDevices = static_cast<bool>(generalConfig.getPropertyValue("ScanOnAdd"));
+
+        // Scan for devices if not yet done so, or timeout is exceeded
+        if (scanForDevices)
         {
             auto lock = std::lock_guard(availableDevicesSearchSync);
-            // Scan for devices if not yet done so, or timeout is exceeded
-            auto currentTime = std::chrono::steady_clock::now();
+            const auto currentTime = std::chrono::steady_clock::now();
             if (!availableDevicesGroup.assigned() || currentTime - lastScanTime > rescanTimer)
             {
-                const auto errCode = getAvailableDevices(&ListPtr<IDeviceInfo>());
+                const ErrCode errCode = getAvailableDevices(&ListPtr<IDeviceInfo>());
                 OPENDAQ_RETURN_IF_FAILED(errCode, "Failed getting available devices");
             }
         }
 
-        // Connection strings with the "daq" prefix automatically choose the best method of connection
-        const bool useSmartConnection = connectionStringPtr.toStdString().find("daq://") == 0;
         DeviceInfoPtr discoveredDeviceInfo;
         if (useSmartConnection)
         {
@@ -1314,7 +1334,7 @@ ErrCode ModuleManagerImpl::createDefaultAddDeviceConfig(IPropertyObject** defaul
 
     config.addProperty(ObjectProperty("Device", deviceConfig.detach()));
     config.addProperty(ObjectProperty("Streaming", streamingConfig.detach()));
-    config.addProperty(ObjectProperty("General", CreateGeneralConfig().detach()));
+    config.addProperty(ObjectProperty("General", CreateGeneralConfig(scanOnAdd).detach()));
 
     *defaultConfig = config.detach();
     return OPENDAQ_SUCCESS;
@@ -1397,6 +1417,9 @@ ErrCode ModuleManagerImpl::getDiscoveryInfo(IDeviceInfo** deviceInfo, IString* m
 
     if (!availableDevicesGroup.assigned())
     {
+        if (!scanOnAdd)
+            return OPENDAQ_NOTFOUND;
+
         auto lock = std::lock_guard(availableDevicesSearchSync);
         const auto errCode = getAvailableDevices(&ListPtr<IDeviceInfo>());
         OPENDAQ_RETURN_IF_FAILED(errCode, "Failed getting available devices");
@@ -1450,6 +1473,9 @@ DeviceInfoPtr ModuleManagerImpl::getDiscoveredDeviceInfo(const DeviceInfoPtr& de
     auto manufacturer = deviceInfo.getManufacturer();
 
     if (!serialNumber.getLength() || !manufacturer.getLength())
+        return nullptr;
+
+    if (!availableDevicesGroup.assigned())
         return nullptr;
 
     DeviceInfoPtr localInfo;
@@ -1726,7 +1752,7 @@ void ModuleManagerImpl::completeServerCapabilities(const DevicePtr& device) cons
 }
 
 
-PropertyObjectPtr ModuleManagerImpl::CreateGeneralConfig()
+PropertyObjectPtr ModuleManagerImpl::CreateGeneralConfig(Bool scanOnAdd)
 {
     auto obj = PropertyObject();
 
@@ -1743,6 +1769,10 @@ PropertyObjectPtr ModuleManagerImpl::CreateGeneralConfig()
     obj.addProperty(ListProperty("AllowedStreamingProtocols", List<IString>()));
 
     obj.addProperty(BoolProperty("AutomaticallyConnectStreaming", true));
+
+    obj.addProperty(BoolPropertyBuilder("ScanOnAdd", scanOnAdd)
+                        .setDescription("Scans the network when adding the device; when off, a daq:// connection string needs an earlier scan")
+                        .build());
 
     obj.addProperty(StringProperty("Username", ""));
     obj.addProperty(StringProperty("Password", ""));
@@ -2148,6 +2178,9 @@ static std::string GetMessageFromLibraryErrCode(std::error_code libraryErrCode)
 ModuleLibrary loadModuleInternal(const LoggerComponentPtr& loggerComponent, const fs::path& path, IContext* context, Bool safeLoadingMode)
 {
     LOG_T("Loading module \"{}\".", path.string());
+
+    // The statics a module library builds live as long as the library does.
+    [[maybe_unused]] const UntrackedAllocations untracked;
 
     std::error_code libraryErrCode;
     boost::dll::shared_library moduleLibrary(path, libraryErrCode, safeLoadingMode ? boost::dll::load_mode::rtld_now : boost::dll::load_mode::default_mode);

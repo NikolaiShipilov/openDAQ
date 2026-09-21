@@ -40,18 +40,23 @@ public:
                          DictPtr<IString, ICredentialProvider> credentialProviders);
     ~ContextImpl();
 
+    // IContext interface
     ErrCode INTERFACE_FUNC getScheduler(IScheduler** scheduler) override;
     ErrCode INTERFACE_FUNC getLogger(ILogger** logger) override;
     ErrCode INTERFACE_FUNC getModuleManager(IBaseObject** manager) override;
     ErrCode INTERFACE_FUNC getTypeManager(ITypeManager** manager) override;
     ErrCode INTERFACE_FUNC getAuthenticationProvider(IAuthenticationProvider** authenticationProvider) override;
     ErrCode INTERFACE_FUNC getOnCoreEvent(IEvent** event) override;
-    ErrCode INTERFACE_FUNC moveModuleManager(IModuleManager** manager) override;
     ErrCode INTERFACE_FUNC getOptions(IDict** options) override;
     ErrCode INTERFACE_FUNC getModuleOptions(IString* moduleId, IDict** options) override;
     ErrCode INTERFACE_FUNC getDiscoveryServers(IDict** servers) override;
+    ErrCode INTERFACE_FUNC getRootDevice(IBaseObject** device) override;
     ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) override;
     ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) override;
+
+    // IContextInternal interface
+    ErrCode INTERFACE_FUNC moveModuleManager(IModuleManager** manager) override;
+    ErrCode INTERFACE_FUNC setRootDevice(IBaseObject* device) override;
 
 private:
     void componentCoreEventCallback(ComponentPtr& component, CoreEventArgsPtr& eventArgs);
@@ -66,6 +71,7 @@ private:
     EventEmitter<ComponentPtr, CoreEventArgsPtr> coreEvent;
     DictPtr<IString, IBaseObject> options;
     DictPtr<IString, IDiscoveryServer> discoveryServers;
+    WeakRefPtr<IBaseObject> rootDeviceWeakRef;
     DictPtr<IString, ICredentialProvider> credentialProviders;
 };
 

@@ -300,6 +300,7 @@ set(SRC_PublicHeaders coreobjects.h
                       mutex_impl.h
                       property_object_core.h
                       property_object_utils.h
+                      permissions_internal.h
 )
 
 set(SRC_PrivateHeaders eval_value_impl.h
@@ -323,7 +324,6 @@ set(SRC_PrivateHeaders eval_value_impl.h
                        user_impl.h
                        authentication_provider_impl.h
                        permission_manager_impl.h
-                       permissions_internal.h
                        permissions_impl.h
                        permissions_builder_impl.h
                        permission_mask_builder_impl.h
@@ -368,6 +368,7 @@ list(APPEND SRC_PublicHeaders  ${ConfigHeader}
                                ${SRC_ObjectLockGuard}
                                ${SRC_PropertyMetadataReadArgs}
                                ${SRC_Mutex}
+                               ${SRC_PermisisonsInternal}
                                coreobjects.natvis
 )
 
@@ -416,6 +417,10 @@ target_compile_definitions(${LIB_NAME} PRIVATE BUILDING_SHARED_LIBRARY
                                        INTERFACE OPENDAQ_LINKS_CORE_OBJECTS
 )
 set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "${SRC_PublicHeaders}")
+
+# Like coretypes, the coreobjects.h umbrella cannot be precompiled into this library itself:
+# its factory declarations collide with OPENDAQ_DEFINE_CLASS_FACTORY in the *_impl.cpp files.
+opendaq_target_pch(${LIB_NAME} <coretypes/coretypes.h>)
 
 opendaq_set_output_lib_name(${LIB_NAME} ${PROJECT_VERSION_MAJOR})
 opendaq_generate_version_header(${LIB_NAME} ONLY_RC)

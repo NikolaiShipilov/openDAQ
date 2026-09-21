@@ -129,7 +129,7 @@ private:
                                    const StringPtr& manufacturer,
                                    const StringPtr& serialNumber) const;
 
-    static PropertyObjectPtr CreateGeneralConfig();
+    static PropertyObjectPtr CreateGeneralConfig(Bool scanOnAdd);
     static void OverrideConfigProperties(PropertyObjectPtr& targetConfig, const PropertyObjectPtr& sourceConfig);
 
     DictPtr<IString, IDeviceInfo> discoverDevicesWithIpModification();
@@ -166,6 +166,7 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> lastScanTime;
     std::chrono::milliseconds rescanTimer;
     Bool safeLoadingMode;
+    Bool scanOnAdd;
 };
 
 END_NAMESPACE_OPENDAQ
