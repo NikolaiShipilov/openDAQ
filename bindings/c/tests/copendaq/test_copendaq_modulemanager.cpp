@@ -23,7 +23,7 @@ class COpendaqModuleManagerTest : public testing::Test
         daqDict_createDict(&options);
         daqDict_createDict(&discoveryServers);
 
-        daqContext_createContext(&ctx, nullptr, logger, typeManager, nullptr, nullptr, options, discoveryServers);
+        daqContext_createContext(&ctx, nullptr, logger, typeManager, nullptr, nullptr, options, discoveryServers, nullptr);
 
         daqBaseObject_releaseRef(discoveryServers);
         daqBaseObject_releaseRef(options);
