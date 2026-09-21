@@ -67,10 +67,20 @@ daqErrCode daqContext_getDiscoveryServers(daqContext* self, daqDict** servers)
     return reinterpret_cast<daq::IContext*>(self)->getDiscoveryServers(reinterpret_cast<daq::IDict**>(servers));
 }
 
-daqErrCode daqContext_createContext(daqContext** obj, daqScheduler* Scheduler, daqLogger* Logger, daqTypeManager* typeManager, daqModuleManager* moduleManager, daqAuthenticationProvider* authenticationProvider, daqDict* options, daqDict* discoveryServers)
+daqErrCode daqContext_getCredentialProviders(daqContext* self, daqDict** providers)
+{
+    return reinterpret_cast<daq::IContext*>(self)->getCredentialProviders(reinterpret_cast<daq::IDict**>(providers));
+}
+
+daqErrCode daqContext_addCredentialProvider(daqContext* self, daqString* providerId, daqCredentialProvider* provider)
+{
+    return reinterpret_cast<daq::IContext*>(self)->addCredentialProvider(reinterpret_cast<daq::IString*>(providerId), reinterpret_cast<daq::ICredentialProvider*>(provider));
+}
+
+daqErrCode daqContext_createContext(daqContext** obj, daqScheduler* Scheduler, daqLogger* Logger, daqTypeManager* typeManager, daqModuleManager* moduleManager, daqAuthenticationProvider* authenticationProvider, daqDict* options, daqDict* discoveryServers, daqDict* credentialProviders)
 {
     daq::IContext* ptr = nullptr;
-    daqErrCode err = daq::createContext(&ptr, reinterpret_cast<daq::IScheduler*>(Scheduler), reinterpret_cast<daq::ILogger*>(Logger), reinterpret_cast<daq::ITypeManager*>(typeManager), reinterpret_cast<daq::IModuleManager*>(moduleManager), reinterpret_cast<daq::IAuthenticationProvider*>(authenticationProvider), reinterpret_cast<daq::IDict*>(options), reinterpret_cast<daq::IDict*>(discoveryServers));
+    daqErrCode err = daq::createContext(&ptr, reinterpret_cast<daq::IScheduler*>(Scheduler), reinterpret_cast<daq::ILogger*>(Logger), reinterpret_cast<daq::ITypeManager*>(typeManager), reinterpret_cast<daq::IModuleManager*>(moduleManager), reinterpret_cast<daq::IAuthenticationProvider*>(authenticationProvider), reinterpret_cast<daq::IDict*>(options), reinterpret_cast<daq::IDict*>(discoveryServers), reinterpret_cast<daq::IDict*>(credentialProviders));
     *obj = reinterpret_cast<daqContext*>(ptr);
     return err;
 }

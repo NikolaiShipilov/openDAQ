@@ -42,6 +42,11 @@ daqErrCode daqModule_createDevice(daqModule* self, daqDevice** device, daqString
     return reinterpret_cast<daq::IModule*>(self)->createDevice(reinterpret_cast<daq::IDevice**>(device), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IComponent*>(parent), reinterpret_cast<daq::IPropertyObject*>(config));
 }
 
+daqErrCode daqModule_createAuthenticatedDevice(daqModule* self, daqDevice** device, daqString* connectionString, daqString* manufacturer, daqString* serialNumber, daqComponent* parent, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig)
+{
+    return reinterpret_cast<daq::IModule*>(self)->createAuthenticatedDevice(reinterpret_cast<daq::IDevice**>(device), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IString*>(manufacturer), reinterpret_cast<daq::IString*>(serialNumber), reinterpret_cast<daq::IComponent*>(parent), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IAuthenticationConfig*>(authenticationConfig));
+}
+
 daqErrCode daqModule_getAvailableFunctionBlockTypes(daqModule* self, daqDict** functionBlockTypes)
 {
     return reinterpret_cast<daq::IModule*>(self)->getAvailableFunctionBlockTypes(reinterpret_cast<daq::IDict**>(functionBlockTypes));
@@ -62,9 +67,9 @@ daqErrCode daqModule_createServer(daqModule* self, daqServer** server, daqString
     return reinterpret_cast<daq::IModule*>(self)->createServer(reinterpret_cast<daq::IServer**>(server), reinterpret_cast<daq::IString*>(serverTypeId), reinterpret_cast<daq::IDevice*>(rootDevice), reinterpret_cast<daq::IPropertyObject*>(config));
 }
 
-daqErrCode daqModule_createStreaming(daqModule* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config)
+daqErrCode daqModule_createStreaming(daqModule* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig, daqString* manufacturer, daqString* serialNumber)
 {
-    return reinterpret_cast<daq::IModule*>(self)->createStreaming(reinterpret_cast<daq::IStreaming**>(streaming), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config));
+    return reinterpret_cast<daq::IModule*>(self)->createStreaming(reinterpret_cast<daq::IStreaming**>(streaming), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IAuthenticationConfig*>(authenticationConfig), reinterpret_cast<daq::IString*>(manufacturer), reinterpret_cast<daq::IString*>(serialNumber));
 }
 
 daqErrCode daqModule_completeServerCapability(daqModule* self, daqBool* succeeded, daqServerCapability* source, daqServerCapabilityConfig* target)
@@ -90,4 +95,9 @@ daqErrCode daqModule_getLicenseConfig(daqModule* self, daqDict** licenseConfig)
 daqErrCode daqModule_licenseLoaded(daqModule* self, daqBool* loaded)
 {
     return reinterpret_cast<daq::IModule*>(self)->licenseLoaded(loaded);
+}
+
+daqErrCode daqModule_createDefaultAuthenticationConfig(daqModule* self, daqString* typeId, daqAuthenticationConfig** authenticationConfig)
+{
+    return reinterpret_cast<daq::IModule*>(self)->createDefaultAuthenticationConfig(reinterpret_cast<daq::IString*>(typeId), reinterpret_cast<daq::IAuthenticationConfig**>(authenticationConfig));
 }

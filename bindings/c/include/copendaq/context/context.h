@@ -42,6 +42,7 @@ extern "C"
     typedef struct daqEvent daqEvent;
     typedef struct daqDict daqDict;
     typedef struct daqString daqString;
+    typedef struct daqCredentialProvider daqCredentialProvider;
     typedef struct daqModuleManager daqModuleManager;
 
     EXPORTED extern const daqIntfID DAQ_CONTEXT_INTF_ID;
@@ -56,7 +57,9 @@ extern "C"
     daqErrCode EXPORTED daqContext_getOptions(daqContext* self, daqDict** options);
     daqErrCode EXPORTED daqContext_getModuleOptions(daqContext* self, daqString* moduleId, daqDict** options);
     daqErrCode EXPORTED daqContext_getDiscoveryServers(daqContext* self, daqDict** servers);
-    daqErrCode EXPORTED daqContext_createContext(daqContext** obj, daqScheduler* Scheduler, daqLogger* Logger, daqTypeManager* typeManager, daqModuleManager* moduleManager, daqAuthenticationProvider* authenticationProvider, daqDict* options, daqDict* discoveryServers);
+    daqErrCode EXPORTED daqContext_getCredentialProviders(daqContext* self, daqDict** providers);
+    daqErrCode EXPORTED daqContext_addCredentialProvider(daqContext* self, daqString* providerId, daqCredentialProvider* provider);
+    daqErrCode EXPORTED daqContext_createContext(daqContext** obj, daqScheduler* Scheduler, daqLogger* Logger, daqTypeManager* typeManager, daqModuleManager* moduleManager, daqAuthenticationProvider* authenticationProvider, daqDict* options, daqDict* discoveryServers, daqDict* credentialProviders);
 
 #ifdef __cplusplus
 }
