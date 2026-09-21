@@ -1,13 +1,8 @@
 #include <credential_demo_module/credential_demo_authenticator.h>
 #include <credential_demo_module/common.h>
 
-#include <opendaq/credential_payload_descriptor_factory.h>
-#include <opendaq/credential_request_factory.h>
+#include <opendaq/credential_descriptor_factory.h>
 #include <coreobjects/exceptions.h>
-#include <coreobjects/property_factory.h>
-#include <coreobjects/property_object_factory.h>
-#include <coretypes/binarydata_ptr.h>
-#include <coretypes/dictobject_factory.h>
 #include <vector>
 #include <memory>
 
@@ -33,19 +28,6 @@ namespace crypto
                             ? PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr)
                             : PEM_read_bio_PUBKEY(bio.get(), nullptr, nullptr, nullptr);
 
-        return EvpPkeyPtr(key, &EVP_PKEY_free);
-    }
-
-    // Same as `ReadPemKeyFile`, but for a private key whose bytes were already handed over in memory
-    // (e.g. by a credential provider that reads the file on the caller's behalf) rather than read from a
-    // file path by this module.
-    EvpPkeyPtr ReadPemPrivateKeyFromMemory(const void* data, size_t size)
-    {
-        BioPtr bio(BIO_new_mem_buf(data, static_cast<int>(size)), &BIO_free);
-        if (!bio)
-            return EvpPkeyPtr(nullptr, &EVP_PKEY_free);
-
-        EVP_PKEY* key = PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr);
         return EvpPkeyPtr(key, &EVP_PKEY_free);
     }
 
@@ -88,207 +70,39 @@ namespace crypto
 namespace authentication
 {
 
-CredentialPayloadDescriptorPtr BuildUserNamePasswordDescriptor(bool hidePassword)
+void Authenticate(const ContextPtr& ctx, const PropertyObjectPtr& credentials, const StringPtr& authenticationMethodId)
 {
-    return KeyValuePayloadDescriptor(Dict<IString, IBoolean>({{"UserName", False}, {"Password", hidePassword}}), "Username and password");
-}
+    const std::string authenticationMethodIdStr = authenticationMethodId.toStdString();
 
-CredentialPayloadDescriptorPtr BuildPinDescriptor(bool hidePin)
-{
-    return StringPayloadDescriptor("PIN code", hidePin);
-}
-
-CredentialPayloadDescriptorPtr BuildPrivateKeyFileDescriptor()
-{
-    return FilePathPayloadDescriptor("Path to the PEM-encoded private key file");
-}
-
-CredentialPayloadDescriptorPtr BuildPrivateKeyBlobDescriptor()
-{
-    return BinaryBlobPayloadDescriptor("Raw bytes of the PEM-encoded private key file");
-}
-
-PropertyObjectPtr BuildAdditionalConfig(const StringPtr& payloadId)
-{
-    auto config = PropertyObject();
-    config.addProperty(BoolProperty("VerboseCredentialRequest", False));
-
-    const std::string payloadIdStr = payloadId.toStdString();
-    if (payloadIdStr == UserNamePasswordPayloadId)
-        config.addProperty(BoolProperty("HidePasswordInput", True));
-    else if (payloadIdStr == PinPayloadId)
-        config.addProperty(BoolProperty("HidePinInput", True));
-
-    return config;
-}
-
-static void PopulateCommonMetaData(const CredentialRequestBuilderPtr& builder, const ComponentTypePtr& componentType, bool verbose)
-{
-    builder.setComponentType(componentType);
-    builder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeName", componentType.getName()).setDescription("The openDAQ component type name").build());
-
-    if (verbose)
+    // Anonymous requires no credentials at all - connects the same way the plain, non-authenticated path
+    // does, so there's nothing to check.
+    if (authenticationMethodIdStr == StandardAnonymousId)
     {
-        builder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeId", componentType.getId()).setDescription("The openDAQ component type ID").build());
-        builder.addMetaDataProperty(StringPropertyBuilder("ComponentTypeDescription", componentType.getDescription()).setDescription("The openDAQ component type description").build());
+        return;
     }
-}
 
-static CredentialRequestPtr CreateUserNamePasswordCredentialRequest(const StringPtr& connectionString,
-                                                                     const StringPtr& manufacturer,
-                                                                     const StringPtr& serialNumber,
-                                                                     const PropertyObjectPtr& additionalConfig,
-                                                                     bool verbose,
-                                                                     const ComponentTypePtr& componentType)
-{
-    const bool hidePassword = additionalConfig.assigned() && additionalConfig.hasProperty("HidePasswordInput")
-                                   ? (bool) additionalConfig.getPropertyValue("HidePasswordInput")
-                                   : true;
-    const auto payloadDescriptor = BuildUserNamePasswordDescriptor(hidePassword);
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(UserNamePasswordPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, componentType, verbose);
-
-    return builder.build();
-}
-
-static CredentialRequestPtr CreatePinCredentialRequest(const StringPtr& connectionString,
-                                                        const StringPtr& manufacturer,
-                                                        const StringPtr& serialNumber,
-                                                        const PropertyObjectPtr& additionalConfig,
-                                                        bool verbose,
-                                                        const ComponentTypePtr& componentType)
-{
-    const bool hidePin = additionalConfig.assigned() && additionalConfig.hasProperty("HidePinInput")
-                              ? (bool) additionalConfig.getPropertyValue("HidePinInput")
-                              : true;
-    const auto payloadDescriptor = BuildPinDescriptor(hidePin);
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PinPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, componentType, verbose);
-
-    return builder.build();
-}
-
-static CredentialRequestPtr CreatePrivateKeyFileCredentialRequest(const StringPtr& connectionString,
-                                                                   const StringPtr& manufacturer,
-                                                                   const StringPtr& serialNumber,
-                                                                   const PropertyObjectPtr& /*additionalConfig*/,
-                                                                   bool verbose,
-                                                                   const ComponentTypePtr& componentType)
-{
-    const auto payloadDescriptor = BuildPrivateKeyFileDescriptor();
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PrivateKeyFilePayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, componentType, verbose);
-
-    return builder.build();
-}
-
-static CredentialRequestPtr CreatePrivateKeyBlobCredentialRequest(const StringPtr& connectionString,
-                                                                   const StringPtr& manufacturer,
-                                                                   const StringPtr& serialNumber,
-                                                                   const PropertyObjectPtr& /*additionalConfig*/,
-                                                                   bool verbose,
-                                                                   const ComponentTypePtr& componentType)
-{
-    const auto payloadDescriptor = BuildPrivateKeyBlobDescriptor();
-
-    auto builder = CredentialRequestBuilder();
-    builder.setConnectionString(connectionString);
-    builder.setManufacturer(manufacturer);
-    builder.setSerialNumber(serialNumber);
-    builder.setPayloadId(PrivateKeyBlobPayloadId);
-    builder.setPayloadDescriptor(payloadDescriptor);
-    PopulateCommonMetaData(builder, componentType, verbose);
-
-    return builder.build();
-}
-
-CredentialRequestPtr CreateCredentialRequest(const StringPtr& payloadId,
-                                              const StringPtr& connectionString,
-                                              const StringPtr& manufacturer,
-                                              const StringPtr& serialNumber,
-                                              const PropertyObjectPtr& additionalConfig,
-                                              bool verbose,
-                                              const ComponentTypePtr& componentType)
-{
-    const std::string payloadIdStr = payloadId.toStdString();
-
-    if (payloadIdStr == PinPayloadId)
-        return CreatePinCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
-
-    if (payloadIdStr == PrivateKeyFilePayloadId)
-        return CreatePrivateKeyFileCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
-
-    if (payloadIdStr == PrivateKeyBlobPayloadId)
-        return CreatePrivateKeyBlobCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
-
-    if (payloadIdStr == UserNamePasswordPayloadId)
-        return CreateUserNamePasswordCredentialRequest(connectionString, manufacturer, serialNumber, additionalConfig, verbose, componentType);
-
-    DAQ_THROW_EXCEPTION(InvalidParameterException, "Unknown authentication payload id \"{}\"", payloadId);
-}
-
-void Authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials, const StringPtr& payloadId)
-{
     if (!credentials.assigned())
     {
         DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no credentials provided");
     }
 
-    const BaseObjectPtr secrets = credentials.getSecrets();
-    const std::string payloadIdStr = payloadId.toStdString();
-
-    if (payloadIdStr == PinPayloadId)
+    if (authenticationMethodIdStr == StandardPinId)
     {
-        const StringPtr pin = secrets.asPtrOrNull<IString>();
+        const StringPtr pin = credentials.hasProperty("Pin") ? credentials.getPropertyValue("Pin") : nullptr;
         if (!pin.assigned() || pin != "1234")
         {
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - wrong pin-code");
         }
     }
-    else if (payloadIdStr == PrivateKeyFilePayloadId || payloadIdStr == PrivateKeyBlobPayloadId)
+    else if (authenticationMethodIdStr == StandardPrivateKeyFileId)
     {
-        crypto::EvpPkeyPtr privateKey(nullptr, &EVP_PKEY_free);
-
-        if (payloadIdStr == PrivateKeyFilePayloadId)
+        const StringPtr privateKeyPath = credentials.hasProperty("PrivateKeyFilePath") ? credentials.getPropertyValue("PrivateKeyFilePath") : nullptr;
+        if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)
         {
-            const StringPtr privateKeyPath = secrets.asPtrOrNull<IString>();
-            if (!privateKeyPath.assigned() || privateKeyPath.getLength() == 0)
-            {
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no private key file path provided");
-            }
-
-            privateKey = crypto::ReadPemKeyFile(privateKeyPath.toStdString(), /*isPrivateKey*/ true);
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no private key file path provided");
         }
-        else
-        {
-            // The credential provider already read the private key file on our behalf - we only ever
-            // see its raw bytes, never the file (or its path) itself.
-            const BinaryDataPtr privateKeyBlob = secrets.asPtrOrNull<IBinaryData, BinaryDataPtr>();
-            if (!privateKeyBlob.assigned() || privateKeyBlob.getSize() == 0)
-            {
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - no private key bytes provided");
-            }
 
-            privateKey = crypto::ReadPemPrivateKeyFromMemory(privateKeyBlob.getAddress(), privateKeyBlob.getSize());
-        }
+        crypto::EvpPkeyPtr privateKey = crypto::ReadPemKeyFile(privateKeyPath.toStdString(), /*isPrivateKey*/ true);
 
         if (!privateKey)
         {
@@ -308,15 +122,18 @@ void Authenticate(const ContextPtr& ctx, const CredentialPayloadPtr& credentials
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - private key challenge verification failed");
         }
     }
-    else
+    else if (authenticationMethodIdStr == StandardUserNamePasswordId)
     {
-        const auto userNameAndPassword = secrets.asPtrOrNull<IDict, DictPtr<IString, IString>>(true);
-        if (!userNameAndPassword.assigned() ||
-            !userNameAndPassword.hasKey("UserName") || userNameAndPassword.get("UserName") != "user" ||
-            !userNameAndPassword.hasKey("Password") || userNameAndPassword.get("Password") != "pass")
+        const StringPtr userName = credentials.hasProperty("UserName") ? credentials.getPropertyValue("UserName") : nullptr;
+        const StringPtr password = credentials.hasProperty("Password") ? credentials.getPropertyValue("Password") : nullptr;
+        if (!userName.assigned() || userName != "user" || !password.assigned() || password != "pass")
         {
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - wrong username or password");
         }
+    }
+    else
+    {
+        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Failed to authenticate - unknown authentication method id \"{}\"", authenticationMethodIdStr);
     }
 }
 

@@ -24,11 +24,14 @@
 #include <coretypes/stringobject.h>
 #include <opendaq/server_capability_config.h>
 #include <opendaq/module_info.h>
+#include <opendaq/credential_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
+ * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
  */
 
 /*!
@@ -86,7 +89,8 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * @param serialNumber The serial number of the device to connect to.
      * @param parent The parent component/device to which the device attaches.
      * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
-     * @param authenticationConfig The authentication configuration used to authenticate the connection to the device.
+     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
+     * obtain and verify credentials for this connection - see `IAuthenticationConfig`.
      */
     virtual ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
                                                              IString* connectionString,
@@ -138,7 +142,8 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
-     * @param authenticationConfig The authentication configuration used to authenticate the streaming connection. In case
+     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
+     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. In case
      * of a null value, the streaming is connected to without authentication.
      * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
      * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
@@ -183,6 +188,14 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * Always return True if no license is required by the module.
      */
     virtual ErrCode INTERFACE_FUNC licenseLoaded(Bool* loaded) = 0;
+
+    /*!
+     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`.
+     * @param typeId The id of a device or streaming type this module offers.
+     * @param[out] authenticationConfig The built authentication config.
+     * @retval OPENDAQ_ERR_NOTFOUND if `typeId` isn't one of this module's own device/streaming types.
+     */
+    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
 };
 /*!@}*/
 

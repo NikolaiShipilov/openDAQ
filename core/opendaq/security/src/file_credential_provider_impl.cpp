@@ -1,93 +1,71 @@
 #include <opendaq/file_credential_provider_impl.h>
-#include <opendaq/credential_payload_factory.h>
 #include <coreobjects/exceptions.h>
 #include <coretypes/listobject_factory.h>
-#include <coretypes/binarydata_factory.h>
 #include <iostream>
 #include <fstream>
-#include <vector>
 
 BEGIN_NAMESPACE_OPENDAQ
 
-static const std::string FileCredentialProviderName = "FileCredentialProvider";
+static const std::string FileCredentialProviderId = "FileCredentialProvider";
 static constexpr int MaxFilePathAttempts = 3;
 
 FileCredentialProviderImpl::FileCredentialProviderImpl()
 {
 }
 
-ErrCode FileCredentialProviderImpl::getName(IString** name)
+ErrCode FileCredentialProviderImpl::getId(IString** id)
 {
-    OPENDAQ_PARAM_NOT_NULL(name);
+    OPENDAQ_PARAM_NOT_NULL(id);
 
-    *name = String(FileCredentialProviderName).detach();
+    *id = String(FileCredentialProviderId).detach();
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode FileCredentialProviderImpl::getSupportedPayloadFormats(IList** formats)
+ErrCode FileCredentialProviderImpl::getSupportedFormats(IList** formats)
 {
     OPENDAQ_PARAM_NOT_NULL(formats);
 
     auto supportedFormats = List<IInteger>();
-    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::FilePath));
-    supportedFormats.pushBack(static_cast<Int>(CredentialPayloadFormat::BinaryBlob));
+    supportedFormats.pushBack(static_cast<Int>(CredentialFormat::FilePath));
 
     *formats = supportedFormats.detach();
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials)
+ErrCode FileCredentialProviderImpl::requestCredentials(ICredentialRequest* request, IPropertyObject** credentials)
 {
     OPENDAQ_PARAM_NOT_NULL(credentials);
     OPENDAQ_PARAM_NOT_NULL(request);
 
     const auto requestPtr = CredentialRequestPtr::Borrow(request);
-    const auto descriptor = requestPtr.getPayloadDescriptor();
+    const auto descriptor = requestPtr.getDescriptor();
     if (!descriptor.assigned())
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no payload descriptor set");
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no descriptor set");
 
     switch (descriptor.getFormat())
     {
-        case CredentialPayloadFormat::FilePath:
+        case CredentialFormat::FilePath:
         {
-            auto callback = Function(
-                [requestPtr, descriptor]()
-                {
-                    printRequestDetails(requestPtr);
-                    return readFilePath(descriptor);
-                });
-
-            *credentials = StringCredentialPayload(callback).detach();
-            return OPENDAQ_SUCCESS;
-        }
-        case CredentialPayloadFormat::BinaryBlob:
-        {
-            auto callback = Function(
-                [requestPtr, descriptor]()
-                {
-                    printRequestDetails(requestPtr);
-                    return readFileBlob(descriptor);
-                });
-
-            *credentials = BinaryBlobCredentialPayload(callback).detach();
+            printRequestDetails(requestPtr);
+            *credentials = readFilePath(descriptor).detach();
             return OPENDAQ_SUCCESS;
         }
         default:
-            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "Unsupported credential payload format");
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "Unsupported credential format");
     }
 }
 
-ErrCode FileCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IBaseObject* secret)
+ErrCode FileCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IPropertyObject* secret)
 {
     OPENDAQ_PARAM_NOT_NULL(request);
     OPENDAQ_PARAM_NOT_NULL(secret);
 
     // This provider never caches secrets obtained interactively either, so supplying one in advance has
-    // nothing to do here - the caller already wraps it into a credential payload itself.
+    // nothing to do here - the caller already wraps it into a secret itself.
     return OPENDAQ_SUCCESS;
 }
 
-StringPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescriptorPtr& descriptor)
+PropertyObjectPtr FileCredentialProviderImpl::readFilePath(const CredentialDescriptorPtr& descriptor)
 {
     const StringPtr description = descriptor.getDescription();
     const std::string prompt = (description.assigned() ? description.toStdString() : "File path") + ": ";
@@ -102,7 +80,11 @@ StringPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescri
             throw std::runtime_error("Input cancelled");
 
         if (isFileAccessible(value))
-            return String(value);
+        {
+            auto secret = descriptor.createEmptySecret();
+            secret.setPropertyValue(secret.getAllProperties()[0].getName(), String(value));
+            return secret;
+        }
 
         const int attemptsLeft = MaxFilePathAttempts - attempt;
         std::cout << "File \"" << value << "\" does not exist or is not accessible.";
@@ -114,23 +96,6 @@ StringPtr FileCredentialProviderImpl::readFilePath(const CredentialPayloadDescri
 
     DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                          "Credential provider could not obtain an accessible file path after {} attempts", MaxFilePathAttempts);
-}
-
-BinaryDataPtr FileCredentialProviderImpl::readFileBlob(const CredentialPayloadDescriptorPtr& descriptor)
-{
-    const std::string path = readFilePath(descriptor).toStdString();
-
-    std::ifstream file(path, std::ios::binary | std::ios::ate);
-    const std::streamsize size = file.tellg();
-    if (!file || size <= 0)
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Credential provider could not read file \"{}\"", path);
-
-    std::vector<char> buffer(static_cast<size_t>(size));
-    file.seekg(0);
-    if (!file.read(buffer.data(), size))
-        DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Credential provider could not read file \"{}\"", path);
-
-    return BinaryData(buffer.data(), static_cast<SizeT>(size));
 }
 
 bool FileCredentialProviderImpl::isFileAccessible(const std::string& path)
@@ -145,11 +110,8 @@ void FileCredentialProviderImpl::printRequestDetails(const CredentialRequestPtr&
     std::cout << "Authentication required\n";
     std::cout << "============================================================\n\n";
 
-    if (const auto type = request.getComponentType(); type.assigned())
-        std::cout << "Component type : " << type.getName() << '\n';
-
-    if (const auto connectionString = request.getConnectionString(); connectionString.assigned() && connectionString.getLength() > 0)
-        std::cout << "Connection string : " << connectionString << '\n';
+    std::cout << "Component type : " << request.getComponentType().getName() << '\n';
+    std::cout << "Connection string : " << request.getConnectionString() << '\n';
 
     if (const auto metaData = request.getMetaData(); metaData.assigned())
     {

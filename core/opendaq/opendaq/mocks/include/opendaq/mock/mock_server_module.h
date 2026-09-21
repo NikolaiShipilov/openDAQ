@@ -51,8 +51,10 @@ public:
                                                 daq::IString* manufacturer,
                                                 daq::IString* serialNumber) override;
     daq::ErrCode INTERFACE_FUNC getAvailableStreamingTypes(daq::IDict** streamingTypes) override;
-    
+
     daq::ErrCode INTERFACE_FUNC completeServerCapability(daq::Bool* succeeded, daq::IServerCapability* source, daq::IServerCapabilityConfig* target) override;
+
+    daq::ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(daq::IString* typeId, daq::IAuthenticationConfig** authenticationConfig) override;
 
     daq::ErrCode INTERFACE_FUNC loadLicense(daq::Bool* succeeded, daq::IDict* licenseConfig) override;
     daq::ErrCode INTERFACE_FUNC getLicenseConfig(daq::IDict** licenseConfig) override;

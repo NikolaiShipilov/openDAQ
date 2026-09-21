@@ -20,14 +20,15 @@
 #include <opendaq/device_impl.h>
 #include <opendaq/mirrored_device_impl.h>
 #include <opendaq/credential_request_ptr.h>
-#include <opendaq/credential_payload_ptr.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
+#include <coreobjects/property_object_ptr.h>
 
 /*
  * Minimal mirrored device implementation with no signals or channels. When connected to via the
  * authenticated path, authenticates via the credential framework using a username/password, a PIN
- * code, or a private-key challenge, the three showcased auth methods. When connected to via the
- * plain, non-authenticated path, no credentials are required or checked. A mirrored device,
+ * code, a private-key challenge, or - trivially - anonymously, the four showcased auth methods.
+ * Anonymous authentication requires no credentials and connects exactly like the plain,
+ * non-authenticated path below, which likewise requires no credentials. A mirrored device,
  * so a real / mock streaming connection can be attached to it automatically or manually.
  */
 
@@ -41,9 +42,8 @@ public:
                                       const ComponentPtr& parent,
                                       const DeviceInfoPtr& info,
                                       bool authenticated,
-                                      const StringPtr& payloadId = nullptr,
-                                      const CredentialPayloadPtr& credentials = nullptr,
-                                      const AuthenticationConfigPtr& authenticationConfig = nullptr);
+                                      const StringPtr& authenticationMethodId = nullptr,
+                                      const PropertyObjectPtr& credentials = nullptr);
 
     static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
     static DeviceTypePtr CreateType();

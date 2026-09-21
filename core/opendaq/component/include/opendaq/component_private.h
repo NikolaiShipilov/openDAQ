@@ -18,15 +18,15 @@
 
 #include <coretypes/listobject.h>
 #include <opendaq/component.h>
-#include <opendaq/credential_request.h>
+#include <opendaq/authentication_config.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(ICoreEventArgs, "coreobjects")]
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceLibrary(ICredentialRequest, "opendaq")]
- * [interfaceSmartPtr(ICredentialRequest, CredentialRequestPtr, "<opendaq/credential_request_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationConfig, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationConfig, AuthenticationConfigPtr, "<opendaq/authentication_config_ptr.h>")]
  */
 
 /*!
@@ -86,24 +86,6 @@ DECLARE_OPENDAQ_INTERFACE(IComponentPrivate, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getComponentConfig(IPropertyObject** config) = 0;
 
     /*!
-     * @brief Sets the credential request formed by the module when the component was created with
-     * authentication, if any.
-     * @param request The credential request the module formed to authenticate this component.
-     *
-     * Carries no secrets - only the non-secret shape (payload id/descriptor, connection details, metadata)
-     * of what was requested from the credential provider. Persisted alongside the component so a reload can
-     * re-request credentials without ever having stored the actual authentication config or its secrets.
-     */
-    virtual ErrCode INTERFACE_FUNC setCredentialRequest(ICredentialRequest* request) = 0;
-
-    /*!
-     * @brief Retrieves the credential request formed by the module when the component was created with
-     * authentication.
-     * @param request The credential request, or `nullptr` if the component was not created with authentication.
-     */
-    virtual ErrCode INTERFACE_FUNC getCredentialRequest(ICredentialRequest** request) = 0;
-
-    /*!
      * @brief Called by parent component to notify this component about parent's active state change.
      * @param parentActive True if parent is active.
      * @param onUpdate True if the call is triggered from config update, false if the call is triggered by a change of the active state.
@@ -113,6 +95,27 @@ DECLARE_OPENDAQ_INTERFACE(IComponentPrivate, IBaseObject)
      * Container components (folders, devices) propagate this call to their children.
      */
     virtual ErrCode INTERFACE_FUNC setParentActive(Bool parentActive, Bool onUpdate) = 0;
+
+    /*!
+     * @brief Sets the authentication config the module was given when the component was created with
+     * authentication, if any.
+     * @param authenticationConfig The authentication config that named the method - and, if supplied
+     * directly rather than obtained from a provider, the credentials - used to authenticate the component.
+     *
+     * Kept alongside the component so a reload can re-request credentials for it. Note that this stores the
+     * config exactly as given - including a directly-supplied secret (`IAuthenticationConfig`'s
+     * `"SuppliedSecret"` property), if the caller set one - though `IAuthenticationConfig`'s own
+     * serialization never writes that secret out.
+     */
+    virtual ErrCode INTERFACE_FUNC setAuthenticationConfig(IAuthenticationConfig* authenticationConfig) = 0;
+
+    /*!
+     * @brief Retrieves the authentication config the module was given when the component was created with
+     * authentication.
+     * @param authenticationConfig The authentication config, or `nullptr` if the component was not created
+     * with authentication.
+     */
+    virtual ErrCode INTERFACE_FUNC getAuthenticationConfig(IAuthenticationConfig** authenticationConfig) = 0;
 };
 
 END_NAMESPACE_OPENDAQ

@@ -6,10 +6,8 @@ StreamingTypeImpl::StreamingTypeImpl(const StringPtr& id,
                                             const StringPtr& name,
                                             const StringPtr& description,
                                             const StringPtr& prefix,
-                                            const PropertyObjectPtr& defaultConfig,
-                                            const DictPtr<IString, IAuthenticationConfig>& supportedAuthenticationConfigs,
-                                            const StringPtr& defaultAuthenticationConfigId)
-    : Super(StreamingTypeStructType(), id, name, description, prefix, defaultConfig, supportedAuthenticationConfigs, defaultAuthenticationConfigId)
+                                            const PropertyObjectPtr& defaultConfig)
+    : Super(StreamingTypeStructType(), id, name, description, prefix, defaultConfig)
 {
 }
 
@@ -18,9 +16,7 @@ StreamingTypeImpl::StreamingTypeImpl(const ComponentTypeBuilderPtr& builder)
                         builder.getName(),
                         builder.getDescription(),
                         builder.getConnectionStringPrefix(),
-                        builder.getDefaultConfig(),
-                        builder.getSupportedAuthenticationConfigs(),
-                        builder.getDefaultAuthenticationConfigId())
+                        builder.getDefaultConfig())
 {
 }
 

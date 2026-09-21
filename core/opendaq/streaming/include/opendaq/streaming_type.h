@@ -57,7 +57,7 @@ DECLARE_OPENDAQ_INTERFACE(IStreamingType, IComponentType)
 /*!
  * @brief Creates a Streaming type object, with the id, name, description and optional defaultConfig.
  * @param id The unique type ID of the Streaming.
- * @param name The name of the Streaming. Eg. FFT.
+ * @param name The name of the Streaming. Eg. OpenDAQNativeStreaming.
  * @param description A short description of the Streaming and its behaviour.
  * @param defaultConfig The property object, to be cloned and returned, each time user creates default
  * configuration object. This way each instance of the Streaming has its own configuration object.

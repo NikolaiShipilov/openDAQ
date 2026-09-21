@@ -1,7 +1,6 @@
 #include <credential_demo_module/credential_demo_streaming_impl.h>
 
 #include <opendaq/streaming_type_factory.h>
-#include <coreobjects/property_factory.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
@@ -10,42 +9,21 @@ static const std::string CredentialDemoStreamingPrefix = "daq.credential_demo_st
 
 CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connectionString,
                                                           const ContextPtr& ctx,
-                                                          const StringPtr& payloadId,
-                                                          const CredentialPayloadPtr& credentials)
+                                                          const StringPtr& authenticationMethodId,
+                                                          const PropertyObjectPtr& credentials)
     : Streaming(connectionString, ctx, /*skipDomainSignalSubscribe*/ true)
 {
-    authentication::Authenticate(ctx, credentials, payloadId);
+    authentication::Authenticate(ctx, credentials, authenticationMethodId);
 }
 
 StreamingTypePtr CredentialDemoStreamingImpl::CreateType()
 {
-    auto userNamePasswordDescriptor = authentication::BuildUserNamePasswordDescriptor(/*hidePassword*/ true);
-    auto pinDescriptor = authentication::BuildPinDescriptor(/*hidePin*/ true);
-    auto privateKeyDescriptor = authentication::BuildPrivateKeyFileDescriptor();
-    auto privateKeyBlobDescriptor = authentication::BuildPrivateKeyBlobDescriptor();
-
-    auto userNamePasswordConfig = authentication::BuildAdditionalConfig(UserNamePasswordPayloadId);
-    auto pinConfig = authentication::BuildAdditionalConfig(PinPayloadId);
-    auto privateKeyConfig = authentication::BuildAdditionalConfig(PrivateKeyFilePayloadId);
-    auto privateKeyBlobConfig = authentication::BuildAdditionalConfig(PrivateKeyBlobPayloadId);
-
-    auto defaultConfig = PropertyObject();
-    defaultConfig.addProperty(BoolProperty("VerboseCredentialRequest", False));
-    defaultConfig.addProperty(BoolProperty("HidePasswordInput", True));
-    defaultConfig.addProperty(BoolProperty("HidePinInput", True));
-
     return StreamingTypeBuilder()
         .setId(CredentialDemoStreamingTypeId)
         .setName("Credential demo streaming")
         .setDescription("Dummy streaming connection, authenticated via the same credential framework and "
                          "auth methods as the device")
         .setConnectionStringPrefix(CredentialDemoStreamingPrefix)
-        .setDefaultConfig(defaultConfig)
-        .addSupportedAuthenticationConfig(UserNamePasswordPayloadId, userNamePasswordDescriptor, userNamePasswordConfig)
-        .addSupportedAuthenticationConfig(PinPayloadId, pinDescriptor, pinConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyFilePayloadId, privateKeyDescriptor, privateKeyConfig)
-        .addSupportedAuthenticationConfig(PrivateKeyBlobPayloadId, privateKeyBlobDescriptor, privateKeyBlobConfig)
-        .setDefaultAuthenticationConfigId(PinPayloadId)
         .build();
 }
 

@@ -43,14 +43,14 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
     m.def("CmdLineCredentialProvider", &daq::CmdLineCredentialProvider_Create);
     m.def("FileCredentialProvider", &daq::FileCredentialProvider_Create);
 
-    cls.def_property_readonly("name",
+    cls.def_property_readonly("id",
         [](daq::ICredentialProvider *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
-            return objectPtr.getName().toStdString();
+            return objectPtr.getId().toStdString();
         },
-        "Gets the name of the credential provider.");
+        "Gets the id that uniquely identifies the credential provider - the same id used to key it within `IInstanceBuilder::addCredentialProvider`/`IContext::getCredentialProviders`, and that `IAuthenticationConfig`'s `\"CredentialProviderId\"` property names when a caller selects one explicitly.");
     cls.def("request_credentials",
         [](daq::ICredentialProvider *object, daq::ICredentialRequest* request)
         {
@@ -59,23 +59,23 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
             return objectPtr.requestCredentials(request).detach();
         },
         py::arg("request"),
-        "Requests credentials for the given request, in the format described by its payload descriptor.");
+        "Requests credentials for the given request, in the format described by its credential descriptor.");
     cls.def("cache_credentials",
-        [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, const py::object& secret)
+        [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, daq::IPropertyObject* secret)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
-            objectPtr.cacheCredentials(request, pyObjectToBaseObject(secret));
+            objectPtr.cacheCredentials(request, secret);
         },
         py::arg("request"), py::arg("secret"),
-        "Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig::getSuppliedSecret` - so an implementation that would otherwise cache a value it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a credential payload - the caller already has the secret and wraps it directly.");
-    cls.def_property_readonly("supported_payload_formats",
+        "Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s `\"SuppliedSecret\"` property - so an implementation that caches values it obtains interactively caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a secret - the caller already has the secret and uses it directly. Implementations for which caching doesn't apply may treat this as a no-op.");
+    cls.def_property_readonly("supported_formats",
         [](daq::ICredentialProvider *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
-            return objectPtr.getSupportedPayloadFormats().detach();
+            return objectPtr.getSupportedFormats().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets a list of the credential payload formats this provider can provide. Used for format-matching against a device type's supported payload formats.");
+        "Gets a list of the credential formats this provider can provide. Used for format-matching against a device type's supported formats.");
 }

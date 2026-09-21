@@ -26,8 +26,8 @@ BEGIN_NAMESPACE_OPENDAQ
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
  * [interfaceLibrary(IProperty, "coreobjects")]
  * [interfaceSmartPtr(IProperty, PropertyPtr, "<coreobjects/property_ptr.h>")]
- * [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
+ * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
  * [interfaceLibrary(IComponentType, "opendaq")]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr, "<opendaq/component_type_ptr.h>")]
  */
@@ -39,13 +39,15 @@ BEGIN_NAMESPACE_OPENDAQ
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequestBuilder, IBaseObject)
 {
 /*!
- * @brief Builds and returns a `CredentialRequest` using the currently configured values.
+ * @brief Builds and returns a `CredentialRequest` using the currently configured values. Fails if
+ * `componentType`, `connectionString`, or `descriptor` was never set.
  * @param[out] request The built credential request.
  */
 virtual ErrCode INTERFACE_FUNC build(ICredentialRequest** request) = 0;
 
 /*!
- * @brief Sets the type of the component the request is being built for.
+ * @brief Sets the type of the component the request is being built for. Required - `build()` fails if
+ * never set.
  * @param componentType The component type.
  */
 // [returnSelf]
@@ -60,47 +62,55 @@ virtual ErrCode INTERFACE_FUNC setComponentType(IComponentType* componentType) =
 virtual ErrCode INTERFACE_FUNC getComponentType(IComponentType** componentType) = 0;
 
 /*!
- * @brief Sets the connection string used for the connection attempt the request is being built for.
- * @param connectionString The connection string.
+ * @brief Sets the canonical connection string of the connection attempt the request is being built for -
+ * expected to already be resolved via the owning module's `onGetCanonicalConnectionString` (routing prefix
+ * trimmed, every parameter made explicit), not the raw string the caller originally supplied. Required -
+ * `build()` fails if never set.
+ * @param connectionString The canonical connection string.
  */
 // [returnSelf]
 virtual ErrCode INTERFACE_FUNC setConnectionString(IString* connectionString) = 0;
 
 /*!
- * @brief Gets the connection string used for the connection attempt the request is being built for.
- * @param[out] connectionString The connection string.
+ * @brief Gets the canonical connection string currently set on the builder.
+ * @param[out] connectionString The canonical connection string.
  */
 virtual ErrCode INTERFACE_FUNC getConnectionString(IString** connectionString) = 0;
 
 /*!
- * @brief Sets the manufacturer of the device the request is being built for.
+ * @brief Sets the manufacturer of the device the connection is being established to or for - a request
+ * can be for a direct connection to that device, or for a streaming connection attached to it. Optional -
+ * leave unset if the manufacturer isn't known for this connection.
  * @param manufacturer The device manufacturer.
  */
 // [returnSelf]
 virtual ErrCode INTERFACE_FUNC setManufacturer(IString* manufacturer) = 0;
 
 /*!
- * @brief Gets the manufacturer of the device the request is being built for.
+ * @brief Gets the manufacturer currently set on the builder.
  * @param[out] manufacturer The device manufacturer.
  */
 virtual ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) = 0;
 
 /*!
- * @brief Sets the serial number of the device the request is being built for.
+ * @brief Sets the serial number of the device the connection is being established to or for - a request
+ * can be for a direct connection to that device, or for a streaming connection attached to it. Optional -
+ * leave unset if the serial number isn't known for this connection.
  * @param serialNumber The device serial number.
  */
 // [returnSelf]
 virtual ErrCode INTERFACE_FUNC setSerialNumber(IString* serialNumber) = 0;
 
 /*!
- * @brief Gets the serial number of the device the request is being built for.
+ * @brief Gets the serial number currently set on the builder.
  * @param[out] serialNumber The device serial number.
  */
 virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
 /*!
  * @brief Adds a property to the request's metadata, describing additional, request-specific information
- * for the credential provider to present to the user (e.g. device type name/id/description).
+ * primarily for the credential provider to show to the user. Optional - never called at all if there's
+ * nothing extra to describe, leaving the built request's metadata empty.
  * @param property The metadata property to add.
  */
 // [returnSelf]
@@ -113,34 +123,18 @@ virtual ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) = 0;
 virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;
 
 /*!
- * @brief Sets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on
- * save & replayed on load.
- * @param payloadId The payload id.
+ * @brief Sets the credential descriptor the provider must provide a secret for - typically read from
+ * `IAuthenticationConfig` when the request is being built. Required - `build()` fails if never set.
+ * @param descriptor The credential descriptor.
  */
 // [returnSelf]
-virtual ErrCode INTERFACE_FUNC setPayloadId(IString* payloadId) = 0;
+virtual ErrCode INTERFACE_FUNC setDescriptor(ICredentialDescriptor* descriptor) = 0;
 
 /*!
- * @brief Gets the id of the negotiated payload - obtained from `IAuthenticationConfig` - serialized on
- * save & replayed on load.
- * @param[out] payloadId The payload id.
+ * @brief Gets the credential descriptor currently set on the builder.
+ * @param[out] descriptor The credential descriptor.
  */
-virtual ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) = 0;
-
-/*!
- * @brief Sets the descriptor of the payload the provider must provide - serialized on save or re-attached
- * from the device type on load.
- * @param descriptor The payload descriptor.
- */
-// [returnSelf]
-virtual ErrCode INTERFACE_FUNC setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor) = 0;
-
-/*!
- * @brief Gets the descriptor of the payload the provider must provide - serialized on save or re-attached
- * from the device type on load.
- * @param[out] descriptor The payload descriptor.
- */
-virtual ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) = 0;
+virtual ErrCode INTERFACE_FUNC getDescriptor(ICredentialDescriptor** descriptor) = 0;
 };
 
 /*!

@@ -2,6 +2,7 @@
 #include <coretypes/validation.h>
 #include <coretypes/intfs.h>
 #include <opendaq/module_manager_ptr.h>
+#include <opendaq/credential_descriptor_factory.h>
 #include <opendaq/component_private_ptr.h>
 #include <opendaq/custom_log.h>
 #include <coretypes/type_manager_private.h>
@@ -241,6 +242,20 @@ ErrCode ContextImpl::getCredentialProviders(IDict** providers)
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode ContextImpl::addCredentialProvider(IString* providerId, ICredentialProvider* provider)
+{
+    OPENDAQ_PARAM_NOT_NULL(providerId);
+    OPENDAQ_PARAM_NOT_NULL(provider);
+
+    if (!this->credentialProviders.assigned())
+        this->credentialProviders = Dict<IString, ICredentialProvider>();
+
+    if (this->credentialProviders.hasKey(providerId))
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_ALREADYEXISTS, fmt::format(R"("A credential provider is already registered under the id '{}'.)", StringPtr::Borrow(providerId)));
+
+    return this->credentialProviders->set(providerId, provider);
+}
+
 void ContextImpl::registerOpenDaqTypes()
 {
     if (typeManager == nullptr)
@@ -318,6 +333,11 @@ void ContextImpl::registerOpenDaqTypes()
 
     const auto connectionStatusType = EnumerationType("ConnectionStatusType", List<IString>("Connected", "Reconnecting", "Unrecoverable", "Removed"));
     checkErrorInfoExcept(typeManager->addType(connectionStatusType), OPENDAQ_ERR_ALREADYEXISTS);
+
+    // Standard authentication credential descriptor types - registered here, before any module is loaded, so
+    // they're globally known from the start the same way as the well-known types above, rather than each
+    // module registering them (redundantly) on demand.
+    RegisterCredentialDescriptorTypes(typeManager);
 }
 
 OPENDAQ_DEFINE_CLASS_FACTORY(

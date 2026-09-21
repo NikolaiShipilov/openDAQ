@@ -34,6 +34,9 @@
 #include <opendaq/network_interface_factory.h>
 #include <opendaq/component_private_ptr.h>
 #include <opendaq/component_type_private_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/authentication_config_ptr.h>
+#include <coretypes/dictobject_factory.h>
 
 #include <opendaq/thread_name.h>
 #include <opendaq/module_manager_check_dependencies.h>
@@ -826,7 +829,13 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
             if (!deviceType.assigned())
                 continue;
 
-            if (authenticated && !deviceType.isAuthenticationSupported())
+            AuthenticationConfigPtr defaultAuthenticationConfig;
+            const ErrCode authConfigErr = library.module->createDefaultAuthenticationConfig(deviceType.getId(), &defaultAuthenticationConfig);
+            const bool authSupported = authConfigErr == OPENDAQ_SUCCESS && defaultAuthenticationConfig.assigned();
+            if (!authSupported)
+                daqClearErrorInfo();
+
+            if (authenticated && !authSupported)
             {
                 deviceTypeFoundButAuthNotSupported = true;
                 continue;
@@ -1250,6 +1259,33 @@ ErrCode ModuleManagerImpl::getAvailableStreamingTypes(IDict** streamingTypes)
 
     *streamingTypes = availableTypes.detach();
     return OPENDAQ_SUCCESS;
+}
+
+ErrCode ModuleManagerImpl::createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig)
+{
+    OPENDAQ_PARAM_NOT_NULL(typeId);
+    OPENDAQ_PARAM_NOT_NULL(authenticationConfig);
+
+    for (const auto& library : libraries)
+    {
+        AuthenticationConfigPtr moduleAuthenticationConfig;
+
+        const ErrCode err = library.module->createDefaultAuthenticationConfig(typeId, &moduleAuthenticationConfig);
+        if (err == OPENDAQ_ERR_NOTIMPLEMENTED || err == OPENDAQ_ERR_NOTFOUND)
+        {
+            daqClearErrorInfo();
+            continue;
+        }
+        OPENDAQ_RETURN_IF_FAILED(err);
+
+        if (moduleAuthenticationConfig.assigned())
+        {
+            *authenticationConfig = moduleAuthenticationConfig.detach();
+            return OPENDAQ_SUCCESS;
+        }
+    }
+
+    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND, fmt::format(R"("No loaded module recognizes type "{}".)", StringPtr::Borrow(typeId)));
 }
 
 ErrCode ModuleManagerImpl::createDefaultAddDeviceConfig(IPropertyObject** defaultConfig)

@@ -30,12 +30,12 @@ BEGIN_NAMESPACE_OPENDAQ
 
 /*!
  * @brief Creates a StreamingType pointer, with the id, name, description and optional defaultConfig.
- * @param id The unique type ID of the function block.
- * @param name The name of the function block. Eg. FFT.
+ * @param id The unique type ID of the Streaming.
+ * @param name The name of the Streaming. Eg. OpenDAQNativeStreaming.
  * @param description A short description of the function block and its behaviour.
  * @param prefix The prefix of the connection string used to add this streaming connection to a device.
  * @param defaultConfig The property object, to be cloned and returned, each time user creates default
- * configuration object. This way each instance of the function block has its own configuration object.
+ * configuration object. This way each instance of the Streaming has its own configuration object.
  */
 inline StreamingTypePtr StreamingType(const StringPtr& id,
                                               const StringPtr& name,

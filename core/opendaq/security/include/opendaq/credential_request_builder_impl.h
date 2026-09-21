@@ -19,7 +19,7 @@
 #include <coretypes/impl.h>
 #include <opendaq/credential_request_builder.h>
 #include <opendaq/component_type_ptr.h>
-#include <opendaq/credential_payload_descriptor_ptr.h>
+#include <opendaq/credential_descriptor_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -43,10 +43,8 @@ public:
     ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) override;
     ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) override;
 
-    ErrCode INTERFACE_FUNC setPayloadId(IString* payloadId) override;
-    ErrCode INTERFACE_FUNC getPayloadId(IString** payloadId) override;
-    ErrCode INTERFACE_FUNC setPayloadDescriptor(ICredentialPayloadDescriptor* descriptor) override;
-    ErrCode INTERFACE_FUNC getPayloadDescriptor(ICredentialPayloadDescriptor** descriptor) override;
+    ErrCode INTERFACE_FUNC setDescriptor(ICredentialDescriptor* descriptor) override;
+    ErrCode INTERFACE_FUNC getDescriptor(ICredentialDescriptor** descriptor) override;
 
 private:
     ComponentTypePtr componentType;
@@ -54,8 +52,7 @@ private:
     PropertyObjectPtr metaData;
     StringPtr manufacturer;
     StringPtr serialNumber;
-    StringPtr payloadId;
-    CredentialPayloadDescriptorPtr payloadDescriptor;
+    CredentialDescriptorPtr descriptor;
 };
 
 END_NAMESPACE_OPENDAQ

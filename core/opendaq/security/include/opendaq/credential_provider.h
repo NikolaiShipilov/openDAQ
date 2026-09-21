@@ -16,15 +16,17 @@
 
 #pragma once
 #include <coretypes/baseobject.h>
+#include <coreobjects/property_object.h>
 #include <opendaq/credential_request.h>
-#include <opendaq/credential_payload.h>
-#include <opendaq/credential_payload_descriptor.h>
+#include <opendaq/credential_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IInteger, "coretypes")]
  * [interfaceSmartPtr(IInteger, IntegerPtr, "<coretypes/integer.h>")]
+ * [interfaceLibrary(IPropertyObject, "coreobjects")]
+ * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
  */
 
 /*!
@@ -34,38 +36,41 @@ BEGIN_NAMESPACE_OPENDAQ
 DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 {
     /*!
-     * @brief Gets the name of the credential provider.
-     * @param[out] name The provider name.
+     * @brief Gets the id that uniquely identifies the credential provider - the same id used to key it
+     * within `IInstanceBuilder::addCredentialProvider`/`IContext::getCredentialProviders`, and that
+     * `IAuthenticationConfig`'s `"CredentialProviderId"` property names when a caller selects one explicitly.
+     * @param[out] id The provider id.
      */
-    virtual ErrCode INTERFACE_FUNC getName(IString** name) = 0;
+    virtual ErrCode INTERFACE_FUNC getId(IString** id) = 0;
 
     /*!
-     * @brief Requests credentials for the given request, in the format described by its payload descriptor.
+     * @brief Requests credentials for the given request, in the format described by its credential descriptor.
      * @param request The credential request to obtain credentials for.
-     * @param[out] credentials The obtained credential payload.
+     * @param[out] credentials The obtained secret - a property object built from the request's
+     * credential descriptor's `createEmptySecret` template, filled in with the obtained secret(s).
      */
-    virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, ICredentialPayload** credentials) = 0;
+    virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) = 0;
 
     /*!
-     * @brief Accepts a secret already known in advance - e.g. supplied directly via
-     * `IAuthenticationConfig::getSuppliedSecret` - so an implementation that would otherwise cache a value
-     * it obtained interactively (e.g. `CmdLineCredentialProvider`'s in-session caching of `FilePath`-format
-     * secrets, keyed by (manufacturer, serialNumber)) caches this one the same way. A later interactive
-     * `requestCredentials` call for the same context then reuses it instead of prompting again. Does not
-     * itself produce a credential payload - the caller already has the secret and wraps it directly.
+     * @brief Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s
+     * `"SuppliedSecret"` property - so an implementation that caches values it obtains interactively caches
+     * this one the same way. A later interactive `requestCredentials` call for the same context then reuses
+     * it instead of prompting again. Does not itself produce a secret - the caller already has
+     * the secret and uses it directly. Implementations for which caching doesn't apply may treat this as a
+     * no-op.
      * @param request The credential request the secret is being supplied for.
-     * @param secret The secret, in the format described by the request's payload descriptor (see
-     * `ICredentialPayload::getSecrets` for the expected concrete type per format).
+     * @param secret The secret, shaped like the request's credential descriptor's `createEmptySecret`
+     * template - a property object filled in with the actual secret value(s).
      */
-    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IBaseObject* secret) = 0;
+    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* secret) = 0;
 
     // [elementType(formats, IInteger)]
     /*!
-     * @brief Gets a list of the credential payload formats this provider can provide. Used for
-     * format-matching against a device type's supported payload formats.
-     * @param[out] formats The list of supported payload formats.
+     * @brief Gets a list of the credential formats this provider can provide. Used for
+     * format-matching against a device / streaming type's supported formats.
+     * @param[out] formats The list of supported formats.
      */
-    virtual ErrCode INTERFACE_FUNC getSupportedPayloadFormats(IList** formats) = 0;
+    virtual ErrCode INTERFACE_FUNC getSupportedFormats(IList** formats) = 0;
 };
 
 /*!
@@ -75,9 +80,8 @@ OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, CmdLineCredentialP
 
 /*!
  * @brief Creates a `ICredentialProvider` dedicated to file-backed secrets. Prompts for the file's path
- * via the command line, the same way `CmdLineCredentialProvider` does. For a `FilePath`-format request it
- * hands back the path itself; for a `BinaryBlob`-format request it reads the file and hands back its raw
- * bytes instead, so the caller never has to touch the file itself.
+ * via the command line, the same way `CmdLineCredentialProvider` does, and hands back the path itself for
+ * a `FilePath`-format request.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FileCredentialProvider, ICredentialProvider)
 

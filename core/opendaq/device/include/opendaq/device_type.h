@@ -16,7 +16,6 @@
 
 #pragma once
 #include <opendaq/component_type.h>
-#include <opendaq/credential_payload_descriptor.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -25,8 +24,6 @@ BEGIN_NAMESPACE_OPENDAQ
 * [interfaceSmartPtr(IDeviceType, GenericDeviceTypePtr)]
 * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr, "<opendaq/component_type_ptr.h>")]
 * [interfaceLibrary(IComponentType, "opendaq")]
-* [interfaceLibrary(ICredentialPayloadDescriptor, "opendaq")]
-* [interfaceSmartPtr(ICredentialPayloadDescriptor, CredentialPayloadDescriptorPtr, "<opendaq/credential_payload_descriptor_ptr.h>")]
 */
 
 /*!
