@@ -84,14 +84,18 @@ DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTy
     return Dict<IString, IBaseObject>({{streamingType.getId(), streamingType}});
 }
 
-StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connectionString,
-                                                     const PropertyObjectPtr& /*config*/,
-                                                     const StringPtr& authenticationMethodId,
-                                                     const PropertyObjectPtr& credentials)
+StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& /*config*/)
 {
-    // This streaming type always declares a default authentication method (see `CreateType()`), so
-    // `authenticationMethodId`/`credentials` are always assigned here, even for a caller that left authentication
-    // unspecified.
+    // Only reached for the "Anonymous" method (or no authentication support at all, which never applies to
+    // this module's own streaming type) - no real credentials to verify either way.
+    return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, StandardAnonymousId, nullptr);
+}
+
+StreamingPtr CredentialDemoModule::onCreateAuthenticatedStreaming(const StringPtr& connectionString,
+                                                                   const PropertyObjectPtr& /*config*/,
+                                                                   const StringPtr& authenticationMethodId,
+                                                                   const PropertyObjectPtr& credentials)
+{
     return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, authenticationMethodId, credentials);
 }
 

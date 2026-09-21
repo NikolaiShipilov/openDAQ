@@ -605,10 +605,7 @@ StreamingPtr NativeStreamingClientModule::createNativeStreaming(const StringPtr&
     return nativeStreaming;
 }
 
-StreamingPtr NativeStreamingClientModule::onCreateStreaming(const StringPtr& connectionString,
-                                                            const PropertyObjectPtr& config,
-                                                            const StringPtr& /*authenticationMethodId*/,
-                                                            const PropertyObjectPtr& /*credentials*/)
+StreamingPtr NativeStreamingClientModule::onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
 {
     if (!acceptsStreamingConnectionParameters(connectionString, config))
         DAQ_THROW_EXCEPTION(InvalidParameterException);

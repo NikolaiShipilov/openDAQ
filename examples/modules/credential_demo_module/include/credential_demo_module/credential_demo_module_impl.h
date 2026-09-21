@@ -44,10 +44,11 @@ public:
                                           const PropertyObjectPtr& credentials) override;
 
     DictPtr<IString, IStreamingType> onGetAvailableStreamingTypes() override;
-    StreamingPtr onCreateStreaming(const StringPtr& connectionString,
-                                   const PropertyObjectPtr& config,
-                                   const StringPtr& authenticationMethodId,
-                                   const PropertyObjectPtr& credentials) override;
+    StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) override;
+    StreamingPtr onCreateAuthenticatedStreaming(const StringPtr& connectionString,
+                                                const PropertyObjectPtr& config,
+                                                const StringPtr& authenticationMethodId,
+                                                const PropertyObjectPtr& credentials) override;
 
     DictPtr<IString, ICredentialDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId) override;
     StringPtr onGetDefaultAuthenticationMethodId(const StringPtr& typeId) override;
