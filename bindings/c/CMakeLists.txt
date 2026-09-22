@@ -279,6 +279,13 @@ set(SRC_OpenDAQ_Headers
     include/copendaq/scheduler/task.h
     include/copendaq/scheduler/work.h
 
+    include/copendaq/security/authentication_config.h
+    include/copendaq/security/common.h
+    include/copendaq/security/credential_descriptor.h
+    include/copendaq/security/credential_provider.h
+    include/copendaq/security/credential_request_builder.h
+    include/copendaq/security/credential_request.h
+
     include/copendaq/server/common.h
     include/copendaq/server/server_type.h
     include/copendaq/server/server.h
@@ -405,6 +412,12 @@ set(SRC_OpenDAQ_Cpp
     src/copendaq/scheduler/task.cpp
     src/copendaq/scheduler/work.cpp
 
+    src/copendaq/security/authentication_config.cpp
+    src/copendaq/security/credential_descriptor.cpp
+    src/copendaq/security/credential_provider.cpp
+    src/copendaq/security/credential_request_builder.cpp
+    src/copendaq/security/credential_request.cpp
+
     src/copendaq/server/server_type.cpp
     src/copendaq/server/server.cpp
 
@@ -451,6 +464,9 @@ set(SRC_OpenDAQ_Cpp
 
 add_library(${LIB_NAME} SHARED ${SRC_CoreTypes_Headers} ${SRC_CoreTypes_Cpp} ${SRC_Private_Headers} ${SRC_Private_Cpp} ${SRC_CoreObjects_Headers} ${SRC_CoreObjects_Cpp} ${SRC_OpenDAQ_Headers} ${SRC_OpenDAQ_Cpp})
 add_library(${SDK_TARGET_NAMESPACE}::${LIB_NAME} ALIAS ${LIB_NAME})
+
+opendaq_target_pch(${LIB_NAME} <opendaq/opendaq.h>)
+opendaq_target_unity_bindings(${LIB_NAME})
 
 target_sources(${LIB_NAME}
     INTERFACE

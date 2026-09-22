@@ -101,10 +101,7 @@ public:
         return Dict<IString, IStreamingType>({{"id", StreamingType("id", "name", "desc", "daqtest", obj)}});
     }
 
-    StreamingPtr onCreateStreaming(const StringPtr& connectionString,
-                                   const PropertyObjectPtr& config,
-                                   const StringPtr& authenticationMethodId,
-                                   const PropertyObjectPtr& credentials) override
+    StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) override
     {
         configValid(config, obj);
         return {};

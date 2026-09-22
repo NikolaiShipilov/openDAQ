@@ -378,9 +378,12 @@ public:
      * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @param[out] streaming The created streaming object.
      *
-     * The credentials are resolved (`requestCredentials`) before `onCreateStreaming` is called -
-     * `authenticationConfig` itself never reaches the final module's own implementation, only the
-     * credentials and the resolved authentication method id (to verify them against the right method) do.
+     * The credentials are resolved (`requestCredentials`) before `onCreateAuthenticatedStreaming` is called.
+     * If the resolved authentication method's format is `None` (e.g. `"Anonymous"`, including when
+     * `authenticationConfig` is unassigned and the resolved streaming type doesn't support authentication
+     * at all), no credentials are requested and `onCreateStreaming` is called instead - `authenticationConfig`
+     * itself never reaches the final module's own implementation either way, only the resolved authentication
+     * method id and credentials (to verify them against the right method) do, and only when they apply.
      */
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                            IString* connectionString,
@@ -411,9 +414,9 @@ public:
         }
 
         if (!streamingType.assigned())
-            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND,
-                                        "No streaming type matching connection string \"{}\" was found",
-                                        connectionString);
+        {
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "No streaming type matching connection string was found");
+        }
 
         AuthenticationConfigPtr resolvedAuthConfig;
         errCode = wrapHandlerReturn(this,
@@ -423,11 +426,14 @@ public:
                                     streamingType.getId());
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
-        StringPtr authenticationMethodId;
-        PropertyObjectPtr credentials;
-        if (resolvedAuthConfig.assigned())
+        const bool authenticated =
+            resolvedAuthConfig.assigned() && resolvedAuthConfig.getCredentialDescriptor().getFormat() != CredentialFormat::None;
+
+        StreamingPtr createdStreaming;
+        if (authenticated)
         {
             CredentialProviderPtr resolvedProvider;
+            PropertyObjectPtr credentials;
             errCode = wrapHandlerReturn(this,
                                         &Module::obtainCredentials,
                                         credentials,
@@ -439,17 +445,21 @@ public:
                                         resolvedProvider);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
-            authenticationMethodId = resolvedAuthConfig.getAuthenticationMethodId();
-        }
+            const StringPtr authenticationMethodId = resolvedAuthConfig.getAuthenticationMethodId();
 
-        StreamingPtr createdStreaming;
-        errCode = wrapHandlerReturn(this,
-                                    &Module::onCreateStreaming,
-                                    createdStreaming,
-                                    connectionString,
-                                    mergeConfig(config, streamingType),
-                                    authenticationMethodId,
-                                    credentials);
+            errCode = wrapHandlerReturn(this,
+                                        &Module::onCreateAuthenticatedStreaming,
+                                        createdStreaming,
+                                        connectionString,
+                                        mergeConfig(config, streamingType),
+                                        authenticationMethodId,
+                                        credentials);
+        }
+        else
+        {
+            errCode = wrapHandlerReturn(
+                this, &Module::onCreateStreaming, createdStreaming, connectionString, mergeConfig(config, streamingType));
+        }
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         *streaming = createdStreaming.detach();
@@ -619,22 +629,32 @@ public:
     }
 
     /*!
-     * @brief Creates and returns a streaming object using the specified connection string and config object,
-     * optionally authenticating the connection with the given, already-resolved credentials.
+     * @brief Creates and returns a streaming object using the specified connection string and config object.
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
-     * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for, or
-     * unassigned if the connection is unauthenticated (see `createStreaming`).
-     * @param credentials The already-resolved credentials to authenticate with, or unassigned if the
-     * connection is unauthenticated - `createStreaming` has already obtained this (via `requestCredentials`,
-     * from a supplied secret or a credential provider) before calling this method, so the implementation
-     * only needs to verify it, never to resolve it itself.
      * @returns The created streaming object.
      */
-    virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString,
-                                           const PropertyObjectPtr& config,
-                                           const StringPtr& authenticationMethodId,
-                                           const PropertyObjectPtr& credentials)
+    virtual StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
+    {
+        return nullptr;
+    }
+
+    /*!
+     * @brief Creates and returns a streaming object using the specified connection string and config object,
+     * authenticating the connection with the given, already-resolved credentials.
+     * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
+     * @param config A config object that contains parameters used to configure a streaming connection.
+     * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for (see
+     * `IAuthenticationConfig::getAuthenticationMethodId`).
+     * @param credentials The already-resolved credentials to authenticate with - `createStreaming`
+     * has already obtained this (via `requestCredentials`, from a supplied secret or a credential provider)
+     * before calling this method, so the implementation only needs to verify it, never to resolve it itself.
+     * @returns The created streaming object.
+     */
+    virtual StreamingPtr onCreateAuthenticatedStreaming(const StringPtr& connectionString,
+                                                        const PropertyObjectPtr& config,
+                                                        const StringPtr& authenticationMethodId,
+                                                        const PropertyObjectPtr& credentials)
     {
         return nullptr;
     }

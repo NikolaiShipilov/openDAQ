@@ -82,14 +82,12 @@ public:
     void testStreamClientSignalFromLeaf(const InstancePtr& client)
     {
         auto clientSignal = client.getSignalsRecursive()[0].template asPtr<IMirroredSignalConfig>();
-        std::promise<StringPtr> clientSignalSubscribePromise;
-        std::future<StringPtr> clientSignalSubscribeFuture;
-        test_helpers::setupSubscribeAckHandler(clientSignalSubscribePromise, clientSignalSubscribeFuture, clientSignal);
+        test_helpers::SignalAckListener clientAcks(clientSignal);
 
         using namespace std::chrono_literals;
         StreamReaderPtr reader = daq::StreamReader<double, uint64_t>(clientSignal, ReadTimeoutType::Any);
 
-        ASSERT_TRUE(test_helpers::waitForAcknowledgement(clientSignalSubscribeFuture));
+        ASSERT_TRUE(clientAcks.waitForSubscribeAck());
 
         {
             daq::SizeT count = 0;
@@ -112,21 +110,17 @@ public:
     void testStreamGatewayAndClientSignals(const InstancePtr& client, const InstancePtr& gateway)
     {
         auto clientSignal = client.getSignalsRecursive()[0].template asPtr<IMirroredSignalConfig>();
-        std::promise<StringPtr> clientSignalSubscribePromise;
-        std::future<StringPtr> clientSignalSubscribeFuture;
-        test_helpers::setupSubscribeAckHandler(clientSignalSubscribePromise, clientSignalSubscribeFuture, clientSignal);
+        test_helpers::SignalAckListener clientAcks(clientSignal);
 
         auto gatewaySignal = gateway.getSignalsRecursive()[0].template asPtr<IMirroredSignalConfig>();
-        std::promise<StringPtr> gatewaySignalSubscribePromise;
-        std::future<StringPtr> gatewaySignalSubscribeFuture;
-        test_helpers::setupSubscribeAckHandler(gatewaySignalSubscribePromise, gatewaySignalSubscribeFuture, gatewaySignal);
+        test_helpers::SignalAckListener gatewayAcks(gatewaySignal);
 
         using namespace std::chrono_literals;
         StreamReaderPtr clientReader = daq::StreamReader<double, uint64_t>(clientSignal, ReadTimeoutType::Any);
         StreamReaderPtr gatewayReader = daq::StreamReader<double, uint64_t>(gatewaySignal, ReadTimeoutType::Any);
 
-        ASSERT_TRUE(test_helpers::waitForAcknowledgement(gatewaySignalSubscribeFuture));
-        ASSERT_TRUE(test_helpers::waitForAcknowledgement(clientSignalSubscribeFuture));
+        ASSERT_TRUE(gatewayAcks.waitForSubscribeAck());
+        ASSERT_TRUE(clientAcks.waitForSubscribeAck());
 
         {
             daq::SizeT count = 0;
@@ -156,20 +150,16 @@ public:
     void testStreamClientSignalViaGateway(const InstancePtr& client, const InstancePtr& gateway)
     {
         auto clientSignal = client.getSignalsRecursive()[0].template asPtr<IMirroredSignalConfig>();
-        std::promise<StringPtr> clientSignalSubscribePromise;
-        std::future<StringPtr> clientSignalSubscribeFuture;
-        test_helpers::setupSubscribeAckHandler(clientSignalSubscribePromise, clientSignalSubscribeFuture, clientSignal);
+        test_helpers::SignalAckListener clientAcks(clientSignal);
 
         auto gatewaySignal = gateway.getSignalsRecursive()[0].template asPtr<IMirroredSignalConfig>();
-        std::promise<StringPtr> gatewaySignalSubscribePromise;
-        std::future<StringPtr> gatewaySignalSubscribeFuture;
-        test_helpers::setupSubscribeAckHandler(gatewaySignalSubscribePromise, gatewaySignalSubscribeFuture, gatewaySignal);
+        test_helpers::SignalAckListener gatewayAcks(gatewaySignal);
 
         using namespace std::chrono_literals;
         StreamReaderPtr reader = daq::StreamReader<double, uint64_t>(clientSignal, ReadTimeoutType::Any);
 
-        ASSERT_TRUE(test_helpers::waitForAcknowledgement(gatewaySignalSubscribeFuture));
-        ASSERT_TRUE(test_helpers::waitForAcknowledgement(clientSignalSubscribeFuture));
+        ASSERT_TRUE(gatewayAcks.waitForSubscribeAck());
+        ASSERT_TRUE(clientAcks.waitForSubscribeAck());
 
         {
             daq::SizeT count = 0;
@@ -253,6 +243,28 @@ public:
         }
     }
 
+    static bool inputPortSourcesAttached(const DevicePtr& device, size_t sourceCount)
+    {
+        for (const auto& port : device.getItems(search::Recursive(search::InterfaceId(IInputPort::Id))))
+        {
+            const auto mirrored = port.template asPtrOrNull<IMirroredInputPortConfig>();
+            if (!mirrored.assigned() || mirrored.getStreamingSources().getCount() != sourceCount ||
+                !mirrored.getActiveStreamingSource().assigned())
+                return false;
+        }
+        return true;
+    }
+
+    // The streaming sources of mirrored signals and input ports are attached asynchronously after connecting
+    static bool waitForStreamingSources(const DevicePtr& device, size_t signalSourceCount, size_t inputPortSourceCount)
+    {
+        return test_helpers::waitFor([&]
+        {
+            return test_helpers::streamingSourcesAttached(device, signalSourceCount) &&
+                   inputPortSourcesAttached(device, inputPortSourceCount);
+        }, std::chrono::seconds(10));
+    }
+
     InstancePtr CreateLeafDeviceInstance(uint16_t leafDeviceIndex)
     {
         auto logger = Logger();
@@ -260,7 +272,7 @@ public:
         auto moduleManager = ModuleManager("[[none]]");
         auto typeManager = TypeManager();
         auto authenticationProvider = AuthenticationProvider();
-        auto context = Context(scheduler, logger, typeManager, moduleManager, authenticationProvider);
+        auto context = Context(scheduler, logger, typeManager, moduleManager, authenticationProvider, test_helpers::instanceOptions());
         auto instance = InstanceCustom(context, fmt::format("subdevice{}", leafDeviceIndex));
 
         addRefDeviceModule(instance);
@@ -293,7 +305,7 @@ public:
         auto moduleManager = ModuleManager("[[none]]");
         auto typeManager = TypeManager();
         auto authenticationProvider = AuthenticationProvider();
-        auto context = Context(scheduler, logger, typeManager, moduleManager, authenticationProvider);
+        auto context = Context(scheduler, logger, typeManager, moduleManager, authenticationProvider, test_helpers::instanceOptions());
 
         auto instance = InstanceCustom(context, "gateway");
 
@@ -327,7 +339,8 @@ public:
                                         ? List<IString>("OpenDAQNativeStreaming", "OpenDAQLTStreaming")
                                         : List<IString>("OpenDAQLTStreaming", "OpenDAQNativeStreaming");
         const auto config = createDeviceConfig(gatewayInstance, streamingProtocolIds, MIN_CONNECTIONS);
-        gatewayInstance.addDevice(createStructureDeviceConnectionString(leafDeviceIndex), config);
+        const auto leafDevice = gatewayInstance.addDevice(createStructureDeviceConnectionString(leafDeviceIndex), config);
+        ASSERT_TRUE(waitForStreamingSources(leafDevice, 2, 1)) << "leaf device " << leafDeviceIndex;
     }
 
     InstancePtr addSecondLeafDevice(const InstancePtr& gatewayInstance, const InstancePtr& clientInstance, bool& success)
@@ -362,14 +375,14 @@ public:
         return secondLeafDevice;
     }
 
-    InstancePtr CreateClientInstance(const IntegerPtr& heuristicValue)
+    InstancePtr CreateClientInstance(uint16_t heuristicValue)
     {
         auto logger = Logger();
         auto scheduler = Scheduler(logger);
         auto moduleManager = ModuleManager("[[none]]");
         auto typeManager = TypeManager();
         auto authenticationProvider = AuthenticationProvider();
-        auto context = Context(scheduler, logger, typeManager, moduleManager, authenticationProvider);
+        auto context = Context(scheduler, logger, typeManager, moduleManager, authenticationProvider, test_helpers::instanceOptions());
         auto instance = InstanceCustom(context, "client");
 
         addLtClientModule(instance);
@@ -383,7 +396,8 @@ public:
                                         : List<IString>("OpenDAQLTStreaming", "OpenDAQNativeStreaming");
         auto config = createDeviceConfig(instance, streamingProtocolIds, heuristicValue);
         auto gatewayDevice = instance.addDevice(createStructureDeviceConnectionString(0), config);
-
+        const bool minHops = heuristicValue == MIN_HOPS;
+        EXPECT_TRUE(waitForStreamingSources(gatewayDevice, minHops ? 4 : 2, minHops ? 2 : 1)) << "gateway device";
         return instance;
     }
 };
@@ -400,6 +414,7 @@ TEST_P(SubDevicesTest, RootStreamingToClient)
     InstancePtr secondLeafDevice = addSecondLeafDevice(gateway, client, success);
     ASSERT_TRUE(success);
 
+    ASSERT_TRUE(waitForStreamingSources(client, 2, 1));
     testSignalStreamingSources(client, gateway, false);
     testInputPortStreamingSources(client, gateway, false);
 

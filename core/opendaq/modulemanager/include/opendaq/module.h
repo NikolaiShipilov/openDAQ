@@ -143,8 +143,10 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
      * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
-     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. In case
-     * of a null value, the streaming is connected to without authentication.
+     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. If
+     * unassigned and the resolved streaming type supports authentication, its own default method is used
+     * instead - the streaming is connected to without authentication only if that method (or the type
+     * itself) requires no credentials at all.
      * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
      * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @param[out] streaming The created streaming object.

@@ -332,6 +332,8 @@ public static partial class OpenDAQFactory
     /// <param name="moduleManager">The module manager.</param>
     /// <param name="authenticationProvider">The authentication provider.</param>
     /// <param name="options">The options.</param>
+    /// <param name="discoveryServices">The discovery servers.</param>
+    /// <param name="credentialProviders">The credential providers to register on the context, keyed by their own id.</param>
     /// <returns>The Context instance.</returns>
     public static Context Context(Scheduler scheduler,
                                   Logger logger,
@@ -339,7 +341,8 @@ public static partial class OpenDAQFactory
                                   ModuleManager moduleManager,
                                   AuthenticationProvider authenticationProvider,
                                   IDictObject<StringObject, BaseObject> options = null,
-                                  IDictObject<StringObject, DiscoveryServer> discoveryServices = null)
+                                  IDictObject<StringObject, DiscoveryServer> discoveryServices = null,
+                                  IDictObject<BaseObject, BaseObject> credentialProviders = null)
     {
         /*
             inline ContextPtr Context(const SchedulerPtr& scheduler,
@@ -363,7 +366,12 @@ public static partial class OpenDAQFactory
             discoveryServices = CoreTypesFactory.CreateDict<StringObject, DiscoveryServer>();
         }
 
-        return CreateContext(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServices);
+        if (credentialProviders == null)
+        {
+            credentialProviders = CoreTypesFactory.CreateDict<BaseObject, BaseObject>();
+        }
+
+        return CreateContext(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServices, credentialProviders);
     }
 
     /// <summary>

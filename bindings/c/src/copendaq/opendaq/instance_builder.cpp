@@ -232,6 +232,16 @@ daqErrCode daqInstanceBuilder_getLoadAuthenticatedModulesOnly(daqInstanceBuilder
     return reinterpret_cast<daq::IInstanceBuilder*>(self)->getLoadAuthenticatedModulesOnly(authOnly);
 }
 
+daqErrCode daqInstanceBuilder_getCredentialProviders(daqInstanceBuilder* self, daqDict** providers)
+{
+    return reinterpret_cast<daq::IInstanceBuilder*>(self)->getCredentialProviders(reinterpret_cast<daq::IDict**>(providers));
+}
+
+daqErrCode daqInstanceBuilder_addCredentialProvider(daqInstanceBuilder* self, daqString* providerId, daqCredentialProvider* provider)
+{
+    return reinterpret_cast<daq::IInstanceBuilder*>(self)->addCredentialProvider(reinterpret_cast<daq::IString*>(providerId), reinterpret_cast<daq::ICredentialProvider*>(provider));
+}
+
 daqErrCode daqInstanceBuilder_createInstanceBuilder(daqInstanceBuilder** obj)
 {
     daq::IInstanceBuilder* ptr = nullptr;

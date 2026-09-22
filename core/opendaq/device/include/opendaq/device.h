@@ -267,8 +267,10 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      * various connection timeouts or other streaming protocol specific settings. Can be created from its corresponding
      * Streaming type object. In case of a null value, it will use the default configuration.
      * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
-     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. In case of
-     * a null value, the streaming is connected to without authentication.
+     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. If
+     * unassigned and the resolved streaming type supports authentication, its own default method is used
+     * instead - the streaming is connected to without authentication only if that method (or the type
+     * itself) requires no credentials at all.
      */
     virtual ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming,
                                                  IString* connectionString,

@@ -126,17 +126,17 @@ public:
         return OPENDAQ_SUCCESS;
     }
 
-    ErrCode INTERFACE_FUNC hasEventPacket(Bool* hasEventPacket) override
+    ErrCode INTERFACE_FUNC hasEventPacket(daq::Bool* hasEventPacket) override
     {
         return OPENDAQ_SUCCESS;
     }
 
-    ErrCode INTERFACE_FUNC hasGapPacket(Bool* hasGapPacket) override
+    ErrCode INTERFACE_FUNC hasGapPacket(daq::Bool* hasGapPacket) override
     {
         return OPENDAQ_SUCCESS;
     }
 
-    ErrCode INTERFACE_FUNC isRemote(Bool* remote) override
+    ErrCode INTERFACE_FUNC isRemote(daq::Bool* remote) override
     {
         *remote = False;
         return OPENDAQ_SUCCESS;
@@ -835,6 +835,11 @@ TEST_F(SignalTest, NoLastValue)
 TEST_F(SignalTest, SetLastValue)
 {
     const auto signal = Signal(NullContext(), nullptr, "sig");
+
+    // manual last values require automatic last-value caching to be disabled first
+    ASSERT_THROW(signal.setLastValue(4), InvalidStateException);
+
+    signal.asPtr<ISignalPrivate>(true).enableKeepLastValue(false);
     signal.setLastValue(4);
     ASSERT_EQ(signal.getLastValue(), 4);
 
@@ -2116,7 +2121,7 @@ public:
     {
     }
 
-    ErrCode INTERFACE_FUNC acceptsSignal(IInputPort* port, ISignal* signal, Bool* accept) override
+    ErrCode INTERFACE_FUNC acceptsSignal(IInputPort* port, ISignal* signal, daq::Bool* accept) override
     {
         *accept = True;
         return OPENDAQ_SUCCESS;
