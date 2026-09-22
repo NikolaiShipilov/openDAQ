@@ -414,9 +414,9 @@ public:
         }
 
         if (!streamingType.assigned())
-            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND,
-                                        "No streaming type matching connection string \"{}\" was found",
-                                        connectionString);
+        {
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "No streaming type matching connection string was found");
+        }
 
         AuthenticationConfigPtr resolvedAuthConfig;
         errCode = wrapHandlerReturn(this,
