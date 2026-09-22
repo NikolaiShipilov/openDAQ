@@ -247,7 +247,7 @@ void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTyp
     std::cout << "Reloaded instance re-authenticated and reconnected to \"" << reloadedDevice.getInfo().getName() << std::endl;
 }
 
-int main(int argc, const char* argv[])
+int main(int /*argc*/, const char* /*argv*/[])
 {
     createJsonConfigFile();
 
