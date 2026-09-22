@@ -68,7 +68,14 @@ public:
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC createEmptySecret(IPropertyObject** secret) override;
 
+    ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
+    ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
+    static ConstCharPtr SerializeId();
+    static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
+
 private:
+    static constexpr const char* SecretClassNameSerializedKey = "SecretClassName";
+
     // Shared implementation constructor the four format-specific constructors above delegate to.
     CredentialDescriptorImpl(CredentialFormat format,
                              const StructTypePtr& structType,

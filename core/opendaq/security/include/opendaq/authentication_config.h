@@ -54,13 +54,11 @@ BEGIN_NAMESPACE_OPENDAQ
  * object also implements.
  *
  * Serialization is fully custom, not the generic `IPropertyObject` mechanism: the component type id (as
- * passed by `IDevice::createDefaultAuthenticationConfig`), the selected `"AuthenticationMethod"`'s
- * authentication method id, and - when present - the selected `"CredentialProviderId"` are written.
- * `"SuppliedSecret"` (a secret) is never serialized. Deserializing re-resolves the saved type id against the
- * live `Context` and rebuilds everything above fresh - it fails outright if the type no longer resolves, or
- * the saved authentication method id is no longer among that type's currently supported descriptors. The
- * saved provider id is restored only if it's still among the freshly-rebuilt `"CredentialProviderId"`
- * candidates; otherwise the normal live default applies.
+ * passed by `IDevice::createDefaultAuthenticationConfig`), every `"AuthenticationMethod"` candidate credential
+ * descriptor, the selected one's authentication method id, and - when present - the selected
+ * `"CredentialProviderId"` are written. `"SuppliedSecret"` (a secret) is never serialized. Deserializing
+ * rebuilds the config directly from the saved descriptors and method id, resolving only a `Context` (to
+ * live-filter `"CredentialProviderId"`'s candidates).
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {

@@ -3,10 +3,11 @@
 #include <opendaq/component_deserialize_context_ptr.h>
 #include <opendaq/component_update_context_ptr.h>
 #include <opendaq/credential_provider_ptr.h>
-#include <opendaq/module_manager_utils_ptr.h>
 #include <coreobjects/property_factory.h>
 #include <coretypes/listobject_factory.h>
+#include <coretypes/dictobject_factory.h>
 #include <coretypes/stringobject_factory.h>
+#include <coretypes/serialized_object_ptr.h>
 #include <coretypes/ctutils.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -256,12 +257,15 @@ ErrCode AuthenticationConfigImpl::serialize(ISerializer* serializer)
 {
     return daqTry([&]
     {
+        const ListPtr<IStruct> credentialDescriptors = objPtr.getProperty(AuthenticationMethodPropertyName).getSelectionValues();
         const StructPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
         const StringPtr authenticationMethodId = selected.asPtr<ICredentialDescriptor>().getAuthenticationMethodId();
 
         serializer->startTaggedObject(this);
         serializer->key(TypeIdSerializedKey);
         serializer->writeString(typeId.getCharPtr(), typeId.getLength());
+        serializer->key(CredentialDescriptorsSerializedKey);
+        checkErrorInfo(credentialDescriptors->serialize(serializer));
         serializer->key(AuthenticationMethodIdSerializedKey);
         serializer->writeString(authenticationMethodId.getCharPtr(), authenticationMethodId.getLength());
 
@@ -312,28 +316,20 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
         if (!daqContext.assigned())
             DAQ_THROW_EXCEPTION(InvalidParameterException, "Unable to resolve a Context while deserializing an AuthenticationConfig");
 
-        const ModuleManagerUtilsPtr managerUtils = daqContext.getModuleManager().asPtr<IModuleManagerUtils>();
+        const ListPtr<ICredentialDescriptor> savedDescriptors =
+            serializedObj.readList<ICredentialDescriptor>(CredentialDescriptorsSerializedKey, daqContext.getTypeManager());
 
-        AuthenticationConfigPtr authConfig;
-        checkErrorInfo(managerUtils->createDefaultAuthenticationConfig(savedTypeId, &authConfig));
+        DictPtr<IString, ICredentialDescriptor> credentialDescriptors = Dict<IString, ICredentialDescriptor>();
+        for (const auto& descriptor : savedDescriptors)
+            credentialDescriptors.set(descriptor.getAuthenticationMethodId(), descriptor);
 
-        const ListPtr<IStruct> methodCandidates = authConfig.getProperty(AuthenticationMethodPropertyName).getSelectionValues();
-        bool methodFound = false;
-        for (const auto& candidate : methodCandidates)
-        {
-            if (candidate.asPtr<ICredentialDescriptor>().getAuthenticationMethodId() == savedAuthenticationMethodId)
-            {
-                authConfig.setPropertySelectionValue(AuthenticationMethodPropertyName, candidate);
-                methodFound = true;
-                break;
-            }
-        }
-
-        if (!methodFound)
+        if (!credentialDescriptors.hasKey(savedAuthenticationMethodId))
             DAQ_THROW_EXCEPTION(NotSupportedException,
-                                 "Saved authentication method id \"{}\" is no longer supported by type \"{}\"",
+                                 "Saved authentication method id \"{}\" is not among the saved credential descriptors for type \"{}\"",
                                  savedAuthenticationMethodId,
                                  savedTypeId);
+
+        AuthenticationConfigPtr authConfig = AuthenticationConfig(credentialDescriptors, savedAuthenticationMethodId, daqContext, savedTypeId);
 
         if (serializedObj.hasKey(ProviderIdSerializedKey) && authConfig.hasProperty(CredentialProviderIdPropertyName))
         {

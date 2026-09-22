@@ -51,10 +51,10 @@ public:
     ErrCode INTERFACE_FUNC setPropertyValue(IString* propertyName, IBaseObject* value) override;
     ErrCode INTERFACE_FUNC setPropertySelectionValue(IString* propertyName, IBaseObject* value) override;
 
-    // Fully custom - replaces generic PropertyObject serialization entirely. `typeId`, the selected
-    // authentication method id, and - when present - the selected "CredentialProviderId" are written; "SuppliedSecret"
-    // (a secret) is never serialized. On deserialize, the saved provider id is restored only if it's still
-    // among the freshly-rebuilt compatible candidates - otherwise the normal live default applies.
+    // Fully custom - replaces generic PropertyObject serialization entirely. `typeId`, every "AuthenticationMethod"
+    // candidate credential descriptor, the selected authentication method id, and - when present - the selected
+    // "CredentialProviderId" are written; "SuppliedSecret" (a secret) is never serialized. Deserializing rebuilds
+    // the config directly from the saved descriptors and method id.
     ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
     ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
     static ConstCharPtr SerializeId();
@@ -65,6 +65,7 @@ private:
     static constexpr const char* CredentialProviderIdPropertyName = "CredentialProviderId";
     static constexpr const char* SuppliedSecretPropertyName = "SuppliedSecret";
     static constexpr const char* TypeIdSerializedKey = "TypeId";
+    static constexpr const char* CredentialDescriptorsSerializedKey = "CredentialDescriptors";
     static constexpr const char* AuthenticationMethodIdSerializedKey = "AuthenticationMethodId";
     static constexpr const char* ProviderIdSerializedKey = "ProviderId";
 
