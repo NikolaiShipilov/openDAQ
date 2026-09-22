@@ -40,7 +40,8 @@ class CredentialDescriptorImpl final : public GenericStructImpl<ICredentialDescr
 {
 public:
     // `secretClassName`, if given and registered with `typeManager`, is the `IPropertyObjectClass`
-    // `createEmptySecret()` builds the returned secret from. `None` has none - there is no secret to build.
+    // `createEmptySecret()` builds the returned secret from. `None` has none - there is no secret to build -
+    // and, unlike the other three formats, its Struct type is never registered with a type manager either.
 
     // KeyValuePairs
     CredentialDescriptorImpl(const StringPtr& id,
@@ -60,7 +61,7 @@ public:
                              const TypeManagerPtr& typeManager,
                              const StringPtr& secretClassName);
     // None
-    CredentialDescriptorImpl(const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager);
+    CredentialDescriptorImpl(const StringPtr& id, const StringPtr& description);
 
     ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) override;
     ErrCode INTERFACE_FUNC getFormat(CredentialFormat* format) override;

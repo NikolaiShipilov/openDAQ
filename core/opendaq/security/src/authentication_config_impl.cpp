@@ -265,7 +265,8 @@ ErrCode AuthenticationConfigImpl::serialize(ISerializer* serializer)
         serializer->key(TypeIdSerializedKey);
         serializer->writeString(typeId.getCharPtr(), typeId.getLength());
         serializer->key(CredentialDescriptorsSerializedKey);
-        checkErrorInfo(credentialDescriptors->serialize(serializer));
+        const auto serializableDescriptors = credentialDescriptors.asPtr<ISerializable>(true);
+        checkErrorInfo(serializableDescriptors->serialize(serializer));
         serializer->key(AuthenticationMethodIdSerializedKey);
         serializer->writeString(authenticationMethodId.getCharPtr(), authenticationMethodId.getLength());
 

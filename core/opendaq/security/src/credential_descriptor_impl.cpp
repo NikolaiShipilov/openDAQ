@@ -113,13 +113,8 @@ CredentialDescriptorImpl::CredentialDescriptorImpl(
 {
 }
 
-CredentialDescriptorImpl::CredentialDescriptorImpl(const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager)
-    : CredentialDescriptorImpl(
-          CredentialFormat::None,
-          detail::RequireRegisteredType(typeManager, NoneDescriptorStructType().getName()),
-          BuildFields(id, description),
-          typeManager,
-          nullptr)
+CredentialDescriptorImpl::CredentialDescriptorImpl(const StringPtr& id, const StringPtr& description)
+    : CredentialDescriptorImpl(CredentialFormat::None, NoneDescriptorStructType(), BuildFields(id, description), nullptr, nullptr)
 {
 }
 
@@ -259,7 +254,7 @@ ErrCode CredentialDescriptorImpl::Deserialize(ISerializedObject* serialized, IBa
         }
         else if (typeName == NoneDescriptorStructType().getName())
         {
-            result = NoneDescriptor(id, description, typeManager);
+            result = NoneDescriptor(id, description);
         }
         else
         {
@@ -274,7 +269,7 @@ ErrCode CredentialDescriptorImpl::Deserialize(ISerializedObject* serialized, IBa
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValueDescriptor, ICredentialDescriptor, IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, secretClassName)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringDescriptor, ICredentialDescriptor, IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, secretClassName)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathDescriptor, ICredentialDescriptor, IString*, id, IString*, description, ITypeManager*, typeManager, IString*, secretClassName)
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, NoneDescriptor, ICredentialDescriptor, IString*, id, IString*, description, ITypeManager*, typeManager)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, NoneDescriptor, ICredentialDescriptor, IString*, id, IString*, description)
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(CredentialDescriptorImpl)
 

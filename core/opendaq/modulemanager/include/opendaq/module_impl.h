@@ -679,7 +679,7 @@ public:
         if (!onGetAvailableDeviceTypes().hasKey(typeId) && !onGetAvailableStreamingTypes().hasKey(typeId))
             DAQ_THROW_EXCEPTION(NotFoundException, "Type \"{}\" is not one of this module's own device/streaming types", typeId);
 
-        const auto anonymous = StandardAnonymousCredentialDescriptor(context.getTypeManager());
+        const auto anonymous = StandardAnonymousCredentialDescriptor();
         return Dict<IString, ICredentialDescriptor>({{anonymous.getAuthenticationMethodId(), anonymous}});
     }
 

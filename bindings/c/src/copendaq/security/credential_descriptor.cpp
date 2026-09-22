@@ -71,10 +71,10 @@ daqErrCode daqCredentialDescriptor_createFilePathDescriptor(daqCredentialDescrip
     return err;
 }
 
-daqErrCode daqCredentialDescriptor_createNoneDescriptor(daqCredentialDescriptor** obj, daqString* id, daqString* description, daqTypeManager* typeManager)
+daqErrCode daqCredentialDescriptor_createNoneDescriptor(daqCredentialDescriptor** obj, daqString* id, daqString* description)
 {
     daq::ICredentialDescriptor* ptr = nullptr;
-    daqErrCode err = daq::createNoneDescriptor(&ptr, reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IString*>(description), reinterpret_cast<daq::ITypeManager*>(typeManager));
+    daqErrCode err = daq::createNoneDescriptor(&ptr, reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IString*>(description));
     *obj = reinterpret_cast<daqCredentialDescriptor*>(ptr);
     return err;
 }

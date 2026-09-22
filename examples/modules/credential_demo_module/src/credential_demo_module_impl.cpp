@@ -107,7 +107,7 @@ DictPtr<IString, ICredentialDescriptor> CredentialDemoModule::onGetSupportedAuth
     auto userNamePasswordDescriptor = StandardUserNamePasswordCredentialDescriptor(context.getTypeManager());
     auto pinDescriptor = StandardPinCredentialDescriptor(context.getTypeManager());
     auto privateKeyDescriptor = StandardPrivateKeyFileCredentialDescriptor(context.getTypeManager());
-    auto anonymousDescriptor = StandardAnonymousCredentialDescriptor(context.getTypeManager());
+    auto anonymousDescriptor = StandardAnonymousCredentialDescriptor();
 
     return Dict<IString, ICredentialDescriptor>({{userNamePasswordDescriptor.getAuthenticationMethodId(), userNamePasswordDescriptor},
                                                         {pinDescriptor.getAuthenticationMethodId(), pinDescriptor},

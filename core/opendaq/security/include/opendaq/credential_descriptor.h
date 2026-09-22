@@ -49,8 +49,7 @@ enum class CredentialFormat : EnumType
  * human-readable description. The id uniquely identifies the authentication method at least within the module that
  * offers it (e.g. `"UserNamePassword"`, `"Pin"`) - the same id the module's
  * `IModule::createDefaultAuthenticationConfig` keys the resulting config's `"AuthenticationMethod"` candidates
- * by. In practice the id is often unique
- * system-wide, deliberately reused across modules: the `Standard*CredentialDescriptor`
+ * by. In practice the id is often unique system-wide, deliberately reused across modules: the `Standard*CredentialDescriptor`
  * factories below key off shared, well-known ids and resolve their Struct/secret class from the one
  * `ITypeManager` shared by the whole `Context`, so any two modules using the same standard id (with the same
  * `Context`) produce identically-shaped descriptors. Where a format has a parameter set,
@@ -124,7 +123,7 @@ OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, NoneDescriptor, ICredentialDescriptor,
-    IString*, id, IString*, description, ITypeManager*, typeManager
+    IString*, id, IString*, description
 )
 
 END_NAMESPACE_OPENDAQ
