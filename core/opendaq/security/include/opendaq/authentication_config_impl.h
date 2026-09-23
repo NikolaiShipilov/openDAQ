@@ -39,9 +39,12 @@ public:
                              const ContextPtr& context,
                              const StringPtr& typeId);
 
-    ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) override;
-    ErrCode INTERFACE_FUNC getCredentialDescriptor(ICredentialDescriptor** descriptor) override;
-    ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
+    ErrCode INTERFACE_FUNC getSelectedAuthenticationMethodId(IString** authenticationMethodId) override;
+    ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) override;
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) override;
+    ErrCode INTERFACE_FUNC getSelectedCredentialProviderId(IString** providerId) override;
+    ErrCode INTERFACE_FUNC setCredentialProviderId(IString* providerId) override;
+    ErrCode INTERFACE_FUNC getSupportedCredentialProviderIds(IList** providerIds) override;
     ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) override;
 
     // Intercepted to keep "CredentialProviderId" live and dependent on "AuthenticationMethod" (recomputed from
@@ -87,6 +90,8 @@ private:
     // would produce? The blessed workflow is to build from that template and fill it in, but this doesn't
     // check provenance, only shape.
     static bool IsSuppliedSecretShapeValid(const PropertyObjectPtr& secret, const CredentialDescriptorPtr& selectedDescriptor);
+
+    static DictPtr<IString, ICredentialDescriptor> ToCredentialDescriptorDict(const ListPtr<IStruct>& candidates);
 };
 
 END_NAMESPACE_OPENDAQ

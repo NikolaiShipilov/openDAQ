@@ -136,7 +136,18 @@ bool AuthenticationConfigImpl::IsSuppliedSecretShapeValid(const PropertyObjectPt
     return true;
 }
 
-ErrCode AuthenticationConfigImpl::getAuthenticationMethodId(IString** authenticationMethodId)
+DictPtr<IString, ICredentialDescriptor> AuthenticationConfigImpl::ToCredentialDescriptorDict(const ListPtr<IStruct>& candidates)
+{
+    DictPtr<IString, ICredentialDescriptor> result = Dict<IString, ICredentialDescriptor>();
+    for (const auto& candidate : candidates)
+    {
+        const auto descriptor = candidate.asPtr<ICredentialDescriptor>();
+        result.set(descriptor.getAuthenticationMethodId(), descriptor);
+    }
+    return result;
+}
+
+ErrCode AuthenticationConfigImpl::getSelectedAuthenticationMethodId(IString** authenticationMethodId)
 {
     OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
 
@@ -148,19 +159,38 @@ ErrCode AuthenticationConfigImpl::getAuthenticationMethodId(IString** authentica
     });
 }
 
-ErrCode AuthenticationConfigImpl::getCredentialDescriptor(ICredentialDescriptor** descriptor)
+ErrCode AuthenticationConfigImpl::setAuthenticationMethodId(IString* authenticationMethodId)
 {
-    OPENDAQ_PARAM_NOT_NULL(descriptor);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
 
     return daqTry([&]
     {
-        const StructPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
-        *descriptor = selected.asPtr<ICredentialDescriptor>().detach();
+        const StringPtr idPtr = StringPtr::Borrow(authenticationMethodId);
+        const ListPtr<IStruct> candidates = objPtr.getProperty(AuthenticationMethodPropertyName).getSelectionValues();
+        const auto descriptors = ToCredentialDescriptorDict(candidates);
+
+        if (!descriptors.hasKey(idPtr))
+            DAQ_THROW_EXCEPTION(
+                NotFoundException, "\"{}\" is not one of this config's supported authentication methods", idPtr);
+
+        checkErrorInfo(this->setPropertySelectionValue(String(AuthenticationMethodPropertyName), descriptors.get(idPtr)));
         return OPENDAQ_SUCCESS;
     });
 }
 
-ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
+ErrCode AuthenticationConfigImpl::getSupportedAuthenticationMethods(IDict** descriptors)
+{
+    OPENDAQ_PARAM_NOT_NULL(descriptors);
+
+    return daqTry([&]
+    {
+        const ListPtr<IStruct> candidates = objPtr.getProperty(AuthenticationMethodPropertyName).getSelectionValues();
+        *descriptors = ToCredentialDescriptorDict(candidates).detach();
+        return OPENDAQ_SUCCESS;
+    });
+}
+
+ErrCode AuthenticationConfigImpl::getSelectedCredentialProviderId(IString** providerId)
 {
     OPENDAQ_PARAM_NOT_NULL(providerId);
 
@@ -176,7 +206,41 @@ ErrCode AuthenticationConfigImpl::getCredentialProviderId(IString** providerId)
         }
 
         const StringPtr id = objPtr.getPropertySelectionValue(CredentialProviderIdPropertyName);
-        *providerId = (id.assigned() && id.getLength() > 0) ? id.addRefAndReturn() : nullptr;
+        *providerId = id.addRefAndReturn();
+        return OPENDAQ_SUCCESS;
+    });
+}
+
+ErrCode AuthenticationConfigImpl::setCredentialProviderId(IString* providerId)
+{
+    OPENDAQ_PARAM_NOT_NULL(providerId);
+
+    return daqTry([&]
+    {
+        if (!objPtr.hasProperty(CredentialProviderIdPropertyName))
+            DAQ_THROW_EXCEPTION(
+                NotFoundException,
+                "This config currently has no credential provider candidates for the selected authentication method");
+
+        checkErrorInfo(this->setPropertySelectionValue(String(CredentialProviderIdPropertyName), providerId));
+        return OPENDAQ_SUCCESS;
+    });
+}
+
+ErrCode AuthenticationConfigImpl::getSupportedCredentialProviderIds(IList** providerIds)
+{
+    OPENDAQ_PARAM_NOT_NULL(providerIds);
+
+    return daqTry([&]
+    {
+        if (!objPtr.hasProperty(CredentialProviderIdPropertyName))
+        {
+            *providerIds = List<IString>().detach();
+            return OPENDAQ_SUCCESS;
+        }
+
+        ListPtr<IString> candidates = objPtr.getProperty(CredentialProviderIdPropertyName).getSelectionValues();
+        *providerIds = candidates.detach();
         return OPENDAQ_SUCCESS;
     });
 }

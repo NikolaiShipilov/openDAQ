@@ -159,7 +159,7 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
 
     // The supplied secret must be shaped like the descriptor's own `createEmptySecret` template - here
     // just a single "PrivateKeyFilePath" property, filled in with the private key's path.
-    auto suppliedSecret = deviceAuthConfig.getCredentialDescriptor().createEmptySecret();
+    auto suppliedSecret = deviceAuthConfig.getSupportedAuthenticationMethods().get(deviceAuthConfig.getSelectedAuthenticationMethodId()).createEmptySecret();
     suppliedSecret.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
     deviceAuthConfig.setPropertyValue("SuppliedSecret", suppliedSecret);
 

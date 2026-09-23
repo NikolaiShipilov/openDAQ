@@ -36,17 +36,20 @@ extern "C"
 
     typedef struct daqAuthenticationConfig daqAuthenticationConfig;
     typedef struct daqString daqString;
-    typedef struct daqCredentialDescriptor daqCredentialDescriptor;
     typedef struct daqPropertyObject daqPropertyObject;
     typedef struct daqDict daqDict;
+    typedef struct daqList daqList;
     typedef struct daqContext daqContext;
 
     EXPORTED extern const daqIntfID DAQ_AUTHENTICATION_CONFIG_INTF_ID;
     void EXPORTED daqAuthenticationConfig_getInterfaceId(daqIntfID* intfId);
 
-    daqErrCode EXPORTED daqAuthenticationConfig_getAuthenticationMethodId(daqAuthenticationConfig* self, daqString** authenticationMethodId);
-    daqErrCode EXPORTED daqAuthenticationConfig_getCredentialDescriptor(daqAuthenticationConfig* self, daqCredentialDescriptor** descriptor);
-    daqErrCode EXPORTED daqAuthenticationConfig_getCredentialProviderId(daqAuthenticationConfig* self, daqString** providerId);
+    daqErrCode EXPORTED daqAuthenticationConfig_getSelectedAuthenticationMethodId(daqAuthenticationConfig* self, daqString** authenticationMethodId);
+    daqErrCode EXPORTED daqAuthenticationConfig_setAuthenticationMethodId(daqAuthenticationConfig* self, daqString* authenticationMethodId);
+    daqErrCode EXPORTED daqAuthenticationConfig_getSupportedAuthenticationMethods(daqAuthenticationConfig* self, daqDict** descriptors);
+    daqErrCode EXPORTED daqAuthenticationConfig_getSelectedCredentialProviderId(daqAuthenticationConfig* self, daqString** providerId);
+    daqErrCode EXPORTED daqAuthenticationConfig_setCredentialProviderId(daqAuthenticationConfig* self, daqString* providerId);
+    daqErrCode EXPORTED daqAuthenticationConfig_getSupportedCredentialProviderIds(daqAuthenticationConfig* self, daqList** providerIds);
     daqErrCode EXPORTED daqAuthenticationConfig_getSuppliedSecret(daqAuthenticationConfig* self, daqPropertyObject** secret);
     daqErrCode EXPORTED daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* credentialDescriptors, daqString* defaultAuthenticationMethodId, daqContext* context, daqString* typeId);
 

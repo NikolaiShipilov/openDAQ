@@ -205,7 +205,7 @@ public:
             this, &Module::obtainCredentials, credentials, authConfigPtr, connectionString, manufacturer, serialNumber, deviceType, resolvedProvider);
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
-        const StringPtr authenticationMethodId = authConfigPtr.getAuthenticationMethodId();
+        const StringPtr authenticationMethodId = authConfigPtr.getSelectedAuthenticationMethodId();
 
         DevicePtr createdDevice;
         errCode = wrapHandlerReturn(this,
@@ -427,7 +427,8 @@ public:
         OPENDAQ_RETURN_IF_FAILED(errCode);
 
         const bool authenticated =
-            resolvedAuthConfig.assigned() && resolvedAuthConfig.getCredentialDescriptor().getFormat() != CredentialFormat::None;
+            resolvedAuthConfig.assigned() &&
+            resolvedAuthConfig.getSupportedAuthenticationMethods().get(resolvedAuthConfig.getSelectedAuthenticationMethodId()).getFormat() != CredentialFormat::None;
 
         StreamingPtr createdStreaming;
         if (authenticated)
@@ -445,7 +446,7 @@ public:
                                         resolvedProvider);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
-            const StringPtr authenticationMethodId = resolvedAuthConfig.getAuthenticationMethodId();
+            const StringPtr authenticationMethodId = resolvedAuthConfig.getSelectedAuthenticationMethodId();
 
             errCode = wrapHandlerReturn(this,
                                         &Module::onCreateAuthenticatedStreaming,
@@ -555,7 +556,7 @@ public:
      * @param parent The parent component/device to which the device attaches.
      * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
      * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for (see
-     * `IAuthenticationConfig::getAuthenticationMethodId`).
+     * `IAuthenticationConfig::getSelectedAuthenticationMethodId`).
      * @param credentials The already-resolved credentials to authenticate with - `createAuthenticatedDevice`
      * has already obtained this (via `requestCredentials`, from a supplied secret or a credential provider)
      * before calling this method, so the implementation only needs to verify it, never to resolve it itself.
@@ -627,7 +628,7 @@ public:
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
      * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for (see
-     * `IAuthenticationConfig::getAuthenticationMethodId`).
+     * `IAuthenticationConfig::getSelectedAuthenticationMethodId`).
      * @param credentials The already-resolved credentials to authenticate with - `createStreaming`
      * has already obtained this (via `requestCredentials`, from a supplied secret or a credential provider)
      * before calling this method, so the implementation only needs to verify it, never to resolve it itself.
@@ -761,7 +762,7 @@ private:
         if (!authenticationConfig.assigned())
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
 
-        if (authenticationConfig.getCredentialDescriptor().getFormat() == CredentialFormat::None)
+        if (authenticationConfig.getSupportedAuthenticationMethods().get(authenticationConfig.getSelectedAuthenticationMethodId()).getFormat() == CredentialFormat::None)
             return nullptr;
 
         const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, componentType);
@@ -783,7 +784,7 @@ private:
         requestBuilder.setConnectionString(onGetCanonicalConnectionString(connectionString));
         requestBuilder.setManufacturer(manufacturer);
         requestBuilder.setSerialNumber(serialNumber);
-        requestBuilder.setDescriptor(authenticationConfig.getCredentialDescriptor());
+        requestBuilder.setDescriptor(authenticationConfig.getSupportedAuthenticationMethods().get(authenticationConfig.getSelectedAuthenticationMethodId()));
         requestBuilder.setComponentType(componentType);
 
         return requestBuilder.build();
@@ -791,14 +792,14 @@ private:
 
     // Resolves the credentials for `credentialRequest` - always a non-`None`-format method (see
     // `requestCredentials`, its only caller, which resolves `None` itself beforehand). Consumes whichever
-    // provider id `authenticationConfig.getCredentialProviderId()` currently returns. If
+    // provider id `authenticationConfig.getSelectedCredentialProviderId()` currently returns. If
     // `authenticationConfig.getSuppliedSecret()` returns one, it is used directly instead of asking a
     // provider to obtain one - though the currently-selected provider, if any, is still handed the secret
     // via `cacheCredentials`, so a later request for the same context can be served from its cache.
     // `resolvedProvider` receives whichever provider was actually involved, or stays unassigned if none was.
     //
     // Throws `AuthenticationFailedException` if:
-    // - `getCredentialProviderId()` returns nothing at all,
+    // - `getSelectedCredentialProviderId()` returns nothing at all,
     // - the returned provider id no longer names a registered provider,
     // - the returned provider no longer supports the required format, or
     // - the resolved credentials (supplied by the caller, or obtained from a provider) don't match
@@ -808,7 +809,7 @@ private:
                                          CredentialProviderPtr& resolvedProvider)
     {
         const auto providers = context.getCredentialProviders();
-        const auto providerId = authenticationConfig.getCredentialProviderId();
+        const auto providerId = authenticationConfig.getSelectedCredentialProviderId();
         const PropertyObjectPtr suppliedSecret = authenticationConfig.getSuppliedSecret();
 
         if (suppliedSecret.assigned())
@@ -881,7 +882,7 @@ private:
     }
 
     // Looks up `providerId` among the registered `providers` and validates it supports `credentialDescriptor`'s
-    // format. `providerId` is expected to already be whatever `authenticationConfig.getCredentialProviderId()`
+    // format. `providerId` is expected to already be whatever `authenticationConfig.getSelectedCredentialProviderId()`
     // currently returns, pre-filtered to compatible providers. An unassigned `providerId` simply returns
     // unassigned; it is the caller's job (`obtainCredentials`) to treat that as a failure.
     //

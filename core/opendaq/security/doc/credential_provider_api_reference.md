@@ -48,9 +48,8 @@ Carries the authentication settings for a single connection attempt. Lives along
 
 | Member | Description |
 |---|---|
-| `getAuthenticationMethodId(IString**)` | Convenience getter for the selected `"AuthenticationMethod"` value's own id. |
-| `getCredentialDescriptor(ICredentialDescriptor**)` | Convenience getter for the `"AuthenticationMethod"` property's current selection value. |
-| `getCredentialProviderId(IString**)` | Convenience getter for the `"CredentialProviderId"` property's selected value, or `nullptr` if the property is absent entirely. |
+| `getSelectedAuthenticationMethodId(IString**)` | Convenience getter for the selected `"AuthenticationMethod"` value's own id. The corresponding credential descriptor itself is obtained by looking this id up in `getSupportedAuthenticationMethods()` - there is no separate getter for it. |
+| `getSelectedCredentialProviderId(IString**)` | Convenience getter for the `"CredentialProviderId"` property's selected value, or `nullptr` if the property is absent entirely. |
 | `getSuppliedSecret(IPropertyObject**)` | Convenience getter for the `"SuppliedSecret"` property's value, or `nullptr` if the property is absent entirely. |
 
 There is no "additional config" on `IAuthenticationConfig` itself - settings like whether to hide secret input as it's typed travel via the component's own, generic config object instead (the same one `addDevice`/`addStreaming` always take), read by the module from its own `config` parameter alongside the authentication config.
@@ -239,7 +238,7 @@ Setting `"SuppliedSecret"` hands the module a secret it already has — a proper
 ```cpp
 auto config = AuthenticationConfig(deviceType, instance.getContext()); // UserNamePassword is the default method
 
-auto secret = config.getCredentialDescriptor().createEmptySecret();
+auto secret = config.getSupportedAuthenticationMethods().get(config.getSelectedAuthenticationMethodId()).createEmptySecret();
 secret.setPropertyValue("UserName", "user");
 secret.setPropertyValue("Password", "pass");
 config.setPropertyValue("SuppliedSecret", secret);
@@ -257,7 +256,7 @@ auto deviceConfig = AuthenticationConfig(deviceType, instance.getContext());
 SelectAuthenticationMethod(deviceConfig, "PrivateKeyFile");
 deviceConfig.setPropertySelectionValue("CredentialProviderId", cmdLineCredentialProvider.getId());
 
-auto deviceSecret = deviceConfig.getCredentialDescriptor().createEmptySecret();
+auto deviceSecret = deviceConfig.getSupportedAuthenticationMethods().get(deviceConfig.getSelectedAuthenticationMethodId()).createEmptySecret();
 deviceSecret.setPropertyValue("PrivateKeyFilePath", "/path/to/private_key.pem");
 deviceConfig.setPropertyValue("SuppliedSecret", deviceSecret);
 
@@ -393,11 +392,11 @@ Steps 1–3 and 5 below are handled entirely by the base `Module` class itself (
 
 A `None`-format method skips steps 2–3 entirely: `Module::requestCredentials` resolves it directly, forming no `ICredentialRequest` and consulting no credential provider, since there is nothing to request. Step 4 still runs, with `credentials` left unassigned - the same shape as an unauthenticated streaming connection.
 
-1. **Resolve the authentication method to use.** `Module::createAuthenticatedDevice`/`createStreaming` reads the authentication method id and its corresponding credential descriptor off the supplied `IAuthenticationConfig` (`getAuthenticationMethodId`, `getCredentialDescriptor`) - for streaming, only after first substituting the resolved streaming type's own default config (`resolveDefaultAuthenticationConfig`) if none was explicitly given and the type supports authentication.
+1. **Resolve the authentication method to use.** `Module::createAuthenticatedDevice`/`createStreaming` reads the authentication method id off the supplied `IAuthenticationConfig` (`getSelectedAuthenticationMethodId`) and looks its corresponding credential descriptor up in `getSupportedAuthenticationMethods()` - for streaming, only after first substituting the resolved streaming type's own default config (`resolveDefaultAuthenticationConfig`) if none was explicitly given and the type supports authentication.
 
 2. **Build the credential request.** `Module::requestCredentials` builds a new `ICredentialRequest` via `ICredentialRequestBuilder`, populating connection string (canonicalized via the module's own `onGetCanonicalConnectionString` override), manufacturer/serial number (if resolved), the credential descriptor, and component type - the same way whether this is a fresh connection or a reload, since the request is always built fresh from whichever `IAuthenticationConfig` is in hand (a freshly-built one, or one reconstructed from its reduced saved form - see step 5 and [Serialization](#serialization) in [§1](#1-core-interfaces)). `addMetaDataProperty` (see [§1](#1-core-interfaces)) is left untouched here - the request's own `getComponentType()`/`getConnectionString()` already cover what a module building through `Module` would otherwise duplicate into it; a module bypassing `requestCredentials` to build its own request is still free to attach extra metadata.
 
-3. **Resolve the credentials.** `Module::obtainCredentials` reads `getCredentialProviderId()` and `getSuppliedSecret()` off the authentication config, and branches on whether the latter returned one. Neither branch ever chooses a provider itself - both only ever look up whichever id `getCredentialProviderId()` currently returns (see [§5](#5-credential-provider-selection--supplied-secrets)), which is always either that id's own compatible-provider default or the caller's explicit override; `findMatchingCredentialProvider` simply validates that id still names a registered, format-compatible provider, and treats it being absent (nothing currently selected) as an immediate failure, never as a cue to scan the registered providers looking for one:
+3. **Resolve the credentials.** `Module::obtainCredentials` reads `getSelectedCredentialProviderId()` and `getSuppliedSecret()` off the authentication config, and branches on whether the latter returned one. Neither branch ever chooses a provider itself - both only ever look up whichever id `getSelectedCredentialProviderId()` currently returns (see [§5](#5-credential-provider-selection--supplied-secrets)), which is always either that id's own compatible-provider default or the caller's explicit override; `findMatchingCredentialProvider` simply validates that id still names a registered, format-compatible provider, and treats it being absent (nothing currently selected) as an immediate failure, never as a cue to scan the registered providers looking for one:
    - **A secret is supplied:** no provider obtains anything — the supplied property object (already shaped like the credential descriptor's `createEmptySecret` template) is used directly as the credential. If a provider is also currently selected, it is first looked up and handed the secret via `provider.cacheCredentials(request, secret)`, so it can remember it the same way it would one obtained interactively — but the secret used for *this* connection is always the one the caller supplied, regardless of whether caching succeeds.
    - **No secret supplied:** the currently selected provider (failing immediately, with a message identifying the problem, if that selection names a provider no longer registered or no longer supporting the required format - both defensive checks against a now-stale id, not paths reachable through the live property itself) is asked via `provider.requestCredentials(request)`, obtaining credentials - a property object built from the descriptor's `createEmptySecret` template - interactively, or served from that provider's own cache if a matching entry exists (e.g. from an earlier `cacheCredentials` call, or an earlier interactive request for the same context).
 

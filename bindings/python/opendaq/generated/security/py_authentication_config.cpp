@@ -50,31 +50,52 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
     }, py::arg("component_type"), py::arg("context"),
     "Builds an authentication config for `component_type`, out of its own supported authentication methods and default authentication method id - the recommended way to build a config for a live device/streaming type.");
 
-    cls.def_property_readonly("authentication_method_id",
+    cls.def_property("authentication_method_id",
         [](daq::IAuthenticationConfig *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getAuthenticationMethodId().toStdString();
+            return objectPtr.getSelectedAuthenticationMethodId().toStdString();
         },
-        "Gets the id of the authentication method currently selected - the selected `\"CredentialDescriptor\"` property value's own `ICredentialDescriptor::getAuthenticationMethodId()`.");
-    cls.def_property_readonly("credential_descriptor",
+        [](daq::IAuthenticationConfig *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& authenticationMethodId)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            objectPtr.setAuthenticationMethodId(getVariantValue<daq::IString*>(authenticationMethodId));
+        },
+        "Gets or selects the authentication method currently used, by its own id - the selected `\"AuthenticationMethod\"` property value's own `ICredentialDescriptor::getAuthenticationMethodId()`. Setting it looks the matching descriptor up among `supported_authentication_methods` internally.");
+    cls.def_property_readonly("supported_authentication_methods",
         [](daq::IAuthenticationConfig *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getCredentialDescriptor().detach();
+            return objectPtr.getSupportedAuthenticationMethods().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the credential descriptor which selected authentication method uses - the current selection value of the `\"CredentialDescriptor\"` property.");
-    cls.def_property_readonly("credential_provider_id",
+        "Gets every authentication method this config supports, keyed by their own id - the full set of `\"AuthenticationMethod\"` selection candidates.");
+    cls.def_property("credential_provider_id",
         [](daq::IAuthenticationConfig *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getCredentialProviderId().toStdString();
+            return objectPtr.getSelectedCredentialProviderId().toStdString();
         },
-        "Gets the id of the credential provider to request credentials from - the value of the `\"CredentialProviderId\"` String property.");
+        [](daq::IAuthenticationConfig *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& providerId)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            objectPtr.setCredentialProviderId(getVariantValue<daq::IString*>(providerId));
+        },
+        "Gets or selects the credential provider to request credentials from, by its own id - the value of the `\"CredentialProviderId\"` Selection property.");
+    cls.def_property_readonly("supported_credential_provider_ids",
+        [](daq::IAuthenticationConfig *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            return objectPtr.getSupportedCredentialProviderIds().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the ids of every credential provider currently compatible with the selected authentication method's format - the full set of `\"CredentialProviderId\"` selection candidates. Empty if no registered provider currently supports the selected method's format.");
     cls.def_property_readonly("supplied_secret",
         [](daq::IAuthenticationConfig *object)
         {
