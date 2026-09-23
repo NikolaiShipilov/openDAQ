@@ -122,9 +122,9 @@ daqErrCode daqDevice_getTicksSinceOrigin(daqDevice* self, daqUInt* ticks)
     return reinterpret_cast<daq::IDevice*>(self)->getTicksSinceOrigin(reinterpret_cast<daq::UInt*>(ticks));
 }
 
-daqErrCode daqDevice_addStreaming(daqDevice* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig)
+daqErrCode daqDevice_addStreaming(daqDevice* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config)
 {
-    return reinterpret_cast<daq::IDevice*>(self)->addStreaming(reinterpret_cast<daq::IStreaming**>(streaming), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IAuthenticationConfig*>(authenticationConfig));
+    return reinterpret_cast<daq::IDevice*>(self)->addStreaming(reinterpret_cast<daq::IStreaming**>(streaming), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config));
 }
 
 daqErrCode daqDevice_createDefaultAddDeviceConfig(daqDevice* self, daqPropertyObject** defaultConfig)
@@ -200,9 +200,4 @@ daqErrCode daqDevice_setOperationModeRecursive(daqDevice* self, daqOperationMode
 daqErrCode daqDevice_addDevices(daqDevice* self, daqDict** devices, daqDict* connectionArgs, daqDict* errCodes, daqDict* errorInfos)
 {
     return reinterpret_cast<daq::IDevice*>(self)->addDevices(reinterpret_cast<daq::IDict**>(devices), reinterpret_cast<daq::IDict*>(connectionArgs), reinterpret_cast<daq::IDict*>(errCodes), reinterpret_cast<daq::IDict*>(errorInfos));
-}
-
-daqErrCode daqDevice_addAuthenticatedDevice(daqDevice* self, daqDevice** device, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig)
-{
-    return reinterpret_cast<daq::IDevice*>(self)->addAuthenticatedDevice(reinterpret_cast<daq::IDevice**>(device), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IAuthenticationConfig*>(authenticationConfig));
 }

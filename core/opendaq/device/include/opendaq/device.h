@@ -28,7 +28,6 @@
 #include <opendaq/update_parameters.h>
 #include <coreobjects/user.h>
 #include <opendaq/log_file_info.h>
-#include <opendaq/authentication_config.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -266,16 +265,8 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      * @param config A config object to configure a streaming connection. This object can contain properties like
      * various connection timeouts or other streaming protocol specific settings. Can be created from its corresponding
      * Streaming type object. In case of a null value, it will use the default configuration.
-     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
-     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. If
-     * unassigned and the resolved streaming type supports authentication, its own default method is used
-     * instead - the streaming is connected to without authentication only if that method (or the type
-     * itself) requires no credentials at all.
      */
-    virtual ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming,
-                                                 IString* connectionString,
-                                                 IPropertyObject* config = nullptr,
-                                                 IAuthenticationConfig* authenticationConfig = nullptr) = 0;
+    virtual ErrCode INTERFACE_FUNC addStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config = nullptr) = 0;
 
     /*!
      * @brief Creates config object that can be used when adding a device. Contains Device and Streaming default configuration
@@ -413,24 +404,6 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      *         OPENDAQ_IGNORED if adding the devices from modules is not allowed within the device.
      */
     virtual ErrCode INTERFACE_FUNC addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes = nullptr, IDict* errorInfos = nullptr) = 0;
-
-    // [templateType(device, IDevice)]
-    /*!
-     * @brief Connects to a device at the given connection string using the provided authentication configuration and returns the added device.
-     * @param[out] device The added device.
-     * @param connectionString The connection string containing the address of the device. In example an
-     * IPv4/IPv6 address. The connection string can be found in the Device Info objects returned by
-     * `getAvailableDevices`.
-     * @param config A config object to configure a client device. This object can contain properties like max sample rate,
-     * port to use for 3rd party communication, number of channels to generate, or other device specific settings. Can be
-     * created from its corresponding Device type object. In case of a null value, it will use the default configuration.
-     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
-     * obtain and verify credentials for this connection - see `IAuthenticationConfig`.
-     */
-    virtual ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
-                                                          IString* connectionString,
-                                                          IPropertyObject* config = nullptr,
-                                                          IAuthenticationConfig* authenticationConfig = nullptr) = 0;
 };
 /*!@}*/
 

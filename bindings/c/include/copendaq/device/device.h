@@ -46,7 +46,6 @@ extern "C"
     typedef struct daqFunctionBlock daqFunctionBlock;
     typedef struct daqUpdateParameters daqUpdateParameters;
     typedef struct daqStreaming daqStreaming;
-    typedef struct daqAuthenticationConfig daqAuthenticationConfig;
     typedef struct daqSyncComponent daqSyncComponent;
     typedef struct daqServer daqServer;
     typedef struct daqComponentStatusContainer daqComponentStatusContainer;
@@ -74,7 +73,7 @@ extern "C"
     daqErrCode EXPORTED daqDevice_saveConfiguration(daqDevice* self, daqString** configuration);
     daqErrCode EXPORTED daqDevice_loadConfiguration(daqDevice* self, daqString* configuration, daqUpdateParameters* config);
     daqErrCode EXPORTED daqDevice_getTicksSinceOrigin(daqDevice* self, daqUInt* ticks);
-    daqErrCode EXPORTED daqDevice_addStreaming(daqDevice* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig);
+    daqErrCode EXPORTED daqDevice_addStreaming(daqDevice* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config);
     daqErrCode EXPORTED daqDevice_createDefaultAddDeviceConfig(daqDevice* self, daqPropertyObject** defaultConfig);
     daqErrCode EXPORTED daqDevice_getSyncComponent(daqDevice* self, daqSyncComponent** sync);
     daqErrCode EXPORTED daqDevice_addServer(daqDevice* self, daqString* typeId, daqPropertyObject* config, daqServer** server);
@@ -90,7 +89,6 @@ extern "C"
     daqErrCode EXPORTED daqDevice_setOperationMode(daqDevice* self, daqOperationModeType modeType);
     daqErrCode EXPORTED daqDevice_setOperationModeRecursive(daqDevice* self, daqOperationModeType modeType);
     daqErrCode EXPORTED daqDevice_addDevices(daqDevice* self, daqDict** devices, daqDict* connectionArgs, daqDict* errCodes, daqDict* errorInfos);
-    daqErrCode EXPORTED daqDevice_addAuthenticatedDevice(daqDevice* self, daqDevice** device, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig);
 
 #ifdef __cplusplus
 }

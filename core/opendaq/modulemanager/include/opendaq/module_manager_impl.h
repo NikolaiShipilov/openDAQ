@@ -33,6 +33,7 @@
 #include <tsl/ordered_map.h>
 #include <daq_discovery/daq_discovery_client.h>
 #include <opendaq/module_authenticator_ptr.h>
+#include <opendaq/authentication_config_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 struct ModuleLibrary;
@@ -54,17 +55,11 @@ public:
     ErrCode INTERFACE_FUNC getAvailableDevices(IList** availableDevices) override;
     ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) override;
     ErrCode INTERFACE_FUNC createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config = nullptr) override;
-    ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
-                                                     IString* connectionString,
-                                                     IComponent* parent,
-                                                     IPropertyObject* config,
-                                                     IAuthenticationConfig* authenticationConfig) override;
     ErrCode INTERFACE_FUNC getAvailableFunctionBlockTypes(IDict** functionBlockTypes) override;
     ErrCode INTERFACE_FUNC createFunctionBlock(IFunctionBlock** functionBlock, IString* id, IComponent* parent, IPropertyObject* config = nullptr, IString* localId = nullptr) override;
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                            IString* connectionString,
                                            IPropertyObject* config = nullptr,
-                                           IAuthenticationConfig* authenticationConfig = nullptr,
                                            IString* manufacturer = nullptr,
                                            IString* serialNumber = nullptr) override;
     ErrCode INTERFACE_FUNC getAvailableStreamingTypes(IDict** streamingTypes) override;
@@ -77,12 +72,7 @@ public:
     ErrCode INTERFACE_FUNC getDiscoveryInfo(IDeviceInfo** deviceInfo, IString* manufacturer, IString* serialNumber) override;
 
 private:
-    ErrCode createDeviceInternal(IDevice** device,
-                                 IString* connectionString,
-                                 IComponent* parent,
-                                 IPropertyObject* config,
-                                 bool authenticated,
-                                 IAuthenticationConfig* authenticationConfig);
+    ErrCode createDeviceInternal(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config);
 
     static void PopulateDeviceTypeConfigFromConnStrOptions(PropertyObjectPtr& deviceTypeConfig,
                                                            const tsl::ordered_map<std::string, ObjectPtr<IBaseObject>>& options);

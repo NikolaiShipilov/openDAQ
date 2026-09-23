@@ -41,7 +41,6 @@ extern "C"
     typedef struct daqString daqString;
     typedef struct daqComponent daqComponent;
     typedef struct daqPropertyObject daqPropertyObject;
-    typedef struct daqAuthenticationConfig daqAuthenticationConfig;
     typedef struct daqFunctionBlock daqFunctionBlock;
     typedef struct daqStreaming daqStreaming;
     typedef struct daqServer daqServer;
@@ -53,10 +52,9 @@ extern "C"
     daqErrCode EXPORTED daqModuleManagerUtils_getAvailableDevices(daqModuleManagerUtils* self, daqList** availableDevices);
     daqErrCode EXPORTED daqModuleManagerUtils_getAvailableDeviceTypes(daqModuleManagerUtils* self, daqDict** deviceTypes);
     daqErrCode EXPORTED daqModuleManagerUtils_createDevice(daqModuleManagerUtils* self, daqDevice** device, daqString* connectionString, daqComponent* parent, daqPropertyObject* config);
-    daqErrCode EXPORTED daqModuleManagerUtils_createAuthenticatedDevice(daqModuleManagerUtils* self, daqDevice** device, daqString* connectionString, daqComponent* parent, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig);
     daqErrCode EXPORTED daqModuleManagerUtils_getAvailableFunctionBlockTypes(daqModuleManagerUtils* self, daqDict** functionBlockTypes);
     daqErrCode EXPORTED daqModuleManagerUtils_createFunctionBlock(daqModuleManagerUtils* self, daqFunctionBlock** functionBlock, daqString* id, daqComponent* parent, daqPropertyObject* config, daqString* localId);
-    daqErrCode EXPORTED daqModuleManagerUtils_createStreaming(daqModuleManagerUtils* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig, daqString* manufacturer, daqString* serialNumber);
+    daqErrCode EXPORTED daqModuleManagerUtils_createStreaming(daqModuleManagerUtils* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqString* manufacturer, daqString* serialNumber);
     daqErrCode EXPORTED daqModuleManagerUtils_getAvailableStreamingTypes(daqModuleManagerUtils* self, daqDict** streamingTypes);
     daqErrCode EXPORTED daqModuleManagerUtils_createDefaultAddDeviceConfig(daqModuleManagerUtils* self, daqPropertyObject** defaultConfig);
     daqErrCode EXPORTED daqModuleManagerUtils_createServer(daqModuleManagerUtils* self, daqServer** server, daqString* serverTypeId, daqDevice* rootDevice, daqPropertyObject* serverConfig);

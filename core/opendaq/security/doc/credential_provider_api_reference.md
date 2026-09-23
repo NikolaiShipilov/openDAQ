@@ -1,5 +1,18 @@
 # Credential Provider Framework — API Reference & Authentication Flow
 
+> **Stale pending a doc pass:** `addAuthenticatedDevice`/`createAuthenticatedDevice` and `addStreaming`/`createStreaming`'s
+> `authenticationConfig` parameter, referenced throughout this document, have been removed - only the plain,
+> config-only overloads (`addDevice`/`createDevice`, `addStreaming`/`createStreaming` with no such parameter)
+> remain. As a temporary, hacky bridge until `IAuthenticationConfig` becomes a real part of the add-device config
+> schema, a caller instead stashes the config onto the plain `config` property object under the
+> `"__AuthenticationConfig"` property name (see `AuthenticationConfigConfigKey`/`InjectAuthenticationConfig`/
+> `ExtractAuthenticationConfig` in `core/opendaq/modulemanager/include/opendaq/module_impl.h`, reused by
+> `ModuleManagerImpl`; `GenericDevice`'s reload path and application code each keep their own small local copy of
+> the same key, since sharing it across components isn't worth a public header for what's meant to be temporary).
+> Every code snippet below using `addAuthenticatedDevice`/`createAuthenticatedDevice` needs updating accordingly -
+> see `examples/applications/cpp/credential_providers/credential_providers.cpp`'s `WithAuthenticationConfig` helper
+> for the current, correct pattern in the meantime.
+
 Credentials are modelled by their **format** (`CredentialFormat`: `None`, `KeyValuePairs`, `String`, or `FilePath`) and a **credential descriptor** (`ICredentialDescriptor`) carrying format-specific parameters and a human description. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object built with `AuthenticationConfig(componentType, context)`, listing every method the named component type itself declares supporting (via `IComponentType::getSupportedAuthenticationMethods()`/`getDefaultAuthenticationMethodId()`, set once when the module built the type) as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming`. Passing `context` alongside the type gives the config access to the device's `Context`, so it can also offer registered credential providers as a `"CredentialProviderId"` selection - a live selection that depends on the selected method, re-filtered from `Context` to only the providers currently supporting that method's format every time the selection changes.
 
 ---

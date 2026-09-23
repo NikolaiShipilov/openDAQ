@@ -37,11 +37,6 @@ daqErrCode daqModuleManagerUtils_createDevice(daqModuleManagerUtils* self, daqDe
     return reinterpret_cast<daq::IModuleManagerUtils*>(self)->createDevice(reinterpret_cast<daq::IDevice**>(device), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IComponent*>(parent), reinterpret_cast<daq::IPropertyObject*>(config));
 }
 
-daqErrCode daqModuleManagerUtils_createAuthenticatedDevice(daqModuleManagerUtils* self, daqDevice** device, daqString* connectionString, daqComponent* parent, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig)
-{
-    return reinterpret_cast<daq::IModuleManagerUtils*>(self)->createAuthenticatedDevice(reinterpret_cast<daq::IDevice**>(device), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IComponent*>(parent), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IAuthenticationConfig*>(authenticationConfig));
-}
-
 daqErrCode daqModuleManagerUtils_getAvailableFunctionBlockTypes(daqModuleManagerUtils* self, daqDict** functionBlockTypes)
 {
     return reinterpret_cast<daq::IModuleManagerUtils*>(self)->getAvailableFunctionBlockTypes(reinterpret_cast<daq::IDict**>(functionBlockTypes));
@@ -52,9 +47,9 @@ daqErrCode daqModuleManagerUtils_createFunctionBlock(daqModuleManagerUtils* self
     return reinterpret_cast<daq::IModuleManagerUtils*>(self)->createFunctionBlock(reinterpret_cast<daq::IFunctionBlock**>(functionBlock), reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IComponent*>(parent), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IString*>(localId));
 }
 
-daqErrCode daqModuleManagerUtils_createStreaming(daqModuleManagerUtils* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig, daqString* manufacturer, daqString* serialNumber)
+daqErrCode daqModuleManagerUtils_createStreaming(daqModuleManagerUtils* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqString* manufacturer, daqString* serialNumber)
 {
-    return reinterpret_cast<daq::IModuleManagerUtils*>(self)->createStreaming(reinterpret_cast<daq::IStreaming**>(streaming), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IAuthenticationConfig*>(authenticationConfig), reinterpret_cast<daq::IString*>(manufacturer), reinterpret_cast<daq::IString*>(serialNumber));
+    return reinterpret_cast<daq::IModuleManagerUtils*>(self)->createStreaming(reinterpret_cast<daq::IStreaming**>(streaming), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IString*>(manufacturer), reinterpret_cast<daq::IString*>(serialNumber));
 }
 
 daqErrCode daqModuleManagerUtils_getAvailableStreamingTypes(daqModuleManagerUtils* self, daqDict** streamingTypes)

@@ -42,7 +42,6 @@ extern "C"
     typedef struct daqString daqString;
     typedef struct daqComponent daqComponent;
     typedef struct daqPropertyObject daqPropertyObject;
-    typedef struct daqAuthenticationConfig daqAuthenticationConfig;
     typedef struct daqFunctionBlock daqFunctionBlock;
     typedef struct daqServer daqServer;
     typedef struct daqStreaming daqStreaming;
@@ -56,12 +55,11 @@ extern "C"
     daqErrCode EXPORTED daqModule_getAvailableDevices(daqModule* self, daqList** availableDevices);
     daqErrCode EXPORTED daqModule_getAvailableDeviceTypes(daqModule* self, daqDict** deviceTypes);
     daqErrCode EXPORTED daqModule_createDevice(daqModule* self, daqDevice** device, daqString* connectionString, daqComponent* parent, daqPropertyObject* config);
-    daqErrCode EXPORTED daqModule_createAuthenticatedDevice(daqModule* self, daqDevice** device, daqString* connectionString, daqString* manufacturer, daqString* serialNumber, daqComponent* parent, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig);
     daqErrCode EXPORTED daqModule_getAvailableFunctionBlockTypes(daqModule* self, daqDict** functionBlockTypes);
     daqErrCode EXPORTED daqModule_createFunctionBlock(daqModule* self, daqFunctionBlock** functionBlock, daqString* id, daqComponent* parent, daqString* localId, daqPropertyObject* config);
     daqErrCode EXPORTED daqModule_getAvailableServerTypes(daqModule* self, daqDict** serverTypes);
     daqErrCode EXPORTED daqModule_createServer(daqModule* self, daqServer** server, daqString* serverTypeId, daqDevice* rootDevice, daqPropertyObject* config);
-    daqErrCode EXPORTED daqModule_createStreaming(daqModule* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig, daqString* manufacturer, daqString* serialNumber);
+    daqErrCode EXPORTED daqModule_createStreaming(daqModule* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqString* manufacturer, daqString* serialNumber);
     daqErrCode EXPORTED daqModule_completeServerCapability(daqModule* self, daqBool* succeeded, daqServerCapability* source, daqServerCapabilityConfig* target);
     daqErrCode EXPORTED daqModule_getAvailableStreamingTypes(daqModule* self, daqDict** streamingTypes);
     daqErrCode EXPORTED daqModule_loadLicense(daqModule* self, daqBool* succeeded, daqDict* licenseConfig);

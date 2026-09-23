@@ -1,5 +1,13 @@
 # Credential Provider Framework — Usage Scenarios
 
+> **Stale pending a doc pass:** `addAuthenticatedDevice`, referenced throughout the scenarios below, has been
+> removed - only the plain, config-only `addDevice`/`addStreaming` remain. A caller instead stashes the
+> `IAuthenticationConfig` onto the plain `config` property object under the `"__AuthenticationConfig"` property
+> name, temporarily, until `IAuthenticationConfig` becomes a real part of the add-device config schema. See
+> `examples/applications/cpp/credential_providers/credential_providers.cpp`'s `WithAuthenticationConfig` helper
+> for the current, correct pattern; every `addAuthenticatedDevice(...)` call below should be read as
+> `addDevice(connectionString, WithAuthenticationConfig(authConfig))` instead.
+
 A backlog of user stories and use-case scenarios for exercising `AuthenticationConfig(componentType, context)`, `addAuthenticatedDevice`/`addStreaming`, and the credential provider framework end to end - meant to drive example/test implementations that verify the API is actually usable, not just that individual methods return the right type. Each scenario names the concrete API calls and expected outcome (return value, exception, or observable side effect) so it can be implemented directly, ideally against `credential_demo_module` the way `credential_providers.cpp` already does.
 
 Persona used throughout: **an application developer** integrating openDAQ's credential framework into a client app or tool - deciding whether/how to offer authenticated connections to their users.

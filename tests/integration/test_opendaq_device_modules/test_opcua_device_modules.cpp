@@ -1672,17 +1672,6 @@ public:
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER);
     }
 
-    daq::ErrCode INTERFACE_FUNC createAuthenticatedDevice(daq::IDevice**,
-                                                          daq::IString*,
-                                                          daq::IString*,
-                                                          daq::IString*,
-                                                          daq::IComponent*,
-                                                          daq::IPropertyObject*,
-                                                          daq::IAuthenticationConfig*) override
-    {
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
-    }
-
     daq::ErrCode INTERFACE_FUNC getAvailableFunctionBlockTypes(daq::IDict**) override
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
@@ -1699,7 +1688,7 @@ public:
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }
-    daq::ErrCode INTERFACE_FUNC createStreaming(daq::IStreaming**, daq::IString*, daq::IPropertyObject*, daq::IAuthenticationConfig*, daq::IString*, daq::IString*) override
+    daq::ErrCode INTERFACE_FUNC createStreaming(daq::IStreaming**, daq::IString*, daq::IPropertyObject*, daq::IString*, daq::IString*) override
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }

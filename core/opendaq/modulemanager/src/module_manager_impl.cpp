@@ -38,6 +38,7 @@
 #include <opendaq/credential_descriptor_ptr.h>
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/authentication_config_factory.h>
+#include <opendaq/module_impl.h>
 #include <coretypes/dictobject_factory.h>
 
 #include <opendaq/thread_name.h>
@@ -779,25 +780,34 @@ ErrCode ModuleManagerImpl::getAvailableDeviceTypes(IDict** deviceTypes)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
-                                                IString* connectionString,
-                                                IComponent* parent,
-                                                IPropertyObject* config,
-                                                bool authenticated,
-                                                IAuthenticationConfig* authenticationConfig)
+ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
     OPENDAQ_PARAM_NOT_NULL(device);
     *device = nullptr;
 
     PropertyObjectPtr inputConfig = PropertyObjectPtr::Borrow(config);
+    // Temporary bridge (see `ExtractAuthenticationConfig`): a caller that wants an authenticated connection
+    // smuggles an `IAuthenticationConfig` onto the top-level `config` it passes in, rather than a dedicated
+    // parameter - the now-removed `createAuthenticatedDevice` used to take one instead.
+    const AuthenticationConfigPtr authenticationConfig = ExtractAuthenticationConfig(inputConfig);
+    const bool authenticated = authenticationConfig.assigned();
     const ErrCode errCode = daqTry([&]()
     {
         PropertyObjectPtr addDeviceConfig;
         const bool inputIsDefaultAddDeviceConfig = IsDefaultAddDeviceConfig(inputConfig);
 
         if (inputIsDefaultAddDeviceConfig)
+        {
             OPENDAQ_RETURN_IF_FAILED(inputConfig.asPtr<IPropertyObjectInternal>(true)->clone(&addDeviceConfig));
+            // `addDeviceConfig` (unlike `inputConfig`/`deviceTypeConfig` below) is persisted verbatim onto the
+            // created device (`componentPrivate.setComponentConfig`, further down) and so gets serialized on
+            // save - the smuggled auth config (see `ExtractAuthenticationConfig`) can't survive that (it's not
+            // meant to be persisted this way at all - see `IComponentPrivate::setAuthenticationConfig`, the
+            // real persistence path for it) and must not ride along into this clone.
+            if (addDeviceConfig.hasProperty(AuthenticationConfigConfigKey))
+                addDeviceConfig.removeProperty(AuthenticationConfigConfigKey);
+        }
         else
             OPENDAQ_RETURN_IF_FAILED(createDefaultAddDeviceConfig(&addDeviceConfig));
 
@@ -869,20 +879,32 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
             // copy props from input config and connection string to device type config
             const auto deviceTypeConfig = PopulateDeviceTypeConfig(addDeviceConfig, inputConfig, deviceType, connectionStringOptions);
 
-            ErrCode err;
+            // `deviceTypeConfig` is freshly built from the device type's own default config shape (above) - the
+            // authentication config smuggled onto `inputConfig` doesn't survive that unless re-injected here, so
+            // `Module::createDevice`'s own `ExtractAuthenticationConfig` can find it (see that helper).
             if (authenticated)
+                InjectAuthenticationConfig(deviceTypeConfig, authenticationConfig);
+
+            ErrCode err = library.module->createDevice(device, connectionStringPtr, parent, deviceTypeConfig);
+
+            // The module has read whatever it needed from `deviceTypeConfig` above - strip the smuggled auth
+            // config again now, before `addDeviceConfig` (which embeds this same `deviceTypeConfig` under
+            // "Device") gets persisted onto the device below and so serialized on save. See the identical
+            // concern where `addDeviceConfig` is cloned from `inputConfig`, above. Best-effort: some modules
+            // may freeze the config they were given, in which case there's nothing more to do about it here -
+            // it's the module's own copy, not the one embedded in `addDeviceConfig`/persisted, if it cloned it.
+            if (authenticated && deviceTypeConfig.hasProperty(AuthenticationConfigConfigKey))
             {
-                // The manufacturer/serial number are only known when the device was resolved from a smart connection string; otherwise
-                // they are left unset and it is up to the module / credential manager to identify the device from the connection string alone.
-                const StringPtr manufacturer = (useSmartConnection && discoveredDeviceInfo.assigned()) ? discoveredDeviceInfo.getManufacturer() : nullptr;
-                const StringPtr serialNumber = (useSmartConnection && discoveredDeviceInfo.assigned()) ? discoveredDeviceInfo.getSerialNumber() : nullptr;
-                err = library.module->createAuthenticatedDevice(
-                    device, connectionStringPtr, manufacturer, serialNumber, parent, deviceTypeConfig, authenticationConfig);
+                try
+                {
+                    deviceTypeConfig.removeProperty(AuthenticationConfigConfigKey);
+                }
+                catch (const std::exception& e)
+                {
+                    LOG_W("Failed to strip smuggled authentication config from device type config: {}", e.what())
+                }
             }
-            else
-            {
-                err = library.module->createDevice(device, connectionStringPtr, parent, deviceTypeConfig);
-            }
+
             OPENDAQ_RETURN_IF_FAILED(err);
 
             const auto devicePtr = DevicePtr::Borrow(*device);
@@ -921,16 +943,7 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device,
 
 ErrCode ModuleManagerImpl::createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config)
 {
-    return createDeviceInternal(device, connectionString, parent, config, false, nullptr);
-}
-
-ErrCode ModuleManagerImpl::createAuthenticatedDevice(IDevice** device,
-                                                     IString* connectionString,
-                                                     IComponent* parent,
-                                                     IPropertyObject* config,
-                                                     IAuthenticationConfig* authenticationConfig)
-{
-    return createDeviceInternal(device, connectionString, parent, config, true, authenticationConfig);
+    return createDeviceInternal(device, connectionString, parent, config);
 }
 
 ErrCode ModuleManagerImpl::createDevices(IDict** devices, IDict* connectionArgs, IComponent* parent, IDict* errCodes, IDict* errorInfos)
@@ -1235,12 +1248,16 @@ ErrCode ModuleManagerImpl::createFunctionBlock(IFunctionBlock** functionBlock, I
 ErrCode ModuleManagerImpl::createStreaming(IStreaming** streaming,
                                            IString* connectionString,
                                            IPropertyObject* config,
-                                           IAuthenticationConfig* authenticationConfig,
                                            IString* manufacturer,
                                            IString* serialNumber)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
     OPENDAQ_PARAM_NOT_NULL(streaming);
+
+    // Temporary bridge (see `ExtractAuthenticationConfig`): a caller that wants an authenticated connection
+    // smuggles an `IAuthenticationConfig` onto `config`, rather than a dedicated parameter - the now-removed
+    // `authenticationConfig` parameter used to carry it instead.
+    const AuthenticationConfigPtr authenticationConfig = ExtractAuthenticationConfig(PropertyObjectPtr::Borrow(config));
 
     StreamingPtr streamingPtr;
     const ErrCode errCode = wrapHandlerReturn(
@@ -1654,9 +1671,19 @@ StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionStr
             streamingTypeConfig = inputConfig;
         }
 
+        // `streamingTypeConfig` is a fresh config subset (above) - the authentication config smuggled onto the
+        // original `config` doesn't survive that unless re-injected here, so `Module::createStreaming`'s own
+        // `ExtractAuthenticationConfig` can find it (see that helper).
+        if (authenticationConfig.assigned())
+        {
+            if (!streamingTypeConfig.assigned())
+                streamingTypeConfig = PropertyObject();
+            InjectAuthenticationConfig(streamingTypeConfig, authenticationConfig);
+        }
+
         try
         {
-            streaming = module.createStreaming(connectionString, streamingTypeConfig, authenticationConfig, manufacturer, serialNumber);
+            streaming = module.createStreaming(connectionString, streamingTypeConfig, manufacturer, serialNumber);
         }
         catch ([[maybe_unused]] const std::exception& e)
         {

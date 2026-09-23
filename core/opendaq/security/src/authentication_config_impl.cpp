@@ -328,9 +328,14 @@ ErrCode AuthenticationConfigImpl::serialize(ISerializer* serializer)
         serializer->startTaggedObject(this);
         serializer->key(TypeIdSerializedKey);
         serializer->writeString(typeId.getCharPtr(), typeId.getLength());
+        // Written as a plain JSON array, not via `IList::serialize()` directly - for the JSON serializer's
+        // version (3), that self-wraps as a tagged object (`{"__type":"List","values":[...]}`), which
+        // `Deserialize`'s `readList()` call below can't read back (it requires a literal array).
         serializer->key(CredentialDescriptorsSerializedKey);
-        const auto serializableDescriptors = credentialDescriptors.asPtr<ISerializable>(true);
-        checkErrorInfo(serializableDescriptors->serialize(serializer));
+        serializer->startList();
+        for (const auto& descriptor : credentialDescriptors)
+            checkErrorInfo(descriptor.asPtr<ISerializable>(true)->serialize(serializer));
+        serializer->endList();
         serializer->key(AuthenticationMethodIdSerializedKey);
         serializer->writeString(authenticationMethodId.getCharPtr(), authenticationMethodId.getLength());
 
