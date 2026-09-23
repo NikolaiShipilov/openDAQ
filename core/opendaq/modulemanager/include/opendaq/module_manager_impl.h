@@ -68,7 +68,6 @@ public:
                                            IString* manufacturer = nullptr,
                                            IString* serialNumber = nullptr) override;
     ErrCode INTERFACE_FUNC getAvailableStreamingTypes(IDict** streamingTypes) override;
-    ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) override;
     ErrCode INTERFACE_FUNC createDefaultAddDeviceConfig(IPropertyObject** defaultConfig) override;
     ErrCode INTERFACE_FUNC createServer(IServer** server, IString* serverTypeId, IDevice* rootDevice, IPropertyObject* serverConfig = nullptr) override;
     ErrCode INTERFACE_FUNC changeIpConfig(IString* iface, IString* manufacturer, IString* serialNumber, IPropertyObject* config) override;

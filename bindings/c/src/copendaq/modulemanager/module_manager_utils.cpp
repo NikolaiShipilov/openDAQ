@@ -96,8 +96,3 @@ daqErrCode daqModuleManagerUtils_getDiscoveryInfo(daqModuleManagerUtils* self, d
 {
     return reinterpret_cast<daq::IModuleManagerUtils*>(self)->getDiscoveryInfo(reinterpret_cast<daq::IDeviceInfo**>(deviceInfo), reinterpret_cast<daq::IString*>(manufacturer), reinterpret_cast<daq::IString*>(serialNumber));
 }
-
-daqErrCode daqModuleManagerUtils_createDefaultAuthenticationConfig(daqModuleManagerUtils* self, daqString* typeId, daqAuthenticationConfig** authenticationConfig)
-{
-    return reinterpret_cast<daq::IModuleManagerUtils*>(self)->createDefaultAuthenticationConfig(reinterpret_cast<daq::IString*>(typeId), reinterpret_cast<daq::IAuthenticationConfig**>(authenticationConfig));
-}

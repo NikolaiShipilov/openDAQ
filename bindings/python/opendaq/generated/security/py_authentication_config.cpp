@@ -45,6 +45,11 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         return daq::AuthenticationConfig_Create(getVariantValue<daq::IDict*>(credentialDescriptors), getVariantValue<daq::IString*>(defaultAuthenticationMethodId), context, getVariantValue<daq::IString*>(typeId));
     }, py::arg("credential_descriptors"), py::arg("default_authentication_method_id"), py::arg("context"), py::arg("type_id"));
 
+    m.def("AuthenticationConfig", [](daq::IComponentType* componentType, daq::IContext* context){
+        return daq::AuthenticationConfig(componentType, context).detach();
+    }, py::arg("component_type"), py::arg("context"),
+    "Builds an authentication config for `component_type`, out of its own supported authentication methods and default authentication method id - the recommended way to build a config for a live device/streaming type.");
+
     cls.def_property_readonly("authentication_method_id",
         [](daq::IAuthenticationConfig *object)
         {

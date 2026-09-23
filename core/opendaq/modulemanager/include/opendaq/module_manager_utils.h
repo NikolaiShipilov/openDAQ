@@ -233,14 +233,6 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
      * This method searches through the available devices discovered during the last scan.
      */
     virtual ErrCode INTERFACE_FUNC getDiscoveryInfo(IDeviceInfo** deviceInfo, IString* manufacturer, IString* serialNumber) = 0;
-
-    /*!
-     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`.
-     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
-     * @param[out] authenticationConfig The built authentication config.
-     * @retval OPENDAQ_ERR_NOTFOUND if `typeId` names neither an available device type nor an available streaming type.
-     */
-    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
 };
 /*!@}*/
 

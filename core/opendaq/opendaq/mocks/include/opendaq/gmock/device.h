@@ -35,7 +35,6 @@ struct MockDevice : MockGenericSignalContainer<MockDevice, IDevice>
     MOCK_METHOD(ErrCode, getDevices, (IList**, ISearchFilter*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, getAvailableDevices, (IList**), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, getAvailableDeviceTypes, (IDict**), (override MOCK_CALL));
-    MOCK_METHOD(ErrCode, createDefaultAuthenticationConfig, (IString*, IAuthenticationConfig**), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, addDevice, (IDevice**, IString*, IPropertyObject*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, addAuthenticatedDevice, (IDevice**, IString*, IPropertyObject*, IAuthenticationConfig*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, addDevices, (IDict**, IDict*, IDict*, IDict*), (override MOCK_CALL));

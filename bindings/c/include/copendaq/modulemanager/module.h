@@ -67,7 +67,6 @@ extern "C"
     daqErrCode EXPORTED daqModule_loadLicense(daqModule* self, daqBool* succeeded, daqDict* licenseConfig);
     daqErrCode EXPORTED daqModule_getLicenseConfig(daqModule* self, daqDict** licenseConfig);
     daqErrCode EXPORTED daqModule_licenseLoaded(daqModule* self, daqBool* loaded);
-    daqErrCode EXPORTED daqModule_createDefaultAuthenticationConfig(daqModule* self, daqString* typeId, daqAuthenticationConfig** authenticationConfig);
 
 #ifdef __cplusplus
 }

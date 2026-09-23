@@ -1,5 +1,4 @@
 #include <opendaq/authentication_config_impl.h>
-#include <opendaq/authentication_config_factory.h>
 #include <opendaq/component_deserialize_context_ptr.h>
 #include <opendaq/component_update_context_ptr.h>
 #include <opendaq/credential_provider_ptr.h>
@@ -9,6 +8,7 @@
 #include <coretypes/stringobject_factory.h>
 #include <coretypes/serialized_object_ptr.h>
 #include <coretypes/ctutils.h>
+#include <opendaq/authentication_config_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -330,7 +330,8 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
                                  savedAuthenticationMethodId,
                                  savedTypeId);
 
-        AuthenticationConfigPtr authConfig = AuthenticationConfig(credentialDescriptors, savedAuthenticationMethodId, daqContext, savedTypeId);
+        AuthenticationConfigPtr authConfig =
+            createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>(credentialDescriptors, savedAuthenticationMethodId, daqContext, savedTypeId);
 
         if (serializedObj.hasKey(ProviderIdSerializedKey) && authConfig.hasProperty(CredentialProviderIdPropertyName))
         {

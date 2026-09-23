@@ -90,7 +90,6 @@ extern "C"
     daqErrCode EXPORTED daqDevice_setOperationMode(daqDevice* self, daqOperationModeType modeType);
     daqErrCode EXPORTED daqDevice_setOperationModeRecursive(daqDevice* self, daqOperationModeType modeType);
     daqErrCode EXPORTED daqDevice_addDevices(daqDevice* self, daqDict** devices, daqDict* connectionArgs, daqDict* errCodes, daqDict* errorInfos);
-    daqErrCode EXPORTED daqDevice_createDefaultAuthenticationConfig(daqDevice* self, daqString* typeId, daqAuthenticationConfig** authenticationConfig);
     daqErrCode EXPORTED daqDevice_addAuthenticatedDevice(daqDevice* self, daqDevice** device, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig);
 
 #ifdef __cplusplus

@@ -96,8 +96,3 @@ daqErrCode daqModule_licenseLoaded(daqModule* self, daqBool* loaded)
 {
     return reinterpret_cast<daq::IModule*>(self)->licenseLoaded(loaded);
 }
-
-daqErrCode daqModule_createDefaultAuthenticationConfig(daqModule* self, daqString* typeId, daqAuthenticationConfig** authenticationConfig)
-{
-    return reinterpret_cast<daq::IModule*>(self)->createDefaultAuthenticationConfig(reinterpret_cast<daq::IString*>(typeId), reinterpret_cast<daq::IAuthenticationConfig**>(authenticationConfig));
-}

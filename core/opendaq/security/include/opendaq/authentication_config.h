@@ -54,7 +54,7 @@ BEGIN_NAMESPACE_OPENDAQ
  * object also implements.
  *
  * Serialization is fully custom, not the generic `IPropertyObject` mechanism: the component type id (as
- * passed by `IDevice::createDefaultAuthenticationConfig`), every `"AuthenticationMethod"` candidate credential
+ * passed to `AuthenticationConfig`), every `"AuthenticationMethod"` candidate credential
  * descriptor, the selected one's authentication method id, and - when present - the selected
  * `"CredentialProviderId"` are written. `"SuppliedSecret"` (a secret) is never serialized. Deserializing
  * rebuilds the config directly from the saved descriptors and method id, resolving only a `Context` (to
@@ -104,13 +104,17 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
  *
  * A config that only ever supports one method is simply the one-entry case of this: pass a
  * `credentialDescriptors` dict with a single key/value pair.
+ *
+ * This is the lower-level overload, for building a config with no live `IComponentType` object at hand
+ * (e.g. deserialization). To build one for an actual device/streaming type, prefer the
+ * `AuthenticationConfig(componentType, context)` overload (see `authentication_config_factory.h`), which
+ * reads `credentialDescriptors`/`defaultAuthenticationMethodId`/`typeId` straight off the type itself.
  * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
  * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
  * @param typeId The id of the component type this config was built for - carried through serialization so a
  * reload can re-resolve `credentialDescriptors`/`context` fresh (see `IAuthenticationConfig`'s serialization
- * notes) - required, no default; pass `nullptr` explicitly for a config with no type behind it (e.g. one
- * built for its own sake, not via `IDevice::createDefaultAuthenticationConfig`), which then cannot
- * meaningfully round-trip through save/reload.
+ * notes) - required, no default; pass `nullptr` explicitly for a config with no type behind it, which then
+ * cannot meaningfully round-trip through save/reload.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,

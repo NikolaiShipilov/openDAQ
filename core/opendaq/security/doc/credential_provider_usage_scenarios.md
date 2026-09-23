@@ -1,6 +1,6 @@
 # Credential Provider Framework — Usage Scenarios
 
-A backlog of user stories and use-case scenarios for exercising `IDevice::createDefaultAuthenticationConfig`, `addAuthenticatedDevice`/`addStreaming`, and the credential provider framework end to end - meant to drive example/test implementations that verify the API is actually usable, not just that individual methods return the right type. Each scenario names the concrete API calls and expected outcome (return value, exception, or observable side effect) so it can be implemented directly, ideally against `credential_demo_module` the way `credential_providers.cpp` already does.
+A backlog of user stories and use-case scenarios for exercising `AuthenticationConfig(componentType, context)`, `addAuthenticatedDevice`/`addStreaming`, and the credential provider framework end to end - meant to drive example/test implementations that verify the API is actually usable, not just that individual methods return the right type. Each scenario names the concrete API calls and expected outcome (return value, exception, or observable side effect) so it can be implemented directly, ideally against `credential_demo_module` the way `credential_providers.cpp` already does.
 
 Persona used throughout: **an application developer** integrating openDAQ's credential framework into a client app or tool - deciding whether/how to offer authenticated connections to their users.
 
@@ -15,15 +15,18 @@ Before ever prompting a user or attempting a connection, an application needs to
 As an application developer, I want to check whether a given device/streaming type supports authentication, so I can decide whether to offer an "authenticated connect" option in my UI at all.
 
 - **Given** a type id whose module declares supported authentication descriptors and a default one for it (e.g. `"CredentialDemoDevice"`)
-  **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
+  **When** I call `AuthenticationConfig(componentType, instance.getContext())`
   **Then** it succeeds and returns a config whose `"AuthenticationMethod"` selection has at least one candidate.
-- **Given** a type id whose module explicitly overrides both authentication hooks to declare no authentication
-  support for it at all (the base `Module` implementation instead offers the standard `"Anonymous"` method,
-  requiring no credentials, by default for every device/streaming type a module declares)
-  **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
-  **Then** it fails with `OPENDAQ_ERR_NOT_SUPPORTED` - not a crash, not an empty-but-successful config.
+- **Given** a type whose module never called `setSupportedAuthenticationMethods`/`setDefaultAuthenticationMethodId`
+  on its `IComponentTypeBuilder` (so it carries only the standard `"Anonymous"` method - no credentials required)
+  **When** I call `AuthenticationConfig(componentType, instance.getContext())`
+  **Then** it still succeeds, returning a config whose only `"AuthenticationMethod"` candidate is `"Anonymous"` -
+  there is no longer a way for a type to declare "no authentication support at all"; every type supports at
+  least `"Anonymous"`. Distinguishing "genuinely richer auth support" from "Anonymous-only" is a matter of
+  inspecting the candidates/format, not of the call failing (see `ModuleManagerImpl::createDeviceInternal`'s
+  own such check for a worked example).
 - **Given** a type id that names neither an available device type nor an available streaming type
-  **When** I call `instance.createDefaultAuthenticationConfig(typeId)`
+  **When** I call `AuthenticationConfig(componentType, instance.getContext())`
   **Then** it fails with `OPENDAQ_ERR_NOTFOUND`, distinguishable from the "not supported" case above (a developer needs to tell "unknown type" from "known type, no auth" apart - e.g. to detect a typo in `typeId` vs. correctly reporting "no auth available" to a user).
 - **Given** the plain, anonymous path is what's wanted instead
   **When** I call `instance.addDevice(connectionString)` on a type that doesn't support authentication (or one that does, but I chose not to authenticate)
@@ -34,7 +37,7 @@ As an application developer, I want to check whether a given device/streaming ty
 As an application developer, I want to know not just whether a type *supports* authentication, but whether I can actually *complete* it with the providers currently registered on my instance - these are different questions, and the API doesn't collapse them into one boolean.
 
 - **Given** a type supporting only a `String`-format method (e.g. `"Pin"`), and only a `FileCredentialProvider` (FilePath-only) registered
-  **When** I call `instance.createDefaultAuthenticationConfig(typeId)` and check `hasProperty("CredentialProviderId")`
+  **When** I call `AuthenticationConfig(componentType, instance.getContext())` and check `hasProperty("CredentialProviderId")`
   **Then** its absence tells me, entirely client-side and without attempting a connection, that authentication would fail before ever calling `addAuthenticatedDevice` - `"CredentialProviderId"`'s live, format-filtered candidates (see the API reference, §1) already reflect the answer for whichever `"AuthenticationMethod"` is currently selected, with no separate cross-reference of `context.getCredentialProviders()` against the type's descriptors needed. For a *non-default* method, select it first (`SelectAuthenticationMethod`, §7) and re-check `hasProperty` - the live dependency between the two properties recomputes it for whatever is currently selected, not just the default.
 - **Given** zero credential providers registered on the instance at all
   **When** I build the default config and call `addAuthenticatedDevice`
@@ -42,10 +45,10 @@ As an application developer, I want to know not just whether a type *supports* a
 
 ### 1.3 — Feasibility for a device deeper in the tree, not just the root
 
-As an application developer working with nested topologies, I want `createDefaultAuthenticationConfig` to work the same way when called on a sub-device, not only on the root instance.
+As an application developer working with nested topologies, I want `AuthenticationConfig(componentType, context)` to work the same way when given a sub-device's own `Context`, not only the root instance's.
 
 - **Given** a device tree where an intermediate `IDevice` (not `Instance` itself) exposes `typeId` via its own `getAvailableDeviceTypes()`/`getAvailableStreamingTypes()`
-  **When** I call `subDevice.createDefaultAuthenticationConfig(typeId)` directly on that sub-device rather than on `instance`
+  **When** I call `AuthenticationConfig(componentType, subDevice.getContext())` directly using that sub-device's own `Context` rather than the root instance's
   **Then** it resolves and builds a config identically to calling it on the root - since `Instance` is a pure forwarder to `rootDevice`, and any `IDevice` implements this the same way via `GenericDevice`. Worth one explicit example beyond the always-root-instance calls in `credential_providers.cpp` today, to confirm the "parent device" framing (not "root device") actually holds.
 
 ---
@@ -59,7 +62,7 @@ The user's original bullets, filled in.
 As an application developer, I want the simplest possible path to work: get the default config, hand it straight to `addAuthenticatedDevice` with no changes, and have it succeed when the user enters correct credentials.
 
 - **Given** a `CmdLineCredentialProvider` (or equivalent, supporting the default method's format) registered on the instance
-  **And** `authConfig = instance.createDefaultAuthenticationConfig(typeId)` used as-is (default `"AuthenticationMethod"` selection, default `"CredentialProviderId"` selection - see the gotcha in §4.1 below)
+  **And** `authConfig = AuthenticationConfig(componentType, instance.getContext())` used as-is (default `"AuthenticationMethod"` selection, default `"CredentialProviderId"` selection - see the gotcha in §4.1 below)
   **When** I call `instance.addAuthenticatedDevice(connectionString, nullptr, authConfig)` and supply correct credentials at the prompt
   **Then** the device is added, `device.getInfo()` is queryable, and `device.getAvailableDeviceTypes()`/other calls on it work normally.
 
@@ -81,7 +84,7 @@ As an application developer, I want the simplest possible path to work: get the 
 
 ### 3.1 — Correct supplied secret, provider registered and explicitly named
 
-- **Given** `authConfig = instance.createDefaultAuthenticationConfig(typeId)` with the desired `"AuthenticationMethod"` selected (`SelectAuthenticationMethod`), `"CredentialProviderId"` explicitly set to `providerId`, and `"SuppliedSecret"` set to a correctly-shaped, correct `secret`
+- **Given** `authConfig = AuthenticationConfig(componentType, instance.getContext())` with the desired `"AuthenticationMethod"` selected (`SelectAuthenticationMethod`), `"CredentialProviderId"` explicitly set to `providerId`, and `"SuppliedSecret"` set to a correctly-shaped, correct `secret`
   **When** I call `addAuthenticatedDevice`
   **Then** authentication succeeds with **no interactive prompt at all** (verify via a non-interactive/scripted run - if the harness would hang on stdin, that's a bug or a wrong assumption about this path), and the named provider's `cacheCredentials(request, secret)` is invoked - confirmed indirectly by then making a *second*, separate connection attempt (same manufacturer/serial or canonical connection string) using only `requestCredentials` (no supplied secret) and observing it also completes without a prompt.
 
@@ -117,7 +120,7 @@ As an application developer, I want the unmodified default config to just work: 
 
 - **Given** two providers registered, `FileCredentialProvider` (FilePath-only) registered before `CmdLineCredentialProvider` (all formats)
   **And** the type's default method is `KeyValuePairs` or `String` (not `FilePath`)
-  **When** I use `instance.createDefaultAuthenticationConfig(typeId)` completely unmodified and call `addAuthenticatedDevice`
+  **When** I use `AuthenticationConfig(componentType, instance.getContext())` completely unmodified and call `addAuthenticatedDevice`
   **Then** it succeeds - `"CredentialProviderId"` defaulted to `CmdLineCredentialProvider` (the only one supporting the default method's format), not `FileCredentialProvider` just because it happened to register first. Worth keeping as a standing regression guard for this exact registration order, since a provider selection that ignores format compatibility would silently pick the wrong one here.
 
 ### 4.2 — Selecting a non-default method live-refilters the provider candidates
@@ -199,7 +202,7 @@ As an application developer relying on `PrioritizedStreamingProtocols`/`Automati
 
 ## 7. Save & load
 
-The user's last bullet, filled in with the fully custom persistence model: `AuthenticationConfigImpl`'s own `serialize()` writes the component type id, the selected method id, and - when present - the selected `"CredentialProviderId"`; `"SuppliedSecret"` is never written. Reload re-resolves the type against the *new* instance's `Context` and rebuilds `"CredentialProviderId"` exactly as a brand-new `createDefaultAuthenticationConfig` call would - live-filtered by the saved method's format - then restores the saved provider id as the selection only if it's still among those live candidates; otherwise it falls back to the same default (first compatible provider) a brand-new call would use.
+The user's last bullet, filled in with the fully custom persistence model: `AuthenticationConfigImpl`'s own `serialize()` writes the component type id, every candidate credential descriptor, the selected method id, and - when present - the selected `"CredentialProviderId"`; `"SuppliedSecret"` is never written. Reload rebuilds the config directly from the saved descriptors and method id - it never re-consults the module/type registry - resolving only the *new* instance's `Context` to live-filter `"CredentialProviderId"`'s candidates, then restores the saved provider id as the selection only if it's still among those live candidates; otherwise it falls back to the same default (first compatible provider) a brand-new `AuthenticationConfig(componentType, context)` call would use.
 
 ### 7.1 — Reload with the same provider registered restores that selection
 
@@ -211,7 +214,7 @@ The user's last bullet, filled in with the fully custom persistence model: `Auth
 
 - **Given** the same saved configuration (originally authenticated through provider B)
   **When** a new instance registers only a *different*, format-compatible provider C - B itself not registered - then calls `loadConfiguration(savedConfiguration)`
-  **Then** the device reconnects through provider C without issue - confirming that when the saved provider id isn't among the live candidates, reload falls back to the same default a brand-new `createDefaultAuthenticationConfig` call would use, rather than failing. Re-authenticates from scratch through the normal `requestCredentials` path - prompting again unless C happens to have something cached for this context (§5.1).
+  **Then** the device reconnects through provider C without issue - confirming that when the saved provider id isn't among the live candidates, reload falls back to the same default a brand-new `AuthenticationConfig(componentType, context)` call would use, rather than failing. Re-authenticates from scratch through the normal `requestCredentials` path - prompting again unless C happens to have something cached for this context (§5.1).
 
 ### 7.3 — Reload with no compatible provider registered
 
@@ -235,7 +238,7 @@ The user's last bullet, filled in with the fully custom persistence model: `Auth
 
 ## 8. Boundary & negative checks worth having somewhere, even briefly
 
-- Calling `createDefaultAuthenticationConfig` with a `typeId` that's valid but for a component sort with no notion of authentication at all (e.g. a function block type, if one is ever passed) - confirm it's treated the same as "unsupported" (`OPENDAQ_ERR_NOT_SUPPORTED`) rather than something type-confused.
+- Calling `AuthenticationConfig(componentType, context)` with a component type of a sort that doesn't carry authentication data at all (Server/FunctionBlock types - only Device/Streaming types do) - confirm the current behavior: `getSupportedAuthenticationMethods()`/`getDefaultAuthenticationMethodId()` still return the internal `"Anonymous"`-only default for these (set once by `GenericComponentTypeImpl`, just never exposed as a Struct field), so the call succeeds with an Anonymous-only config rather than failing - worth confirming this is the intended behavior, not an oversight.
 - Calling `addAuthenticatedDevice` with `authenticationConfig = nullptr` against a type that supports authentication - confirm this is rejected clearly (`AuthenticationFailedException`, from `Module::requestCredentials`'s own check, before a module's `onCreateAuthenticatedDevice` is ever invoked), distinct from silently falling back to the anonymous path.
 - Two authentication attempts to the *same* connection string in quick succession without an intervening `removeDevice` (e.g. accidental double-click in a UI) - confirm the second attempt's failure/success mode is well-defined rather than racing the first.
 

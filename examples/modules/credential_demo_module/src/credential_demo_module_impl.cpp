@@ -23,12 +23,12 @@ CredentialDemoModule::CredentialDemoModule(const ContextPtr& context)
 ListPtr<IDeviceInfo> CredentialDemoModule::onGetAvailableDevices()
 {
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
-    return { CredentialDemoDeviceImpl::CreateDeviceInfo(options) };
+    return { CredentialDemoDeviceImpl::CreateDeviceInfo(options, context) };
 }
 
 DictPtr<IString, IDeviceType> CredentialDemoModule::onGetAvailableDeviceTypes()
 {
-    auto deviceType = CredentialDemoDeviceImpl::CreateType();
+    auto deviceType = CredentialDemoDeviceImpl::CreateType(context);
     return Dict<IString, IBaseObject>({{deviceType.getId(), deviceType}});
 }
 
@@ -37,7 +37,7 @@ DevicePtr CredentialDemoModule::onCreateDevice(const StringPtr& connectionString
                                                const PropertyObjectPtr& config)
 {
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
-    auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
+    auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options, context);
     CredentialDemoDeviceImpl::ValidateConnectionString(connectionString);
 
     // The plain, non-authenticated path doesn't request credentials - the device is "connected" to anonymously.
@@ -51,11 +51,11 @@ StringPtr CredentialDemoModule::onGetCanonicalConnectionString(const StringPtr& 
     // in the first place: each type has exactly one, fixed, non-parameterized address.
     const std::string connStr = connectionString;
 
-    const std::string devicePrefix = CredentialDemoDeviceImpl::CreateType().getConnectionStringPrefix().toStdString() + "://";
+    const std::string devicePrefix = std::string(CredentialDemoDeviceImpl::Prefix) + "://";
     if (connStr.rfind(devicePrefix, 0) == 0)
         return String(connStr.substr(devicePrefix.size()));
 
-    const std::string streamingPrefix = CredentialDemoStreamingImpl::CreateType().getConnectionStringPrefix().toStdString() + "://";
+    const std::string streamingPrefix = std::string(CredentialDemoStreamingImpl::Prefix) + "://";
     if (connStr.rfind(streamingPrefix, 0) == 0)
         return String(connStr.substr(streamingPrefix.size()));
 
@@ -69,7 +69,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
                                                             const PropertyObjectPtr& credentials)
 {
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
-    auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options);
+    auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options, context);
     CredentialDemoDeviceImpl::ValidateConnectionString(connectionString);
 
     // The device is never connected to anonymously via this path, only ever authenticated with the given
@@ -80,7 +80,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
 
 DictPtr<IString, IStreamingType> CredentialDemoModule::onGetAvailableStreamingTypes()
 {
-    auto streamingType = CredentialDemoStreamingImpl::CreateType();
+    auto streamingType = CredentialDemoStreamingImpl::CreateType(context);
     return Dict<IString, IBaseObject>({{streamingType.getId(), streamingType}});
 }
 
@@ -97,32 +97,6 @@ StreamingPtr CredentialDemoModule::onCreateAuthenticatedStreaming(const StringPt
                                                                    const PropertyObjectPtr& credentials)
 {
     return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, authenticationMethodId, credentials);
-}
-
-DictPtr<IString, ICredentialDescriptor> CredentialDemoModule::onGetSupportedAuthenticationMethods(const StringPtr& typeId)
-{
-    if (typeId != CredentialDemoDeviceImpl::CreateType().getId() && typeId != CredentialDemoStreamingImpl::CreateType().getId())
-        return Dict<IString, ICredentialDescriptor>();
-
-    auto userNamePasswordDescriptor = StandardUserNamePasswordCredentialDescriptor(context.getTypeManager());
-    auto pinDescriptor = StandardPinCredentialDescriptor(context.getTypeManager());
-    auto privateKeyDescriptor = StandardPrivateKeyFileCredentialDescriptor(context.getTypeManager());
-    auto anonymousDescriptor = StandardAnonymousCredentialDescriptor();
-
-    return Dict<IString, ICredentialDescriptor>({{userNamePasswordDescriptor.getAuthenticationMethodId(), userNamePasswordDescriptor},
-                                                        {pinDescriptor.getAuthenticationMethodId(), pinDescriptor},
-                                                        {privateKeyDescriptor.getAuthenticationMethodId(), privateKeyDescriptor},
-                                                        {anonymousDescriptor.getAuthenticationMethodId(), anonymousDescriptor}});
-}
-
-StringPtr CredentialDemoModule::onGetDefaultAuthenticationMethodId(const StringPtr& typeId)
-{
-    if (typeId == CredentialDemoDeviceImpl::CreateType().getId())
-        return StandardUserNamePasswordId;
-    if (typeId == CredentialDemoStreamingImpl::CreateType().getId())
-        return StandardPinId;
-
-    return nullptr;
 }
 
 DictPtr<IString, IBaseObject> CredentialDemoModule::populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions)

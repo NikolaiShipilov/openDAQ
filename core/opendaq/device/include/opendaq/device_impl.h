@@ -55,6 +55,7 @@
 #include <opendaq/component_type_private.h>
 #include <opendaq/mirrored_device_ptr.h>
 #include <opendaq/authentication_config_ptr.h>
+#include <opendaq/authentication_config_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 template <typename TInterface = IDevice, typename... Interfaces>
@@ -88,7 +89,6 @@ public:
 
     virtual ListPtr<IDeviceInfo> onGetAvailableDevices();
     virtual DictPtr<IString, IDeviceType> onGetAvailableDeviceTypes();
-    virtual AuthenticationConfigPtr onCreateDefaultAuthenticationConfig(const StringPtr& typeId);
     virtual DevicePtr onAddDevice(const StringPtr& connectionString, const PropertyObjectPtr& config);
     virtual DevicePtr onAddAuthenticatedDevice(const StringPtr& connectionString,
                                                const PropertyObjectPtr& config,
@@ -156,7 +156,6 @@ public:
     // Client devices
     ErrCode INTERFACE_FUNC getAvailableDevices(IList** availableDevices) override;
     ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) override;
-    ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) override;
     ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config = nullptr) override;
     ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
                                                   IString* connectionString,
@@ -1393,34 +1392,6 @@ DictPtr<IString, IDeviceType> GenericDevice<TInterface, Interfaces...>::onGetAva
     auto lock = this->getRecursiveConfigLock2();
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
     return managerUtils.getAvailableDeviceTypes();
-}
-
-template <typename TInterface, typename... Interfaces>
-ErrCode GenericDevice<TInterface, Interfaces...>::createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig)
-{
-    OPENDAQ_PARAM_NOT_NULL(typeId);
-    OPENDAQ_PARAM_NOT_NULL(authenticationConfig);
-
-    if (this->isComponentRemoved)
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_COMPONENT_REMOVED);
-
-    AuthenticationConfigPtr configPtr;
-    const ErrCode errCode = wrapHandlerReturn(this, &Self::onCreateDefaultAuthenticationConfig, configPtr, typeId);
-    OPENDAQ_RETURN_IF_FAILED(errCode);
-
-    *authenticationConfig = configPtr.detach();
-    return errCode;
-}
-
-template <typename TInterface, typename... Interfaces>
-AuthenticationConfigPtr GenericDevice<TInterface, Interfaces...>::onCreateDefaultAuthenticationConfig(const StringPtr& typeId)
-{
-    auto lock = this->getRecursiveConfigLock2();
-    const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
-
-    AuthenticationConfigPtr authenticationConfig;
-    checkErrorInfo(managerUtils->createDefaultAuthenticationConfig(typeId, &authenticationConfig));
-    return authenticationConfig;
 }
 
 template <typename TInterface, typename... Interfaces>

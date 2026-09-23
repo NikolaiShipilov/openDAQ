@@ -55,7 +55,6 @@ public:
 
     ErrCode INTERFACE_FUNC getAvailableDevices(IList** availableDevices) override;
     ErrCode INTERFACE_FUNC getAvailableDeviceTypes(IDict** deviceTypes) override;
-    ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) override;
     ErrCode INTERFACE_FUNC addDevice(IDevice** device, IString* connectionString, IPropertyObject* config) override;
     ErrCode INTERFACE_FUNC addAuthenticatedDevice(IDevice** device,
                                                   IString* connectionString,

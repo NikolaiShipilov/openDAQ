@@ -190,14 +190,6 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * Always return True if no license is required by the module.
      */
     virtual ErrCode INTERFACE_FUNC licenseLoaded(Bool* loaded) = 0;
-
-    /*!
-     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`.
-     * @param typeId The id of a device or streaming type this module offers.
-     * @param[out] authenticationConfig The built authentication config.
-     * @retval OPENDAQ_ERR_NOTFOUND if `typeId` isn't one of this module's own device/streaming types.
-     */
-    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
 };
 /*!@}*/
 

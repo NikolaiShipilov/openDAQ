@@ -202,11 +202,6 @@ daqErrCode daqDevice_addDevices(daqDevice* self, daqDict** devices, daqDict* con
     return reinterpret_cast<daq::IDevice*>(self)->addDevices(reinterpret_cast<daq::IDict**>(devices), reinterpret_cast<daq::IDict*>(connectionArgs), reinterpret_cast<daq::IDict*>(errCodes), reinterpret_cast<daq::IDict*>(errorInfos));
 }
 
-daqErrCode daqDevice_createDefaultAuthenticationConfig(daqDevice* self, daqString* typeId, daqAuthenticationConfig** authenticationConfig)
-{
-    return reinterpret_cast<daq::IDevice*>(self)->createDefaultAuthenticationConfig(reinterpret_cast<daq::IString*>(typeId), reinterpret_cast<daq::IAuthenticationConfig**>(authenticationConfig));
-}
-
 daqErrCode daqDevice_addAuthenticatedDevice(daqDevice* self, daqDevice** device, daqString* connectionString, daqPropertyObject* config, daqAuthenticationConfig* authenticationConfig)
 {
     return reinterpret_cast<daq::IDevice*>(self)->addAuthenticatedDevice(reinterpret_cast<daq::IDevice**>(device), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IAuthenticationConfig*>(authenticationConfig));

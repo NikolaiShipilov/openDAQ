@@ -1711,10 +1711,6 @@ public:
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
     }
-    daq::ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(daq::IString*, daq::IAuthenticationConfig**) override
-    {
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
-    }
     daq::ErrCode INTERFACE_FUNC loadLicense(daq::Bool* succeeded, daq::IDict* licenseConfig) override
     {
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);

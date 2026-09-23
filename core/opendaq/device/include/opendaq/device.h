@@ -414,22 +414,6 @@ DECLARE_OPENDAQ_INTERFACE(IDevice, IFolder)
      */
     virtual ErrCode INTERFACE_FUNC addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes = nullptr, IDict* errorInfos = nullptr) = 0;
 
-    /*!
-     * @brief Builds and returns a new, self-contained default authentication config for one of this
-     * device's own available device or streaming types, identified by `typeId` - not for the device
-     * itself, which this method has no bearing on. See `IAuthenticationConfig` for what the returned
-     * config contains and how to tune it before handing it to `addAuthenticatedDevice`/`addStreaming`.
-     * @param typeId The id of one of this device's available device or streaming types - looked up first
-     * among `getAvailableDeviceTypes`, then among the available streaming types, since streaming
-     * connections can support authentication the same way devices do.
-     * @param[out] authenticationConfig Newly created authentication config object. A new object is created
-     * on each call.
-     *
-     * Returns `OPENDAQ_ERR_NOTFOUND` if `typeId` names neither an available device type nor an available
-     * streaming type.
-     */
-    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
-
     // [templateType(device, IDevice)]
     /*!
      * @brief Connects to a device at the given connection string using the provided authentication configuration and returns the added device.
