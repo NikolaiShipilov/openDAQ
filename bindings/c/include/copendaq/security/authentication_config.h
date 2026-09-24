@@ -51,7 +51,7 @@ extern "C"
     daqErrCode EXPORTED daqAuthenticationConfig_setCredentialProviderId(daqAuthenticationConfig* self, daqString* providerId);
     daqErrCode EXPORTED daqAuthenticationConfig_getSupportedCredentialProviderIds(daqAuthenticationConfig* self, daqList** providerIds);
     daqErrCode EXPORTED daqAuthenticationConfig_getSuppliedSecret(daqAuthenticationConfig* self, daqPropertyObject** secret);
-    daqErrCode EXPORTED daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* credentialDescriptors, daqString* defaultAuthenticationMethodId, daqContext* context, daqString* typeId);
+    daqErrCode EXPORTED daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* credentialDescriptors, daqContext* context);
 
 #ifdef __cplusplus
 }

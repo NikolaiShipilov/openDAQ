@@ -41,9 +41,9 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
 {
     cls.doc() = "Carries the authentication settings used for a single connection attempt to a component.";
 
-    m.def("AuthenticationConfig", [](std::variant<daq::IDict*, py::dict>& credentialDescriptors, std::variant<daq::IString*, py::str, daq::IEvalValue*>& defaultAuthenticationMethodId, daq::IContext* context, std::variant<daq::IString*, py::str, daq::IEvalValue*>& typeId){
-        return daq::AuthenticationConfig_Create(getVariantValue<daq::IDict*>(credentialDescriptors), getVariantValue<daq::IString*>(defaultAuthenticationMethodId), context, getVariantValue<daq::IString*>(typeId));
-    }, py::arg("credential_descriptors"), py::arg("default_authentication_method_id"), py::arg("context"), py::arg("type_id"));
+    m.def("AuthenticationConfig", [](std::variant<daq::IDict*, py::dict>& credentialDescriptors, daq::IContext* context){
+        return daq::AuthenticationConfig_Create(getVariantValue<daq::IDict*>(credentialDescriptors), context);
+    }, py::arg("credential_descriptors"), py::arg("context"));
 
     m.def("AuthenticationConfig", [](daq::IComponentType* componentType, daq::IContext* context){
         return daq::AuthenticationConfig(componentType, context).detach();

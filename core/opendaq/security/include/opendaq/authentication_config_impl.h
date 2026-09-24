@@ -29,15 +29,17 @@ class AuthenticationConfigImpl : public GenericPropertyObjectImpl<IAuthenticatio
 public:
     using Super = GenericPropertyObjectImpl<IAuthenticationConfig>;
 
-    // `context` must be assigned - throws otherwise. `typeId` has no default instead: every caller states
-    // explicitly whether it has one (`nullptr` included), rather than a config silently ending up type-less
-    // by omission. `typeId` lets a saved config re-resolve `credentialDescriptors`/`context` fresh on reload
-    // (see `serialize`/`Deserialize`) - a config built with no type behind it can't meaningfully round-trip
-    // through save/reload.
+    // `context` must be assigned - throws otherwise. The first entry of `credentialDescriptors` (in dict
+    // iteration order) starts out selected.
     AuthenticationConfigImpl(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
-                             const StringPtr& defaultAuthenticationMethodId,
-                             const ContextPtr& context,
-                             const StringPtr& typeId);
+                             const ContextPtr& context);
+
+    // Stub constructor used only by `Deserialize` (mirrors `DeviceInfoConfigImpl`'s own default constructor) -
+    // produces an object with no properties at all yet, not even "AuthenticationMethod", so the generic
+    // PropertyObject deserialization pipeline can add it back fresh from its own serialized definition, the
+    // same way it would for any other Property. None of the typed getters/setters are valid on an object built
+    // this way until that happens - not meant for direct use otherwise.
+    explicit AuthenticationConfigImpl(const ContextPtr& context);
 
     ErrCode INTERFACE_FUNC getSelectedAuthenticationMethodId(IString** authenticationMethodId) override;
     ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) override;
@@ -50,15 +52,33 @@ public:
     // Intercepted to keep "CredentialProviderId" live and dependent on "AuthenticationMethod" (recomputed from
     // `context` on every "AuthenticationMethod" write, added/removed as compatibility changes), to remember the
     // user's last explicit provider choice, and to validate/auto-clear "SuppliedSecret" against whichever
-    // descriptor is currently selected.
+    // descriptor is currently selected. `setProtectedPropertyValue` gets the same treatment (see
+    // `onPropertyValueChanged`) since it's the path generic deserialization (`DeserializePropertyValues`) writes
+    // through, bypassing `setPropertyValue`/`setPropertySelectionValue` entirely.
     ErrCode INTERFACE_FUNC setPropertyValue(IString* propertyName, IBaseObject* value) override;
     ErrCode INTERFACE_FUNC setPropertySelectionValue(IString* propertyName, IBaseObject* value) override;
+    ErrCode INTERFACE_FUNC setProtectedPropertyValue(IString* propertyName, IBaseObject* value) override;
 
-    // Fully custom - replaces generic PropertyObject serialization entirely. `typeId`, every "AuthenticationMethod"
-    // candidate credential descriptor, the selected authentication method id, and - when present - the selected
-    // "CredentialProviderId" are written; "SuppliedSecret" (a secret) is never serialized. Deserializing rebuilds
-    // the config directly from the saved descriptors and method id.
-    ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
+    // Relies on the generic PropertyObject serialization for "AuthenticationMethod" (its candidates and
+    // selected value round-trip through it correctly on their own - see `serializeProperty`/
+    // `serializePropertyValue`) but not for "CredentialProviderId" or "SuppliedSecret", both explicitly
+    // excluded from it (same two overrides): "SuppliedSecret" (a secret) must never be persisted at all;
+    // "CredentialProviderId"'s *candidates* must never be persisted either - they're always live-recomputed
+    // from the current `Context` (see `rebuildCredentialProviderCandidates`), and a saved snapshot could be
+    // stale - so serializing it as a Property the normal way (candidates included) would be actively wrong,
+    // not just unnecessary. Only its *selected* value is written, as an extra value alongside the generic
+    // serialization - see `serializeCustomValues`.
+    // Deserializing builds a bare stub first (the constructor above), then runs the entirely generic
+    // PropertyObject pipeline on it: `DeserializePropertyOrder`/`DeserializeLocalProperties`/
+    // `DeserializePropertyValues` add "AuthenticationMethod" back from its own serialized definition (candidates
+    // and all) and restore its saved selection override, if one was saved - routed through
+    // `setProtectedPropertyValue` (see above), so it still triggers the live "CredentialProviderId" rebuild. No
+    // manual JSON parsing of its own. The saved "CredentialProviderId" selection, a custom value rather than a
+    // property, is reapplied separately afterward - only if it's still compatible with the freshly (live)
+    // rebuilt candidates.
+    ErrCode serializeCustomValues(ISerializer* serializer, bool forUpdate) override;
+    ErrCode serializeProperty(const PropertyPtr& property, ISerializer* serializer) override;
+    ErrCode serializePropertyValue(const StringPtr& name, const ObjectPtr<IBaseObject>& value, ISerializer* serializer, bool forUpdate) override;
     ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
     static ConstCharPtr SerializeId();
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
@@ -67,17 +87,17 @@ private:
     static constexpr const char* AuthenticationMethodPropertyName = "AuthenticationMethod";
     static constexpr const char* CredentialProviderIdPropertyName = "CredentialProviderId";
     static constexpr const char* SuppliedSecretPropertyName = "SuppliedSecret";
-    static constexpr const char* TypeIdSerializedKey = "TypeId";
-    static constexpr const char* CredentialDescriptorsSerializedKey = "CredentialDescriptors";
-    static constexpr const char* AuthenticationMethodIdSerializedKey = "AuthenticationMethodId";
-    static constexpr const char* ProviderIdSerializedKey = "ProviderId";
 
     ContextPtr context;
-    StringPtr typeId;
     StringPtr preferredCredentialProviderId;
 
-    void initProperties(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
-                        const StringPtr& defaultAuthenticationMethodId);
+    void initProperties(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors);
+
+    // Shared tail of `setPropertyValue`/`setPropertySelectionValue`/`setProtectedPropertyValue`, run after the
+    // write itself already succeeded: rebuilds "CredentialProviderId"'s live candidates and auto-clears an
+    // incompatible "SuppliedSecret" on an "AuthenticationMethod" write; remembers the user's explicit choice on
+    // a "CredentialProviderId" write.
+    ErrCode onPropertyValueChanged(const StringPtr& name);
 
     // Always re-queries `context.getCredentialProviders()` fresh (never a cached snapshot), filters by
     // `selectedDescriptor`'s format, and adds/removes/replaces "CredentialProviderId" to match - present

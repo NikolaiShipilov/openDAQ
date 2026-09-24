@@ -54,12 +54,17 @@ BEGIN_NAMESPACE_OPENDAQ
  * `IPropertyObject` interface this object also implements; `"SuppliedSecret"`, `"CredentialProviderId"`, and
  * `"AuthenticationMethod"` can all equally be read and set through either.
  *
- * Serialization is fully custom, not the generic `IPropertyObject` mechanism: the component type id (as
- * passed to `AuthenticationConfig`), every `"AuthenticationMethod"` candidate credential
- * descriptor, the selected one's authentication method id, and - when present - the selected
- * `"CredentialProviderId"` are written. `"SuppliedSecret"` (a secret) is never serialized. Deserializing
- * rebuilds the config directly from the saved descriptors and method id, resolving only a `Context` (to
- * live-filter `"CredentialProviderId"`'s candidates).
+ * Serialization relies on the generic `IPropertyObject` mechanism for `"AuthenticationMethod"` only - every
+ * candidate credential descriptor and the selected one round-trip through it like any other property.
+ * `"CredentialProviderId"` and `"SuppliedSecret"` are both excluded from it: `"SuppliedSecret"` (a secret) is
+ * never persisted at all; `"CredentialProviderId"`'s *candidates* are never persisted either, since they're
+ * always live-recomputed from the current `Context` and a saved snapshot could be stale - only its *selected*
+ * value (if any) is written, as one extra value that isn't itself a property. Deserializing can't use the
+ * generic property-object reconstruction pipeline as-is (this class has no default constructor), so it reads
+ * the saved credential descriptors/method id directly off `"AuthenticationMethod"`'s own serialized definition
+ * first, to resolve a `Context` and rebuild the config through the same constructor a fresh one goes through -
+ * the saved `"CredentialProviderId"` selection, if any, is then reapplied only if it's still among the
+ * freshly, live-recomputed candidates.
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
@@ -139,8 +144,8 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
  * `"AuthenticationMethod"` Selection property (see `IAuthenticationConfig`), so a caller can later switch
  * between methods just by changing that property's selection, rather than needing a different config
  * object per method. `credentialDescriptors` is a dict keyed by each descriptor's own
- * `ICredentialDescriptor::getAuthenticationMethodId()`; `defaultAuthenticationMethodId` names which one of those keys starts out
- * selected.
+ * `ICredentialDescriptor::getAuthenticationMethodId()`; its first entry, in dict iteration order, starts
+ * out selected.
  *
  * A config that only ever supports one method is simply the one-entry case of this: pass a
  * `credentialDescriptors` dict with a single key/value pair.
@@ -148,17 +153,13 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
  * This is the lower-level overload, for building a config with no live `IComponentType` object at hand
  * (e.g. deserialization). To build one for an actual device/streaming type, prefer the
  * `AuthenticationConfig(componentType, context)` overload (see `authentication_config_factory.h`), which
- * reads `credentialDescriptors`/`defaultAuthenticationMethodId`/`typeId` straight off the type itself.
+ * reads `credentialDescriptors` straight off the type itself.
  * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
  * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
- * @param typeId The id of the component type this config was built for - carried through serialization so a
- * reload can re-resolve `credentialDescriptors`/`context` fresh (see `IAuthenticationConfig`'s serialization
- * notes) - required, no default; pass `nullptr` explicitly for a config with no type behind it, which then
- * cannot meaningfully round-trip through save/reload.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IDict*, credentialDescriptors, IString*, defaultAuthenticationMethodId, IContext*, context, IString*, typeId
+    IDict*, credentialDescriptors, IContext*, context
 )
 
 END_NAMESPACE_OPENDAQ
