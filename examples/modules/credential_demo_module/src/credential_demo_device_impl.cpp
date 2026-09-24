@@ -5,9 +5,11 @@
 #include <opendaq/device_type_factory.h>
 #include <opendaq/component_type_builder_factory.h>
 #include <opendaq/credential_request_factory.h>
+#include <opendaq/credential_descriptor_factory.h>
 #include <opendaq/server_capability_config.h>
 #include <opendaq/device_info_internal.h>
 #include <opendaq/streaming_ptr.h>
+#include <coretypes/dictobject_factory.h>
 #include <fmt/format.h>
 #include <string_view>
 
@@ -44,49 +46,63 @@ bool CredentialDemoDeviceImpl::isAddedToLocalComponentTree()
     return true;
 }
 
-DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions)
+DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions, const ContextPtr& context)
 {
     const StringPtr manufacturer = moduleOptions.get("Manufacturer");
     const StringPtr serialNumber = moduleOptions.get("SerialNumber");
 
-    auto connectionString = fmt::format("daq.credential_demo://{}", GenericDeviceAddress);
+    auto connectionString = fmt::format("{}://{}", Prefix, GenericDeviceAddress);
     auto devInfo = DeviceInfo(connectionString);
     devInfo.setName("Credential demo device");
     devInfo.setManufacturer(manufacturer);
     devInfo.setModel("Credential demo device");
     devInfo.setSerialNumber(serialNumber);
-    devInfo.setDeviceType(CreateType());
+    devInfo.setDeviceType(CreateType(context));
 
     auto capability = ServerCapability("CredentialDemo", "Credential Demo", ProtocolType::Configuration)
-                           .setPrefix(CreateType().getConnectionStringPrefix())
+                           .setPrefix(Prefix)
                            .setConnectionString(connectionString);
     devInfo.asPtr<IDeviceInfoInternal>(true).addServerCapability(capability);
 
     // The`addDevice`'s automatic streaming attach (`PrioritizedStreamingProtocols`)
     // can pick "CredentialDemoStreaming" up for this device without any manual `addStreaming` call.
-    auto streamingConnectionString =
-        fmt::format("{}://{}", CredentialDemoStreamingImpl::CreateType().getConnectionStringPrefix(), GenericDeviceAddress);
+    auto streamingConnectionString = fmt::format("{}://{}", CredentialDemoStreamingImpl::Prefix, GenericDeviceAddress);
     auto streamingCapability = ServerCapability("CredentialDemoStreaming", "Credential Demo Streaming", ProtocolType::Streaming)
-                                    .setPrefix(CredentialDemoStreamingImpl::CreateType().getConnectionStringPrefix())
+                                    .setPrefix(CredentialDemoStreamingImpl::Prefix)
                                     .setConnectionString(streamingConnectionString);
     devInfo.asPtr<IDeviceInfoInternal>(true).addServerCapability(streamingCapability);
 
     return devInfo;
 }
 
-DeviceTypePtr CredentialDemoDeviceImpl::CreateType()
+DeviceTypePtr CredentialDemoDeviceImpl::CreateType(const ContextPtr& context)
 {
+    auto userNamePasswordDescriptor = StandardUserNamePasswordCredentialDescriptor(context.getTypeManager());
+    auto pinDescriptor = StandardPinCredentialDescriptor(context.getTypeManager());
+    auto privateKeyDescriptor = StandardPrivateKeyFileCredentialDescriptor(context.getTypeManager());
+    auto anonymousDescriptor = StandardAnonymousCredentialDescriptor();
+
+    // Showcases all four authentication methods - UserName/Password, PIN, PrivateKeyFile, Anonymous -
+    // defaulting to UserName/Password.
+    auto supportedMethods =
+        Dict<IString, ICredentialDescriptor>({{userNamePasswordDescriptor.getAuthenticationMethodId(), userNamePasswordDescriptor},
+                                              {pinDescriptor.getAuthenticationMethodId(), pinDescriptor},
+                                              {privateKeyDescriptor.getAuthenticationMethodId(), privateKeyDescriptor},
+                                              {anonymousDescriptor.getAuthenticationMethodId(), anonymousDescriptor}});
+
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
-        .setConnectionStringPrefix("daq.credential_demo")
+        .setConnectionStringPrefix(Prefix)
+        .setSupportedAuthenticationMethods(supportedMethods)
+        .setDefaultAuthenticationMethodId(StandardUserNamePasswordId)
         .build();
 }
 
 void CredentialDemoDeviceImpl::ValidateConnectionString(const StringPtr& connectionString)
 {
-    const std::string prefix = fmt::format("{}://", CreateType().getConnectionStringPrefix());
+    const std::string prefix = fmt::format("{}://", Prefix);
     const std::string connStr = connectionString;
     if (connStr.find(prefix) != 0)
     {

@@ -45,8 +45,10 @@ public:
                                       const StringPtr& authenticationMethodId = nullptr,
                                       const PropertyObjectPtr& credentials = nullptr);
 
-    static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions);
-    static DeviceTypePtr CreateType();
+    static constexpr const char* Prefix = "daq.credential_demo";
+
+    static DeviceInfoPtr CreateDeviceInfo(const DictPtr<IString, IBaseObject>& moduleOptions, const ContextPtr& context);
+    static DeviceTypePtr CreateType(const ContextPtr& context);
     static void ValidateConnectionString(const StringPtr& connectionString);
 
 protected:

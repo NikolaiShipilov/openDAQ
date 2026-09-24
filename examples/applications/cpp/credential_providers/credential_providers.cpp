@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <coreobjects/callable_info_factory.h>
 #include <opendaq/opendaq.h>
 #include <opendaq/module_manager_utils_ptr.h>
 
@@ -31,7 +32,7 @@ void createJsonConfigFile()
     file.close();
 }
 
-// `instance.createDefaultAuthenticationConfig(typeId)` returns one self-contained config listing every
+// `AuthenticationConfig(componentType, context)` returns one self-contained config listing every
 // authentication method the named component type supports (UserNamePassword, Pin, PrivateKeyFile) as a
 // candidate of its "AuthenticationMethod" selection property, defaulting to the type's own default method -
 // never a separate config per method. This switches that selection to the method named by `authenticationMethodId`,
@@ -52,6 +53,25 @@ void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const
     throw std::runtime_error("Unknown authentication method id: " + authenticationMethodId.toStdString());
 }
 
+// Temporary bridge until `IAuthenticationConfig` becomes a real part of the add-device config schema:
+// `addAuthenticatedDevice`/`addStreaming(..., authenticationConfig)` are gone - only the plain, config-only
+// overloads remain. Until the real config-schema integration lands, `authConfig` is instead smuggled onto an
+// otherwise plain `config` property object under this property name, which `Module`/`ModuleManagerImpl` look
+// for and honor exactly as the old, now-removed parameter used to be - this key must match theirs exactly
+// (see `AuthenticationConfigConfigKey` in `module_impl.h`). Stashed as a zero-argument Function property that
+// returns it when called, since neither a plain Object-type property value (the property framework only
+// accepts a literal `IPropertyObject`, not a more specific derived interface like `IAuthenticationConfig`) nor
+// a List/Dict item (Container-type properties forbid object-type items/keys entirely) will hold it.
+static const char* AuthenticationConfigConfigKey = "__AuthenticationConfig";
+
+PropertyObjectPtr WithAuthenticationConfig(const AuthenticationConfigPtr& authConfig)
+{
+    auto config = PropertyObject();
+    config.addProperty(FunctionProperty(AuthenticationConfigConfigKey, FunctionInfo(ctObject)));
+    config.setPropertyValue(AuthenticationConfigConfigKey, Function([authConfig]() { return authConfig; }));
+    return config;
+}
+
 // PrivateKeyFile authentication - another String-format credential, but instead of comparing a
 // fixed secret, the module verifies a signed challenge against the public key configured via the
 // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
@@ -59,9 +79,9 @@ void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const
 void demoPrivateKeyFileAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
-    auto privateKeyFileConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+    auto privateKeyFileConfig = AuthenticationConfig(deviceType, instance.getContext());
     SelectAuthenticationMethod(privateKeyFileConfig, "PrivateKeyFile");
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
+    auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(privateKeyFileConfig));
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
@@ -77,14 +97,14 @@ void demoNoAuthentication(const InstancePtr& instance)
 }
 
 // authenticate with username and password
-// UserName/Password authentication - a KeyValuePairs-format credential. `createDefaultAuthenticationConfig`'s
+// UserName/Password authentication - a KeyValuePairs-format credential. `AuthenticationConfig(deviceType, context)`'s
 // "CredentialProviderId" selection defaults to the first registered provider (fileCredentialProvider), which only
 // supports FilePath - explicitly switch it to credentialProvider, which supports every format.
 void demoUserNamePasswordAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
-    auto userNamePasswordConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+    auto userNamePasswordConfig = AuthenticationConfig(deviceType, instance.getContext());
     userNamePasswordConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, userNamePasswordConfig);
+    auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(userNamePasswordConfig));
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
     instance.removeDevice(device);
@@ -98,11 +118,11 @@ void demoUserNamePasswordAuthentication(const InstancePtr& instance, const Devic
 // default (an unset id) would otherwise pick (see the comment where it's registered, below).
 void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
-    auto privateKeyFileConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+    auto privateKeyFileConfig = AuthenticationConfig(deviceType, instance.getContext());
     SelectAuthenticationMethod(privateKeyFileConfig, "PrivateKeyFile");
     privateKeyFileConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
+    auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(privateKeyFileConfig));
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via the explicitly selected \""
               << credentialProviderId << "\" credential provider. Press \"enter\" to continue..." << std::endl;
     std::cin.get();
@@ -111,15 +131,15 @@ void demoExplicitCredentialProviderSelection(const InstancePtr& instance, const 
 
 // `IAuthenticationConfig` derives from `IPropertyObject` - the same way `IDeviceInfo` does - so besides the
 // typed getters used in every other demo, the exact same settings can be read and set with plain property
-// object calls instead. `instance.createDefaultAuthenticationConfig(deviceType.getId())` already returns one
-// self-contained config with every supported method (UserNamePassword, Pin, PrivateKeyFile) as a candidate
-// of its "AuthenticationMethod" selection property, defaulting to UserNamePassword -
+// object calls instead. `AuthenticationConfig(deviceType, context)` already returns one self-contained config
+// with every supported method (UserNamePassword, Pin, PrivateKeyFile) as a candidate of its
+// "AuthenticationMethod" selection property, defaulting to UserNamePassword -
 // `SelectAuthenticationMethod` switches that selection to "Pin" via plain property object calls, no separate
 // per-method config fetched anywhere. The credential provider id is likewise a "CredentialProviderId"
 // Selection property (over every provider registered on the instance) - set the same way.
 void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
-    auto authConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+    auto authConfig = AuthenticationConfig(deviceType, instance.getContext());
     SelectAuthenticationMethod(authConfig, "Pin");
 
     StructPtr credentialDescriptor = authConfig.getPropertySelectionValue("AuthenticationMethod");
@@ -129,7 +149,7 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     std::cout << "Credential provider id, read back as a Selection property: " << authConfig.getPropertySelectionValue("CredentialProviderId") << std::endl;
 
     std::cout << "When prompted for the PIN, enter: 1234" << std::endl;
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, authConfig);
+    auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(authConfig));
     std::cout << "Connected to \"" << device.getInfo().getName()
               << "\" with PIN authentication, configured entirely via plain property object calls on the authentication config itself. "
                  "Press \"enter\" to continue..."
@@ -149,21 +169,21 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
 void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
     auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-    auto streamingAuthConfig = instance.createDefaultAuthenticationConfig(streamingType.getId());
+    auto streamingAuthConfig = AuthenticationConfig(streamingType, instance.getContext());
     SelectAuthenticationMethod(streamingAuthConfig, "PrivateKeyFile");
     streamingAuthConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
 
-    auto deviceAuthConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+    auto deviceAuthConfig = AuthenticationConfig(deviceType, instance.getContext());
     SelectAuthenticationMethod(deviceAuthConfig, "PrivateKeyFile");
     deviceAuthConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
 
     // The supplied secret must be shaped like the descriptor's own `createEmptySecret` template - here
     // just a single "PrivateKeyFilePath" property, filled in with the private key's path.
-    auto suppliedSecret = deviceAuthConfig.getCredentialDescriptor().createEmptySecret();
+    auto suppliedSecret = deviceAuthConfig.getSupportedAuthenticationMethods().get(deviceAuthConfig.getSelectedAuthenticationMethodId()).createEmptySecret();
     suppliedSecret.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
     deviceAuthConfig.setPropertyValue("SuppliedSecret", suppliedSecret);
 
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
+    auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(deviceAuthConfig));
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication via the \""
               << credentialProviderId << "\" credential provider, using a secret supplied directly - no prompt." << std::endl;
 
@@ -171,7 +191,7 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
                  "method, same credential provider - so no path prompt should appear this time; the provider serves "
                  "it from its cache instead."
               << std::endl;
-    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
+    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", WithAuthenticationConfig(streamingAuthConfig));
     std::cout << "Attached. Streaming sources: " << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
     std::cout << "Press \"enter\" to continue..." << std::endl;
     std::cin.get();
@@ -183,20 +203,20 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
 // own, separate authentication config (PrivateKeyFile), attached with a manual `addStreaming` call.
 void demoDeviceAndStreamingAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
-    auto deviceAuthConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+    auto deviceAuthConfig = AuthenticationConfig(deviceType, instance.getContext());
     // UserName/Password (KeyValuePairs) isn't supported by the default "CredentialProviderId" selection
     // (fileCredentialProvider, FilePath-only) - switch to credentialProvider, which supports every format.
     deviceAuthConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
 
     std::cout << "Device authentication (default method - UserName/Password):" << std::endl;
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceAuthConfig);
+    auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(deviceAuthConfig));
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with UserName/Password authentication." << std::endl;
 
     auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-    auto streamingAuthConfig = instance.createDefaultAuthenticationConfig(streamingType.getId());
+    auto streamingAuthConfig = AuthenticationConfig(streamingType, instance.getContext());
     SelectAuthenticationMethod(streamingAuthConfig, "PrivateKeyFile");
     std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
-    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
+    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", WithAuthenticationConfig(streamingAuthConfig));
     std::cout << "Attached a streaming connection authenticated independently of the device. Streaming sources: "
               << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
     std::cout << "Press \"enter\" to continue..." << std::endl;
@@ -209,12 +229,12 @@ void demoDeviceAndStreamingAuthentication(const InstancePtr& instance, const Dev
 // previously authenticated device is re-authenticated (not silently reconnected) on load.
 void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTypePtr& deviceType, const StringPtr& credentialProviderId)
 {
-    auto pinConfig = instance.createDefaultAuthenticationConfig(deviceType.getId());
+    auto pinConfig = AuthenticationConfig(deviceType, instance.getContext());
     SelectAuthenticationMethod(pinConfig, "Pin");
     // Pin (String) isn't supported by the default "CredentialProviderId" selection (fileCredentialProvider,
     // FilePath-only) - switch to credentialProvider, which supports every format.
     pinConfig.setPropertySelectionValue("CredentialProviderId", credentialProviderId);
-    auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
+    auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(pinConfig));
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with PIN authentication." << std::endl;
 
     std::cout << "Press \"enter\" to save the configuration and reload it into a new instance..." << std::endl;
@@ -247,7 +267,7 @@ void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTyp
     std::cout << "Reloaded instance re-authenticated and reconnected to \"" << reloadedDevice.getInfo().getName() << std::endl;
 }
 
-int main(int argc, const char* argv[])
+int main(int /*argc*/, const char* /*argv*/[])
 {
     createJsonConfigFile();
 

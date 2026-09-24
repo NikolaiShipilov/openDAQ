@@ -184,15 +184,6 @@ void defineIDevice(pybind11::module_ m, PyDaqIntf<daq::IDevice, daq::IFolder> cl
         },
         py::return_value_policy::take_ownership,
         "Get a dictionary of available device types as <IString, IDeviceType> pairs");
-    cls.def("create_default_authentication_config",
-        [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& typeId)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::DevicePtr::Borrow(object);
-            return objectPtr.createDefaultAuthenticationConfig(getVariantValue<daq::IString*>(typeId)).detach();
-        },
-        py::arg("type_id"),
-        "Builds and returns a new, self-contained default authentication config for the component type identified by `typeId` - covering every authentication method that type supports, not just one of them, and offering every credential provider currently registered on this device's `Context` as a `\"CredentialProviderId\"` selection candidate.");
     cls.def("add_device",
         [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config)
         {
@@ -202,15 +193,6 @@ void defineIDevice(pybind11::module_ m, PyDaqIntf<daq::IDevice, daq::IFolder> cl
         },
         py::arg("connection_string"), py::arg("config") = nullptr,
         "Connects to a device at the given connection string and returns it.");
-    cls.def("add_authenticated_device",
-        [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config, daq::IAuthenticationConfig* authenticationConfig)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::DevicePtr::Borrow(object);
-            return objectPtr.addAuthenticatedDevice(getVariantValue<daq::IString*>(connectionString), config, authenticationConfig).detach();
-        },
-        py::arg("connection_string"), py::arg("config") = nullptr, py::arg("authentication_config") = nullptr,
-        "Connects to a device at the given connection string using the provided authentication configuration and returns the added device.");
     cls.def("remove_device",
         [](daq::IDevice *object, daq::IDevice* device)
         {
@@ -291,13 +273,13 @@ void defineIDevice(pybind11::module_ m, PyDaqIntf<daq::IDevice, daq::IFolder> cl
         },
         "Gets the number of ticks passed since the device's absolute origin.");
     cls.def("add_streaming",
-        [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config, daq::IAuthenticationConfig* authenticationConfig)
+        [](daq::IDevice *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::DevicePtr::Borrow(object);
-            return objectPtr.addStreaming(getVariantValue<daq::IString*>(connectionString), config, authenticationConfig).detach();
+            return objectPtr.addStreaming(getVariantValue<daq::IString*>(connectionString), config).detach();
         },
-        py::arg("connection_string"), py::arg("config") = nullptr, py::arg("authentication_config") = nullptr,
+        py::arg("connection_string"), py::arg("config") = nullptr,
         "Connects to a streaming at the given connection string, adds it as a streaming source of device and returns created streaming object.");
     cls.def("create_default_add_device_config",
         [](daq::IDevice *object)

@@ -61,6 +61,12 @@ DECLARE_OPENDAQ_INTERFACE(IDeviceType, IComponentType)
  * @param description A short description of the device type.
  * @param defaultConfig The property object, to be cloned and returned, each time user creates default
  * configuration object. This way each instance of the device has its own configuration object.
+ * @param prefix The prefix of the connection string used when adding the device (the part before the
+ * "://" delimiter in the connection string).
+ * @param supportedAuthenticationMethods The credential descriptors this device type supports authenticating
+ * with, keyed by their own id.
+ * @param defaultAuthenticationMethodId The id of the authentication method this device type supports by
+ * default.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY(
     LIBRARY_FACTORY, DeviceType,
@@ -68,7 +74,9 @@ OPENDAQ_DECLARE_CLASS_FACTORY(
     IString*, name,
     IString*, description,
     IPropertyObject*, defaultConfig,
-    IString*, prefix
+    IString*, prefix,
+    IDict*, supportedAuthenticationMethods,
+    IString*, defaultAuthenticationMethodId
 )
 
 /*!@}*/

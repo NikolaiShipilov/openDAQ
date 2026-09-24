@@ -68,29 +68,6 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
     virtual ErrCode INTERFACE_FUNC createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config = nullptr) = 0;
 
     /*!
-     * @brief Creates a device object that can communicate with the device described in the specified connection string,
-     * authenticating the connection by obtaining credentials - as specified by the given authentication configuration -
-     * from a compatible registered credential provider.
-     * The device object is not automatically added as a sub-device of the caller, but only returned by reference.
-     * @param[out] device The device object created to communicate with and control the device.
-     * @param connectionString Describes the connection info of the device to connect to.
-     * @param parent The parent component/device to which the device attaches.
-     * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
-     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
-     * obtain and verify credentials for this connection - see `IAuthenticationConfig`.
-     *
-     * Iterates through all loaded modules and creates a device with the first module that accepts the provided connection string.
-     * The manufacturer and serial number identifying the target device are not accepted here - if the connection string is a
-     * smart (`daq://`) connection string, they are resolved from discovery info and forwarded to the module; otherwise they
-     * are left unset.
-     */
-    virtual ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
-                                                             IString* connectionString,
-                                                             IComponent* parent,
-                                                             IPropertyObject* config,
-                                                             IAuthenticationConfig* authenticationConfig) = 0;
-
-    /*!
      * @brief Returns a dictionary of known and available function block types this module can create.
      * @param[out] functionBlockTypes The dictionary of known function block types.
      *
@@ -123,23 +100,17 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
      * @param[out] streaming The created streaming object.
      * @param connectionString Describes the connection parameters of the streaming.
      * @param config A configuration object that contains parameters used to configure a streaming connection in the form of key-value pairs.
-     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
-     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. If
-     * unassigned and the resolved streaming type supports authentication, its own default method is used
-     * instead - the streaming is connected to without authentication only if that method (or the type
-     * itself) requires no credentials at all.
      * @param manufacturer The manufacturer of the device the streaming connection belongs to.
      * @param serialNumber The serial number of the device the streaming connection belongs to.
      *
      * Iterates through all loaded modules and creates a streaming connection with the first module that accepts the
-     * provided connection string. Unlike `createAuthenticatedDevice`, there is no smart-string/discovery resolution
-     * here - streaming connection strings are always concrete, protocol-specific strings, not `daq://` smart ones -
-     * so `manufacturer`/`serialNumber` are simply forwarded as given, defaulting to a null value when not known.
+     * provided connection string. There is no smart-string/discovery resolution here - streaming connection strings
+     * are always concrete, protocol-specific strings, not `daq://` smart ones - so `manufacturer`/`serialNumber` are
+     * simply forwarded as given, defaulting to a null value when not known.
      */
     virtual ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                                    IString* connectionString,
                                                    IPropertyObject* config = nullptr,
-                                                   IAuthenticationConfig* authenticationConfig = nullptr,
                                                    IString* manufacturer = nullptr,
                                                    IString* serialNumber = nullptr) = 0;
     // [templateType(streamingTypes, IString, IStreamingType)]
@@ -233,14 +204,6 @@ DECLARE_OPENDAQ_INTERFACE(IModuleManagerUtils, IBaseObject)
      * This method searches through the available devices discovered during the last scan.
      */
     virtual ErrCode INTERFACE_FUNC getDiscoveryInfo(IDeviceInfo** deviceInfo, IString* manufacturer, IString* serialNumber) = 0;
-
-    /*!
-     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`.
-     * @param typeId The id of a device or streaming type (see `getAvailableDeviceTypes`/`getAvailableStreamingTypes`).
-     * @param[out] authenticationConfig The built authentication config.
-     * @retval OPENDAQ_ERR_NOTFOUND if `typeId` names neither an available device type nor an available streaming type.
-     */
-    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
 };
 /*!@}*/
 

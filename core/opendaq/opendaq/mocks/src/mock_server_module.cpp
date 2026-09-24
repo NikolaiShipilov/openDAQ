@@ -49,18 +49,6 @@ ErrCode MockServerModuleImpl::createDevice(IDevice** device,
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode MockServerModuleImpl::createAuthenticatedDevice(IDevice** device,
-                                                        IString* /*connectionString*/,
-                                                        IString* /*manufacturer*/,
-                                                        IString* /*serialNumber*/,
-                                                        IComponent* /*parent*/,
-                                                        IPropertyObject* /*config*/,
-                                                        IAuthenticationConfig* /*authenticationConfig*/)
-{
-    *device = nullptr;
-    return OPENDAQ_SUCCESS;
-}
-
 ErrCode MockServerModuleImpl::getAvailableFunctionBlockTypes(IDict** functionBlockTypes)
 {
     *functionBlockTypes = Dict<IString, IFunctionBlockType>().detach();
@@ -110,7 +98,6 @@ ErrCode MockServerModuleImpl::createServer(IServer** server,
 ErrCode MockServerModuleImpl::createStreaming(IStreaming** /*streaming*/,
                                               IString* /*connectionString*/,
                                               IPropertyObject* /*config*/,
-                                              IAuthenticationConfig* /*authenticationConfig*/,
                                               IString* /*manufacturer*/,
                                               IString* /*serialNumber*/)
 {
@@ -123,11 +110,6 @@ ErrCode MockServerModuleImpl::completeServerCapability(daq::Bool* /*succeeded*/,
 }
 
 ErrCode MockServerModuleImpl::getAvailableStreamingTypes(daq::IDict** /*streamingTypes*/)
-{
-    return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
-}
-
-ErrCode MockServerModuleImpl::createDefaultAuthenticationConfig(daq::IString* /*typeId*/, daq::IAuthenticationConfig** /*authenticationConfig*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }

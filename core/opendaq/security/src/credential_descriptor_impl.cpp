@@ -2,6 +2,8 @@
 #include <opendaq/credential_descriptor_factory.h>
 #include <coretypes/dictobject_factory.h>
 #include <coreobjects/property_object_factory.h>
+#include <coretypes/serialized_object_ptr.h>
+#include <coretypes/ctutils.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -111,13 +113,8 @@ CredentialDescriptorImpl::CredentialDescriptorImpl(
 {
 }
 
-CredentialDescriptorImpl::CredentialDescriptorImpl(const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager)
-    : CredentialDescriptorImpl(
-          CredentialFormat::None,
-          detail::RequireRegisteredType(typeManager, NoneDescriptorStructType().getName()),
-          BuildFields(id, description),
-          typeManager,
-          nullptr)
+CredentialDescriptorImpl::CredentialDescriptorImpl(const StringPtr& id, const StringPtr& description)
+    : CredentialDescriptorImpl(CredentialFormat::None, NoneDescriptorStructType(), BuildFields(id, description), nullptr, nullptr)
 {
 }
 
@@ -182,9 +179,98 @@ ErrCode CredentialDescriptorImpl::createEmptySecret(IPropertyObject** secret)
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode CredentialDescriptorImpl::serialize(ISerializer* serializer)
+{
+    return daqTry([&]
+    {
+        serializer->startTaggedObject(this);
+
+        const StringPtr typeName = this->structType.getName();
+        serializer->key("typeName");
+        serializer->writeString(typeName.getCharPtr(), typeName.getLength());
+
+        serializer->key("fields");
+        const auto serializableFields = this->fields.asPtr<ISerializable>(true);
+        checkErrorInfo(serializableFields->serialize(serializer));
+
+        if (secretClassName.assigned())
+        {
+            serializer->key(SecretClassNameSerializedKey);
+            serializer->writeString(secretClassName.getCharPtr(), secretClassName.getLength());
+        }
+
+        serializer->endObject();
+        return OPENDAQ_SUCCESS;
+    });
+}
+
+ErrCode CredentialDescriptorImpl::getSerializeId(ConstCharPtr* id) const
+{
+    *id = SerializeId();
+    return OPENDAQ_SUCCESS;
+}
+
+ConstCharPtr CredentialDescriptorImpl::SerializeId()
+{
+    return "CredentialDescriptor";
+}
+
+ErrCode CredentialDescriptorImpl::Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj)
+{
+    OPENDAQ_PARAM_NOT_NULL(context);
+    OPENDAQ_PARAM_NOT_NULL(obj);
+
+    return daqTry([&]
+    {
+        const auto typeManager = BaseObjectPtr::Borrow(context).asPtr<ITypeManager>(true);
+
+        const auto serializedObj = SerializedObjectPtr::Borrow(serialized);
+        const StringPtr typeName = serializedObj.readString("typeName");
+        const DictPtr<IString, IBaseObject> fields = serializedObj.readObject("fields", context, factoryCallback).asPtr<IDict>();
+
+        StringPtr secretClassName;
+        if (serializedObj.hasKey(SecretClassNameSerializedKey))
+            secretClassName = serializedObj.readString(SecretClassNameSerializedKey);
+
+        const StringPtr id = fields.get("AuthenticationMethodId");
+        const StringPtr description = fields.get("Description");
+
+        CredentialDescriptorPtr result;
+        if (typeName == KeyValueDescriptorStructType().getName())
+        {
+            const StructPtr parameters = fields.get("Parameters");
+            const DictPtr<IString, IBoolean> keys = parameters.get("Keys");
+            result = KeyValueDescriptor(id, keys, description, typeManager, secretClassName);
+        }
+        else if (typeName == StringDescriptorStructType().getName())
+        {
+            const StructPtr parameters = fields.get("Parameters");
+            const Bool hidden = parameters.get("Hidden");
+            result = StringDescriptor(id, description, hidden, typeManager, secretClassName);
+        }
+        else if (typeName == FilePathDescriptorStructType().getName())
+        {
+            result = FilePathDescriptor(id, description, typeManager, secretClassName);
+        }
+        else if (typeName == NoneDescriptorStructType().getName())
+        {
+            result = NoneDescriptor(id, description);
+        }
+        else
+        {
+            DAQ_THROW_EXCEPTION(InvalidParameterException, "Unknown credential descriptor type \"{}\"", typeName);
+        }
+
+        *obj = result.detach();
+        return OPENDAQ_SUCCESS;
+    });
+}
+
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValueDescriptor, ICredentialDescriptor, IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, secretClassName)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringDescriptor, ICredentialDescriptor, IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, secretClassName)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathDescriptor, ICredentialDescriptor, IString*, id, IString*, description, ITypeManager*, typeManager, IString*, secretClassName)
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, NoneDescriptor, ICredentialDescriptor, IString*, id, IString*, description, ITypeManager*, typeManager)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, NoneDescriptor, ICredentialDescriptor, IString*, id, IString*, description)
+
+OPENDAQ_REGISTER_DESERIALIZE_FACTORY(CredentialDescriptorImpl)
 
 END_NAMESPACE_OPENDAQ

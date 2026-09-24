@@ -25,8 +25,22 @@
 #include <coreobjects/property_object_internal_ptr.h>
 #include <opendaq/module_info_ptr.h>
 #include <opendaq/component_type_private.h>
+#include <opendaq/credential_descriptor_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
+
+namespace detail
+{
+    inline bool ComponentTypeStructHasField(const StructTypePtr& type, const StringPtr& fieldName)
+    {
+        for (const auto& name : type.getFieldNames())
+        {
+            if (name == fieldName)
+                return true;
+        }
+        return false;
+    }
+}
 
 template <typename Intf = IComponentType, typename... Interfaces>
 class GenericComponentTypeImpl : public GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>
@@ -36,23 +50,49 @@ public:
                                       const StringPtr& id,
                                       const StringPtr& name,
                                       const StringPtr& description,
-                                      const PropertyObjectPtr& defaultConfig);
+                                      const PropertyObjectPtr& defaultConfig,
+                                      const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods = nullptr,
+                                      const StringPtr& defaultAuthenticationMethodId = nullptr);
 
     explicit GenericComponentTypeImpl(const StructTypePtr& type,
                                       const StringPtr& id,
                                       const StringPtr& name,
                                       const StringPtr& description,
                                       const StringPtr& prefix,
-                                      const PropertyObjectPtr& defaultConfig);
+                                      const PropertyObjectPtr& defaultConfig,
+                                      const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods = nullptr,
+                                      const StringPtr& defaultAuthenticationMethodId = nullptr);
 
     ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC getName(IString** name) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) override;
     ErrCode INTERFACE_FUNC getModuleInfo(IModuleInfo** moduleInfo) override;
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) override;
+    ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString** defaultAuthenticationMethodId) override;
 
     // IComponentTypePrivate
     ErrCode INTERFACE_FUNC setModuleInfo(IModuleInfo* info) override;
+
+private:
+    // Only sets "SupportedAuthenticationMethods"/"DefaultAuthenticationMethodId" when `type` actually
+    // declares them as Struct fields - not every sort does (e.g. Server/FunctionBlock don't) - since the
+    // base `GenericStructImpl` constructor used here does not validate `fields` against `type`'s declared
+    // shape, a mismatch would otherwise silently leave the Struct's own field list out of sync with its
+    // stored `fields`.
+    static DictPtr<IString, IBaseObject> BuildFields(const StructTypePtr& type,
+                                                      const StringPtr& id,
+                                                      const StringPtr& name,
+                                                      const StringPtr& description,
+                                                      const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                                                      const StringPtr& defaultAuthenticationMethodId);
+    static DictPtr<IString, IBaseObject> BuildFields(const StructTypePtr& type,
+                                                      const StringPtr& id,
+                                                      const StringPtr& name,
+                                                      const StringPtr& description,
+                                                      const StringPtr& prefix,
+                                                      const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                                                      const StringPtr& defaultAuthenticationMethodId);
 
 protected:
     StringPtr id;
@@ -61,6 +101,8 @@ protected:
     StringPtr prefix;
     PropertyObjectPtr defaultConfig;
     ModuleInfoPtr moduleInfo;
+    DictPtr<IString, ICredentialDescriptor> supportedAuthenticationMethods;
+    StringPtr defaultAuthenticationMethodId;
 };
 
 template <class Intf, class... Interfaces>
@@ -68,14 +110,18 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
                                                                         const StringPtr& id,
                                                                         const StringPtr& name,
                                                                         const StringPtr& description,
-                                                                        const PropertyObjectPtr& defaultConfig)
+                                                                        const PropertyObjectPtr& defaultConfig,
+                                                                        const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                                                                        const StringPtr& defaultAuthenticationMethodId)
     : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(
-          type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}}))
+          type, BuildFields(type, id, name, description, supportedAuthenticationMethods, defaultAuthenticationMethodId))
     , id(id)
     , name(name)
     , description(description)
     , prefix("")
     , defaultConfig(defaultConfig)
+    , supportedAuthenticationMethods(supportedAuthenticationMethods)
+    , defaultAuthenticationMethodId(defaultAuthenticationMethodId)
 {
 }
 
@@ -85,15 +131,54 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
                                                                         const StringPtr& name,
                                                                         const StringPtr& description,
                                                                         const StringPtr& prefix,
-                                                                        const PropertyObjectPtr& defaultConfig)
+                                                                        const PropertyObjectPtr& defaultConfig,
+                                                                        const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                                                                        const StringPtr& defaultAuthenticationMethodId)
     : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(
-          type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}, {"Prefix", prefix}}))
+          type, BuildFields(type, id, name, description, prefix, supportedAuthenticationMethods, defaultAuthenticationMethodId))
     , id(id)
     , name(name)
     , description(description)
     , prefix(prefix)
     , defaultConfig(defaultConfig)
+    , supportedAuthenticationMethods(supportedAuthenticationMethods)
+    , defaultAuthenticationMethodId(defaultAuthenticationMethodId)
 {
+}
+
+template <class Intf, class... Interfaces>
+DictPtr<IString, IBaseObject> GenericComponentTypeImpl<Intf, Interfaces...>::BuildFields(
+    const StructTypePtr& type,
+    const StringPtr& id,
+    const StringPtr& name,
+    const StringPtr& description,
+    const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+    const StringPtr& defaultAuthenticationMethodId)
+{
+    auto fields = Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}});
+    if (detail::ComponentTypeStructHasField(type, "SupportedAuthenticationMethods"))
+        fields.set("SupportedAuthenticationMethods", supportedAuthenticationMethods);
+    if (detail::ComponentTypeStructHasField(type, "DefaultAuthenticationMethodId"))
+        fields.set("DefaultAuthenticationMethodId", defaultAuthenticationMethodId);
+    return fields;
+}
+
+template <class Intf, class... Interfaces>
+DictPtr<IString, IBaseObject> GenericComponentTypeImpl<Intf, Interfaces...>::BuildFields(
+    const StructTypePtr& type,
+    const StringPtr& id,
+    const StringPtr& name,
+    const StringPtr& description,
+    const StringPtr& prefix,
+    const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+    const StringPtr& defaultAuthenticationMethodId)
+{
+    auto fields = Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}, {"Prefix", prefix}});
+    if (detail::ComponentTypeStructHasField(type, "SupportedAuthenticationMethods"))
+        fields.set("SupportedAuthenticationMethods", supportedAuthenticationMethods);
+    if (detail::ComponentTypeStructHasField(type, "DefaultAuthenticationMethodId"))
+        fields.set("DefaultAuthenticationMethodId", defaultAuthenticationMethodId);
+    return fields;
 }
 
 template <class Intf, class... Interfaces>
@@ -132,6 +217,24 @@ ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::createDefaultConfig(IProp
         return this->defaultConfig.template asPtr<IPropertyObjectInternal>()->clone(defaultConfig);
 
     *defaultConfig = PropertyObject().detach();
+    return OPENDAQ_SUCCESS;
+}
+
+template <class Intf, class... Interfaces>
+ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::getSupportedAuthenticationMethods(IDict** descriptors)
+{
+    OPENDAQ_PARAM_NOT_NULL(descriptors);
+
+    *descriptors = this->supportedAuthenticationMethods.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+template <class Intf, class... Interfaces>
+ErrCode GenericComponentTypeImpl<Intf, Interfaces...>::getDefaultAuthenticationMethodId(IString** defaultAuthenticationMethodId)
+{
+    OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationMethodId);
+
+    *defaultAuthenticationMethodId = this->defaultAuthenticationMethodId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

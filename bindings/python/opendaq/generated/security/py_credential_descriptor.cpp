@@ -58,9 +58,9 @@ void defineICredentialDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICredential
         return daq::FilePathDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), typeManager, getVariantValue<daq::IString*>(secretClassName));
     }, py::arg("id"), py::arg("description"), py::arg("type_manager"), py::arg("secret_class_name"));
 
-    m.def("NoneDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager){
-        return daq::NoneDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), typeManager);
-    }, py::arg("id"), py::arg("description"), py::arg("type_manager"));
+    m.def("NoneDescriptor", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
+        return daq::NoneDescriptor_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description));
+    }, py::arg("id"), py::arg("description"));
 
 
     cls.def_property_readonly("authentication_method_id",
@@ -70,7 +70,7 @@ void defineICredentialDescriptor(pybind11::module_ m, PyDaqIntf<daq::ICredential
             const auto objectPtr = daq::CredentialDescriptorPtr::Borrow(object);
             return objectPtr.getAuthenticationMethodId().toStdString();
         },
-        "Gets the id that uniquely identifies the authentication method this descriptor belongs to, at least within the module that offers it. In practice often unique system-wide instead: the Standard*CredentialDescriptor factories key off shared, well-known ids resolved through the one ITypeManager shared by the whole Context, so different modules using the same standard id produce identically-shaped descriptors.");
+        "Gets the id that uniquely identifies the authentication method this descriptor belongs to, at least within the module that offers it. In practice often unique system-wide instead: the Standard*CredentialDescriptor factories key off shared, well-known ids and (but for the anonymous one, which needs no type manager at all) resolve their Struct/secret class through the one ITypeManager shared by the whole Context, so different modules using the same standard id produce identically-shaped descriptors.");
     cls.def_property_readonly("format",
         [](daq::ICredentialDescriptor *object)
         {

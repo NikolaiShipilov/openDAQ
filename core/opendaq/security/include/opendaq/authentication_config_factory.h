@@ -18,29 +18,21 @@
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/credential_descriptor_ptr.h>
 #include <opendaq/context_ptr.h>
+#include <opendaq/component_type_ptr.h>
 #include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
- * `credentialDescriptors`. Each entry becomes one candidate value of the resulting config's
- * `"AuthenticationMethod"` Selection property , so a caller can later switch between methods
- * by changing that property's selection.
- * @param credentialDescriptors The supported credential descriptors, keyed by their own id.
- * @param defaultAuthenticationMethodId The id of the authentication method to select by default.
+ * @brief Builds an `AuthenticationConfig` for `componentType`, out of its own
+ * `IComponentType::getSupportedAuthenticationMethods()`.
+ * @param componentType The device or streaming type to build the config for.
  * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
  * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
- * @param typeId The id of the component type this config was built for, carried through serialization so a
- * reload can re-resolve everything fresh - required, no default. Pass `nullptr` explicitly for a config with
- * no type behind it; such a config can't meaningfully round-trip through save/reload.
  */
-inline AuthenticationConfigPtr AuthenticationConfig(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
-                                                     const StringPtr& defaultAuthenticationMethodId,
-                                                     const ContextPtr& context,
-                                                     const StringPtr& typeId)
+inline AuthenticationConfigPtr AuthenticationConfig(const ComponentTypePtr& componentType, const ContextPtr& context)
 {
-    AuthenticationConfigPtr obj(AuthenticationConfig_Create(credentialDescriptors, defaultAuthenticationMethodId, context, typeId));
+    AuthenticationConfigPtr obj(AuthenticationConfig_Create(componentType.getSupportedAuthenticationMethods(), context));
     return obj;
 }
 

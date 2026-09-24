@@ -76,15 +76,6 @@ void defineIModule(pybind11::module_ m, PyDaqIntf<daq::IModule, daq::IBaseObject
         },
         py::arg("connection_string"), py::arg("parent"), py::arg("config") = nullptr,
         "Creates a device object that can communicate with the device described in the specified connection string. The device object is not automatically added as a sub-device of the caller, but only returned by reference.");
-    cls.def("create_authenticated_device",
-        [](daq::IModule *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, std::variant<daq::IString*, py::str, daq::IEvalValue*>& manufacturer, std::variant<daq::IString*, py::str, daq::IEvalValue*>& serialNumber, daq::IComponent* parent, daq::IPropertyObject* config, daq::IAuthenticationConfig* authenticationConfig)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::ModulePtr::Borrow(object);
-            return objectPtr.createAuthenticatedDevice(getVariantValue<daq::IString*>(connectionString), getVariantValue<daq::IString*>(manufacturer), getVariantValue<daq::IString*>(serialNumber), parent, config, authenticationConfig).detach();
-        },
-        py::arg("connection_string"), py::arg("manufacturer"), py::arg("serial_number"), py::arg("parent"), py::arg("config"), py::arg("authentication_config"),
-        "Creates a device object that can communicate with the device described in the specified connection string, authenticating the connection by obtaining credentials - as specified by the given authentication configuration - from a compatible registered credential provider. The device object is not automatically added as a sub-device of the caller, but only returned by reference.");
     cls.def_property_readonly("available_function_block_types",
         [](daq::IModule *object)
         {
@@ -122,14 +113,14 @@ void defineIModule(pybind11::module_ m, PyDaqIntf<daq::IModule, daq::IBaseObject
         py::arg("server_type_id"), py::arg("root_device"), py::arg("config") = nullptr,
         "Creates and returns a server with the specified server type.");
     cls.def("create_streaming",
-        [](daq::IModule *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config, daq::IAuthenticationConfig* authenticationConfig, std::variant<daq::IString*, py::str, daq::IEvalValue*>& manufacturer, std::variant<daq::IString*, py::str, daq::IEvalValue*>& serialNumber)
+        [](daq::IModule *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config, std::variant<daq::IString*, py::str, daq::IEvalValue*>& manufacturer, std::variant<daq::IString*, py::str, daq::IEvalValue*>& serialNumber)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::ModulePtr::Borrow(object);
-            return objectPtr.createStreaming(getVariantValue<daq::IString*>(connectionString), config, authenticationConfig, getVariantValue<daq::IString*>(manufacturer), getVariantValue<daq::IString*>(serialNumber)).detach();
+            return objectPtr.createStreaming(getVariantValue<daq::IString*>(connectionString), config, getVariantValue<daq::IString*>(manufacturer), getVariantValue<daq::IString*>(serialNumber)).detach();
         },
-        py::arg("connection_string"), py::arg("config") = nullptr, py::arg("authentication_config") = nullptr, py::arg("manufacturer") = nullptr, py::arg("serial_number") = nullptr,
-        "Creates and returns a streaming object using the specified connection string and config object, optionally authenticating the connection by obtaining credentials - as specified by the given authentication configuration - from a compatible registered credential provider.");
+        py::arg("connection_string"), py::arg("config") = nullptr, py::arg("manufacturer") = nullptr, py::arg("serial_number") = nullptr,
+        "Creates and returns a streaming object using the specified connection string and config object, optionally authenticating the connection by obtaining credentials - as specified by an authentication configuration smuggled in through config.");
     cls.def("complete_server_capability",
         [](daq::IModule *object, daq::IServerCapability* source, daq::IServerCapabilityConfig* target)
         {

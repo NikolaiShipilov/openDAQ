@@ -52,7 +52,7 @@ extern "C"
     daqErrCode EXPORTED daqCredentialDescriptor_createKeyValueDescriptor(daqCredentialDescriptor** obj, daqString* id, daqDict* keys, daqString* description, daqTypeManager* typeManager, daqString* secretClassName);
     daqErrCode EXPORTED daqCredentialDescriptor_createStringDescriptor(daqCredentialDescriptor** obj, daqString* id, daqString* description, daqBool hidden, daqTypeManager* typeManager, daqString* secretClassName);
     daqErrCode EXPORTED daqCredentialDescriptor_createFilePathDescriptor(daqCredentialDescriptor** obj, daqString* id, daqString* description, daqTypeManager* typeManager, daqString* secretClassName);
-    daqErrCode EXPORTED daqCredentialDescriptor_createNoneDescriptor(daqCredentialDescriptor** obj, daqString* id, daqString* description, daqTypeManager* typeManager);
+    daqErrCode EXPORTED daqCredentialDescriptor_createNoneDescriptor(daqCredentialDescriptor** obj, daqString* id, daqString* description);
 
 #ifdef __cplusplus
 }

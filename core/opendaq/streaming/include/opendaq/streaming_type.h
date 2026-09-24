@@ -59,8 +59,13 @@ DECLARE_OPENDAQ_INTERFACE(IStreamingType, IComponentType)
  * @param id The unique type ID of the Streaming.
  * @param name The name of the Streaming. Eg. OpenDAQNativeStreaming.
  * @param description A short description of the Streaming and its behaviour.
+ * @param prefix The prefix of the connection string used to add this streaming connection to a device.
  * @param defaultConfig The property object, to be cloned and returned, each time user creates default
  * configuration object. This way each instance of the Streaming has its own configuration object.
+ * @param supportedAuthenticationMethods The credential descriptors this streaming type supports authenticating
+ * with, keyed by their own id.
+ * @param defaultAuthenticationMethodId The id of the authentication method this streaming type supports by
+ * default.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY(
     LIBRARY_FACTORY, StreamingType,
@@ -68,7 +73,9 @@ OPENDAQ_DECLARE_CLASS_FACTORY(
     IString*, name,
     IString*, description,
     IString*, prefix,
-    IPropertyObject*, defaultConfig
+    IPropertyObject*, defaultConfig,
+    IDict*, supportedAuthenticationMethods,
+    IString*, defaultAuthenticationMethodId
 )
 
 /*!@}*/
