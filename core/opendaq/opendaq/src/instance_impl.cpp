@@ -171,7 +171,7 @@ static ContextPtr ContextFromInstanceBuilder(IInstanceBuilder* instanceBuilder)
             discoveryServers.set(serverName, server);
     }
 
-    return Context(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServers, builderPtr.getCredentialProviders());
+    return Context(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServers, builderPtr.getCredentialProvider());
 }
 
 void InstanceImpl::stopAndRemoveServers() const
@@ -551,22 +551,9 @@ ErrCode InstanceImpl::getAvailableDeviceTypes(IDict** deviceTypes)
     return rootDevice->getAvailableDeviceTypes(deviceTypes);
 }
 
-ErrCode InstanceImpl::createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig)
-{
-    return rootDevice->createDefaultAuthenticationConfig(typeId, authenticationConfig);
-}
-
 ErrCode InstanceImpl::addDevice(IDevice** device, IString* connectionString, IPropertyObject* config)
 {
     return rootDevice->addDevice(device, connectionString, config);
-}
-
-ErrCode InstanceImpl::addAuthenticatedDevice(IDevice** device,
-                                             IString* connectionString,
-                                             IPropertyObject* config,
-                                             IAuthenticationConfig* authenticationConfig)
-{
-    return rootDevice->addAuthenticatedDevice(device, connectionString, config, authenticationConfig);
 }
 
 ErrCode InstanceImpl::addDevices(IDict** devices, IDict* connectionArgs, IDict* errCodes, IDict* errorInfos)
@@ -584,12 +571,9 @@ ErrCode InstanceImpl::getDevices(IList** devices, ISearchFilter* searchFilter)
     return rootDevice->getDevices(devices, searchFilter);
 }
 
-ErrCode InstanceImpl::addStreaming(IStreaming** streaming,
-                                   IString* connectionString,
-                                   IPropertyObject* config,
-                                   IAuthenticationConfig* authenticationConfig)
+ErrCode InstanceImpl::addStreaming(IStreaming** streaming, IString* connectionString, IPropertyObject* config)
 {
-    return rootDevice->addStreaming(streaming, connectionString, config, authenticationConfig);
+    return rootDevice->addStreaming(streaming, connectionString, config);
 }
 
 ErrCode InstanceImpl::getSyncComponent(ISyncComponent** syncComponent)

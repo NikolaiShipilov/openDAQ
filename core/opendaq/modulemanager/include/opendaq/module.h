@@ -79,28 +79,6 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
     virtual ErrCode INTERFACE_FUNC createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config = nullptr) = 0;
 
     /*!
-     * @brief Creates a device object that can communicate with the device described in the specified connection string,
-     * authenticating the connection by obtaining credentials - as specified by the given authentication configuration -
-     * from a compatible registered credential provider.
-     * The device object is not automatically added as a sub-device of the caller, but only returned by reference.
-     * @param[out] device The device object created to communicate with and control the device.
-     * @param connectionString Describes the connection info of the device to connect to.
-     * @param manufacturer The manufacturer of the device to connect to.
-     * @param serialNumber The serial number of the device to connect to.
-     * @param parent The parent component/device to which the device attaches.
-     * @param config A configuration object that contains parameters used to configure a device in the form of key-value pairs.
-     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
-     * obtain and verify credentials for this connection - see `IAuthenticationConfig`.
-     */
-    virtual ErrCode INTERFACE_FUNC createAuthenticatedDevice(IDevice** device,
-                                                             IString* connectionString,
-                                                             IString* manufacturer,
-                                                             IString* serialNumber,
-                                                             IComponent* parent,
-                                                             IPropertyObject* config,
-                                                             IAuthenticationConfig* authenticationConfig) = 0;
-
-    /*!
      * @brief Returns a dictionary of known and available function block types this module can create.
      * @param[out] functionBlockTypes The dictionary of known function block types.
      */
@@ -142,11 +120,6 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
-     * @param authenticationConfig Carries the settings (selected method, provider, supplied secret) used to
-     * obtain and verify credentials for this streaming connection - see `IAuthenticationConfig`. If
-     * unassigned and the resolved streaming type supports authentication, its own default method is used
-     * instead - the streaming is connected to without authentication only if that method (or the type
-     * itself) requires no credentials at all.
      * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
      * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
      * @param[out] streaming The created streaming object.
@@ -154,7 +127,6 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
     virtual ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                                    IString* connectionString,
                                                    IPropertyObject* config = nullptr,
-                                                   IAuthenticationConfig* authenticationConfig = nullptr,
                                                    IString* manufacturer = nullptr,
                                                    IString* serialNumber = nullptr) = 0;
 
@@ -190,14 +162,6 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * Always return True if no license is required by the module.
      */
     virtual ErrCode INTERFACE_FUNC licenseLoaded(Bool* loaded) = 0;
-
-    /*!
-     * @brief Builds the self-contained default `IAuthenticationConfig` for the type identified by `typeId`.
-     * @param typeId The id of a device or streaming type this module offers.
-     * @param[out] authenticationConfig The built authentication config.
-     * @retval OPENDAQ_ERR_NOTFOUND if `typeId` isn't one of this module's own device/streaming types.
-     */
-    virtual ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(IString* typeId, IAuthenticationConfig** authenticationConfig) = 0;
 };
 /*!@}*/
 

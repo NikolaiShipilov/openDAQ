@@ -67,9 +67,7 @@ protected:
 
     void removed() override;
 
-    StreamingPtr onAddStreaming(const StringPtr& connectionString,
-                                const PropertyObjectPtr& config,
-                                const AuthenticationConfigPtr& authenticationConfig) override;
+    StreamingPtr onAddStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) override;
 
     virtual bool isAddedToLocalComponentTree();
     virtual StringPtr onGetRemoteId() const = 0;
@@ -335,9 +333,7 @@ ErrCode MirroredDeviceBase<Interfaces...>::setComponentConfig(IPropertyObject* c
 }
 
 template <typename... Interfaces>
-StreamingPtr MirroredDeviceBase<Interfaces...>::onAddStreaming(const StringPtr& connectionString,
-                                                                const PropertyObjectPtr& config,
-                                                                const AuthenticationConfigPtr& authenticationConfig)
+StreamingPtr MirroredDeviceBase<Interfaces...>::onAddStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config)
 {
     auto lock = this->getRecursiveConfigLock2();
     checkDuplicateStreamingSource(connectionString);
@@ -347,7 +343,7 @@ StreamingPtr MirroredDeviceBase<Interfaces...>::onAddStreaming(const StringPtr& 
     const StringPtr serialNumber = deviceInfo.assigned() ? deviceInfo.getSerialNumber() : nullptr;
 
     const ModuleManagerUtilsPtr managerUtils = this->context.getModuleManager().template asPtr<IModuleManagerUtils>();
-    return registerStreamingSource(managerUtils.createStreaming(connectionString, config, authenticationConfig, manufacturer, serialNumber));
+    return registerStreamingSource(managerUtils.createStreaming(connectionString, config, manufacturer, serialNumber));
 }
 
 template <typename... Interfaces>

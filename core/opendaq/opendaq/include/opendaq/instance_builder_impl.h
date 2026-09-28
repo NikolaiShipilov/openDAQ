@@ -18,6 +18,7 @@
 #include <opendaq/instance_builder.h>
 #include <opendaq/instance_factory.h>
 #include <opendaq/config_provider_ptr.h>
+#include <opendaq/credential_provider_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -89,8 +90,8 @@ public:
     ErrCode INTERFACE_FUNC setLoadAuthenticatedModulesOnly(Bool authenticatedOnly) override;
     ErrCode INTERFACE_FUNC getLoadAuthenticatedModulesOnly(Bool* authenticatedOnly) override;
 
-    ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) override;
-    ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) override;
+    ErrCode INTERFACE_FUNC getCredentialProvider(ICredentialProvider** provider) override;
+    ErrCode INTERFACE_FUNC setCredentialProvider(ICredentialProvider* provider) override;
 
 private:
     static DictPtr<IString, IBaseObject> GetDefaultOptions();
@@ -119,7 +120,7 @@ private:
     DictPtr<IString, IBaseObject> options;
     PropertyObjectPtr rootDeviceConfig{nullptr};
     ListPtr<IString> discoveryServers;
-    DictPtr<IString, ICredentialProvider> credentialProviders;
+    CredentialProviderPtr credentialProvider;
 };
 
 END_NAMESPACE_OPENDAQ

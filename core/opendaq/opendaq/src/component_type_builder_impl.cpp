@@ -4,6 +4,8 @@
 #include <opendaq/function_block_type_impl.h>
 #include <opendaq/streaming_type_impl.h>
 #include <coretypes/validation.h>
+#include <coretypes/dictobject_factory.h>
+#include <opendaq/credential_descriptor_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -16,6 +18,13 @@ ErrCode ComponentTypeBuilderImpl::build(IComponentType** componentType)
 {
     const ErrCode errCode = daqTry([&componentType, this]
     {
+        if ((sort == ComponentTypeSort::Device || sort == ComponentTypeSort::Streaming) && !this->supportedAuthenticationMethods.assigned())
+        {
+            // Left unset by the caller - default to offering "Anonymous".
+            this->supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods();
+            this->defaultAuthenticationMethodId = StandardAnonymousId;
+        }
+
         const auto builderPtr = this->borrowPtr<ComponentTypeBuilderPtr>();
         switch (sort)
         {
@@ -122,6 +131,34 @@ ErrCode ComponentTypeBuilderImpl::getDefaultConfig(IPropertyObject** defaultConf
     OPENDAQ_PARAM_NOT_NULL(defaultConfig);
 
     *defaultConfig = this->defaultConfig.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ComponentTypeBuilderImpl::setSupportedAuthenticationMethods(IDict* descriptors)
+{
+    this->supportedAuthenticationMethods = descriptors;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ComponentTypeBuilderImpl::getSupportedAuthenticationMethods(IDict** descriptors)
+{
+    OPENDAQ_PARAM_NOT_NULL(descriptors);
+
+    *descriptors = this->supportedAuthenticationMethods.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ComponentTypeBuilderImpl::setDefaultAuthenticationMethodId(IString* defaultAuthenticationMethodId)
+{
+    this->defaultAuthenticationMethodId = defaultAuthenticationMethodId;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode ComponentTypeBuilderImpl::getDefaultAuthenticationMethodId(IString** defaultAuthenticationMethodId)
+{
+    OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationMethodId);
+
+    *defaultAuthenticationMethodId = this->defaultAuthenticationMethodId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

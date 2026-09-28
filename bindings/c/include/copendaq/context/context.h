@@ -57,9 +57,8 @@ extern "C"
     daqErrCode EXPORTED daqContext_getOptions(daqContext* self, daqDict** options);
     daqErrCode EXPORTED daqContext_getModuleOptions(daqContext* self, daqString* moduleId, daqDict** options);
     daqErrCode EXPORTED daqContext_getDiscoveryServers(daqContext* self, daqDict** servers);
-    daqErrCode EXPORTED daqContext_getCredentialProviders(daqContext* self, daqDict** providers);
-    daqErrCode EXPORTED daqContext_addCredentialProvider(daqContext* self, daqString* providerId, daqCredentialProvider* provider);
-    daqErrCode EXPORTED daqContext_createContext(daqContext** obj, daqScheduler* Scheduler, daqLogger* Logger, daqTypeManager* typeManager, daqModuleManager* moduleManager, daqAuthenticationProvider* authenticationProvider, daqDict* options, daqDict* discoveryServers, daqDict* credentialProviders);
+    daqErrCode EXPORTED daqContext_getCredentialProvider(daqContext* self, daqCredentialProvider** provider);
+    daqErrCode EXPORTED daqContext_createContext(daqContext** obj, daqScheduler* Scheduler, daqLogger* Logger, daqTypeManager* typeManager, daqModuleManager* moduleManager, daqAuthenticationProvider* authenticationProvider, daqDict* options, daqDict* discoveryServers, daqCredentialProvider* credentialProvider);
 
 #ifdef __cplusplus
 }

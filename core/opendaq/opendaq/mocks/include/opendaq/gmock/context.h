@@ -39,8 +39,7 @@ struct MockContext : daq::ImplementationOf<daq::IContext, daq::IContextInternal>
     MOCK_METHOD(daq::ErrCode, getModuleOptions, (daq::IString* moduleId, daq::IDict** options), (override MOCK_CALL));
     MOCK_METHOD(daq::ErrCode, getDiscoveryServers, (daq::IDict** services), (override MOCK_CALL));
     MOCK_METHOD(daq::ErrCode, getRootDevice, (daq::IBaseObject** device), (override MOCK_CALL));
-    MOCK_METHOD(daq::ErrCode, getCredentialProviders, (daq::IDict** providers), (override MOCK_CALL));
-    MOCK_METHOD(daq::ErrCode, addCredentialProvider, (daq::IString* providerId, daq::ICredentialProvider* provider), (override MOCK_CALL));
+    MOCK_METHOD(daq::ErrCode, getCredentialProvider, (daq::ICredentialProvider** provider), (override MOCK_CALL));
 
     MOCK_METHOD(daq::ErrCode, moveModuleManager, (daq::IModuleManager** manager), (override MOCK_CALL));
     MOCK_METHOD(daq::ErrCode, setRootDevice, (daq::IBaseObject* device), (override MOCK_CALL));

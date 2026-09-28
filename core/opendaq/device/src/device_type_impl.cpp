@@ -1,5 +1,6 @@
 #include <opendaq/device_type_impl.h>
 #include <opendaq/device_type_factory.h>
+#include <opendaq/credential_descriptor_factory.h>
 #include <coretypes/validation.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -13,8 +14,10 @@ DeviceTypeImpl::DeviceTypeImpl(const StringPtr& id,
                                const StringPtr& name,
                                const StringPtr& description,
                                const PropertyObjectPtr& defaultConfig,
-                               const StringPtr& prefix)
-    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig)
+                               const StringPtr& prefix,
+                               const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                               const StringPtr& defaultAuthenticationMethodId)
+    : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig, supportedAuthenticationMethods, defaultAuthenticationMethodId)
 {
 }
 
@@ -23,7 +26,9 @@ DeviceTypeImpl::DeviceTypeImpl(const ComponentTypeBuilderPtr& builder)
                      builder.getName(),
                      builder.getDescription(),
                      builder.getDefaultConfig(),
-                     builder.getConnectionStringPrefix())
+                     builder.getConnectionStringPrefix(),
+                     builder.getSupportedAuthenticationMethods(),
+                     builder.getDefaultAuthenticationMethodId())
 {
 }
 
@@ -60,7 +65,7 @@ ErrCode INTERFACE_FUNC DeviceTypeImpl::serialize(ISerializer* serializer)
                 serializerPtr.writeString(description);
             }
 
-            if (description.assigned())
+            if (prefix.assigned())
             {
                 serializerPtr.key("prefix");
                 serializerPtr.writeString(prefix);
@@ -70,6 +75,18 @@ ErrCode INTERFACE_FUNC DeviceTypeImpl::serialize(ISerializer* serializer)
             {
                 serializerPtr.key("defaultConfig");
                 defaultConfig.serialize(serializerPtr);
+            }
+
+            if (supportedAuthenticationMethods.assigned() && supportedAuthenticationMethods.getCount() > 0)
+            {
+                serializerPtr.key("supportedAuthenticationMethods");
+                supportedAuthenticationMethods.serialize(serializerPtr);
+            }
+
+            if (defaultAuthenticationMethodId.assigned())
+            {
+                serializerPtr.key("defaultAuthenticationMethodId");
+                serializerPtr.writeString(defaultAuthenticationMethodId);
             }
 
             if (moduleInfo.assigned())
@@ -127,7 +144,16 @@ ErrCode DeviceTypeImpl::Deserialize(ISerializedObject* serialized, IBaseObject* 
         if (serializedObj.hasKey("defaultConfig"))
             defaultConfig = serializedObj.readObject("defaultConfig", contextPtr, factoryCallbackPtr);
 
-        auto deviceType = createWithImplementation<IDeviceType, DeviceTypeImpl>(id, name, description, defaultConfig, prefix);
+        DictPtr<IString, ICredentialDescriptor> supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods();
+        if (serializedObj.hasKey("supportedAuthenticationMethods"))
+            supportedAuthenticationMethods = serializedObj.readObject("supportedAuthenticationMethods", contextPtr, factoryCallbackPtr).asPtr<IDict>();
+
+        StringPtr defaultAuthenticationMethodId = StandardAnonymousId;
+        if (serializedObj.hasKey("defaultAuthenticationMethodId"))
+            defaultAuthenticationMethodId = serializedObj.readString("defaultAuthenticationMethodId");
+
+        auto deviceType = createWithImplementation<IDeviceType, DeviceTypeImpl>(
+            id, name, description, defaultConfig, prefix, supportedAuthenticationMethods, defaultAuthenticationMethodId);
 
         ModuleInfoPtr moduleInfo;
         if (serializedObj.hasKey("moduleInfo"))
@@ -156,7 +182,11 @@ OPENDAQ_DEFINE_CLASS_FACTORY(
     IPropertyObject*,
     defaultConfig,
     IString*,
-    prefix
+    prefix,
+    IDict*,
+    supportedAuthenticationMethods,
+    IString*,
+    defaultAuthenticationMethodId
     )
 
 END_NAMESPACE_OPENDAQ

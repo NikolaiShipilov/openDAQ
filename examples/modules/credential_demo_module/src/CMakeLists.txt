@@ -37,6 +37,9 @@ add_library(${LIB_NAME} SHARED ${SRC_Include}
 
 add_library(${SDK_TARGET_NAMESPACE}::${LIB_NAME} ALIAS ${LIB_NAME})
 
+opendaq_target_pch(${LIB_NAME} <opendaq/opendaq.h>)
+opendaq_target_unity_libs(${LIB_NAME} BATCH_SIZE 4)
+
 find_package(OpenSSL REQUIRED)
 
 target_link_libraries(${LIB_NAME} PUBLIC daq::opendaq

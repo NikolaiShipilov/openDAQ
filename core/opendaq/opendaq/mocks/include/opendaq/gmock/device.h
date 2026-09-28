@@ -35,9 +35,7 @@ struct MockDevice : MockGenericSignalContainer<MockDevice, IDevice>
     MOCK_METHOD(ErrCode, getDevices, (IList**, ISearchFilter*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, getAvailableDevices, (IList**), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, getAvailableDeviceTypes, (IDict**), (override MOCK_CALL));
-    MOCK_METHOD(ErrCode, createDefaultAuthenticationConfig, (IString*, IAuthenticationConfig**), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, addDevice, (IDevice**, IString*, IPropertyObject*), (override MOCK_CALL));
-    MOCK_METHOD(ErrCode, addAuthenticatedDevice, (IDevice**, IString*, IPropertyObject*, IAuthenticationConfig*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, addDevices, (IDict**, IDict*, IDict*, IDict*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, removeDevice, (IDevice*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, getFunctionBlocks, (IList**, ISearchFilter*), (override MOCK_CALL));
@@ -47,7 +45,7 @@ struct MockDevice : MockGenericSignalContainer<MockDevice, IDevice>
     MOCK_METHOD(ErrCode, saveConfiguration, (IString**), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, loadConfiguration, (IString*, IUpdateParameters*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, getTicksSinceOrigin, (UInt*), (override MOCK_CALL));
-    MOCK_METHOD(ErrCode, addStreaming, (IStreaming**, IString*, IPropertyObject*, IAuthenticationConfig*), (override MOCK_CALL));
+    MOCK_METHOD(ErrCode, addStreaming, (IStreaming**, IString*, IPropertyObject*), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, createDefaultAddDeviceConfig, (IPropertyObject**), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, getSyncComponent, (ISyncComponent**), (override MOCK_CALL));
     MOCK_METHOD(ErrCode, addServer, (IString*, IPropertyObject*, IServer**), (override MOCK_CALL));

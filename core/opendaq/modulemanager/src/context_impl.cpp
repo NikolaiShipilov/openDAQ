@@ -21,7 +21,7 @@ ContextImpl::ContextImpl(SchedulerPtr scheduler,
                          AuthenticationProviderPtr authenticationProvider,
                          DictPtr<IString, IBaseObject> options,
                          DictPtr<IString, IDiscoveryServer> discoveryServices,
-                         DictPtr<IString, ICredentialProvider> credentialProviders)
+                         CredentialProviderPtr credentialProvider)
     : logger(std::move(logger))
     , scheduler(std::move(scheduler))
     , moduleManager(std::move(moduleManager))
@@ -29,7 +29,7 @@ ContextImpl::ContextImpl(SchedulerPtr scheduler,
     , authenticationProvider(std::move(authenticationProvider))
     , options(std::move(options))
     , discoveryServers(std::move(discoveryServices))
-    , credentialProviders(std::move(credentialProviders))
+    , credentialProvider(std::move(credentialProvider))
 {
     if (!this->logger.assigned())
         DAQ_THROW_EXCEPTION(ArgumentNullException, "Logger must not be null");
@@ -251,30 +251,11 @@ ErrCode ContextImpl::setRootDevice(IBaseObject* device)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ContextImpl::getCredentialProviders(IDict** providers)
+ErrCode ContextImpl::getCredentialProvider(ICredentialProvider** provider)
 {
-    OPENDAQ_PARAM_NOT_NULL(providers);
-    if (!this->credentialProviders.assigned())
-    {
-        *providers = Dict<IString, ICredentialProvider>().detach();
-        return OPENDAQ_SUCCESS;
-    }
-    *providers = this->credentialProviders.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode ContextImpl::addCredentialProvider(IString* providerId, ICredentialProvider* provider)
-{
-    OPENDAQ_PARAM_NOT_NULL(providerId);
     OPENDAQ_PARAM_NOT_NULL(provider);
-
-    if (!this->credentialProviders.assigned())
-        this->credentialProviders = Dict<IString, ICredentialProvider>();
-
-    if (this->credentialProviders.hasKey(providerId))
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_ALREADYEXISTS, fmt::format(R"("A credential provider is already registered under the id '{}'.)", StringPtr::Borrow(providerId)));
-
-    return this->credentialProviders->set(providerId, provider);
+    *provider = this->credentialProvider.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
 }
 
 void ContextImpl::registerOpenDaqTypes()
@@ -371,7 +352,7 @@ OPENDAQ_DEFINE_CLASS_FACTORY(
     IAuthenticationProvider*, authenticationProvider,
     IDict*, options,
     IDict*, discoveryServices,
-    IDict*, credentialProviders
+    ICredentialProvider*, credentialProvider
 )
 
 END_NAMESPACE_OPENDAQ

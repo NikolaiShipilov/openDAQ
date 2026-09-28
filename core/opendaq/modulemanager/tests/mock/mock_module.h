@@ -29,13 +29,6 @@ public:
     daq::ErrCode INTERFACE_FUNC getAvailableDevices(daq::IList** availableDevices) override;
     daq::ErrCode INTERFACE_FUNC getAvailableDeviceTypes(daq::IDict** deviceTypes) override;
     daq::ErrCode INTERFACE_FUNC createDevice(daq::IDevice** device, daq::IString* connectionString, daq::IComponent* parent, daq::IPropertyObject* config) override;
-    daq::ErrCode INTERFACE_FUNC createAuthenticatedDevice(daq::IDevice** device,
-                                                          daq::IString* connectionString,
-                                                          daq::IString* manufacturer,
-                                                          daq::IString* serialNumber,
-                                                          daq::IComponent* parent,
-                                                          daq::IPropertyObject* config,
-                                                          daq::IAuthenticationConfig* authenticationConfig) override;
 
     daq::ErrCode INTERFACE_FUNC getAvailableFunctionBlockTypes(daq::IDict** functionBlockTypes) override;
     daq::ErrCode INTERFACE_FUNC createFunctionBlock(daq::IFunctionBlock** functionBlock, daq::IString* id, daq::IComponent* parent, daq::IString* localId, daq::IPropertyObject* config) override;
@@ -46,13 +39,10 @@ public:
     daq::ErrCode INTERFACE_FUNC createStreaming(daq::IStreaming** streaming,
                                                 daq::IString* connectionString,
                                                 daq::IPropertyObject* config,
-                                                daq::IAuthenticationConfig* authenticationConfig,
                                                 daq::IString* manufacturer,
                                                 daq::IString* serialNumber) override;
     daq::ErrCode INTERFACE_FUNC completeServerCapability(daq::Bool* succeeded, daq::IServerCapability* source, daq::IServerCapabilityConfig* target) override;
     daq::ErrCode INTERFACE_FUNC getAvailableStreamingTypes(daq::IDict** streamingTypes) override;
-
-    daq::ErrCode INTERFACE_FUNC createDefaultAuthenticationConfig(daq::IString* typeId, daq::IAuthenticationConfig** authenticationConfig) override;
 
     daq::ErrCode INTERFACE_FUNC loadLicense(daq::Bool* succeeded, daq::IDict* licenseConfig) override;
     daq::ErrCode INTERFACE_FUNC getLicenseConfig(daq::IDict** licenseConfig) override;

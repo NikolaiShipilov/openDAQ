@@ -37,7 +37,7 @@ public:
                          AuthenticationProviderPtr authenticationProvider,
                          DictPtr<IString, IBaseObject> options,
                          DictPtr<IString, IDiscoveryServer> discoveryServices,
-                         DictPtr<IString, ICredentialProvider> credentialProviders);
+                         CredentialProviderPtr credentialProvider);
     ~ContextImpl();
 
     // IContext interface
@@ -51,8 +51,7 @@ public:
     ErrCode INTERFACE_FUNC getModuleOptions(IString* moduleId, IDict** options) override;
     ErrCode INTERFACE_FUNC getDiscoveryServers(IDict** servers) override;
     ErrCode INTERFACE_FUNC getRootDevice(IBaseObject** device) override;
-    ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) override;
-    ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) override;
+    ErrCode INTERFACE_FUNC getCredentialProvider(ICredentialProvider** provider) override;
 
     // IContextInternal interface
     ErrCode INTERFACE_FUNC moveModuleManager(IModuleManager** manager) override;
@@ -72,7 +71,7 @@ private:
     DictPtr<IString, IBaseObject> options;
     DictPtr<IString, IDiscoveryServer> discoveryServers;
     WeakRefPtr<IBaseObject> rootDeviceWeakRef;
-    DictPtr<IString, ICredentialProvider> credentialProviders;
+    CredentialProviderPtr credentialProvider;
 };
 
 END_NAMESPACE_OPENDAQ

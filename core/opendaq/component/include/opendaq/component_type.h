@@ -17,14 +17,19 @@
 #pragma once
 #include <coreobjects/property_object.h>
 #include <coretypes/stringobject.h>
+#include <coretypes/dictobject.h>
 #include <opendaq/module_info.h>
 
 BEGIN_NAMESPACE_OPENDAQ
+
+struct ICredentialDescriptor;
 
 /*#
  * [templated(defaultAliasName: ComponentTypePtr)]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr)]
  * [interfaceLibrary(IPropertyObject, CoreObjects)]
+ * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
+ * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
  */
 
 /*!
@@ -36,8 +41,8 @@ BEGIN_NAMESPACE_OPENDAQ
 /*!
  * @brief Provides information about the component types.
  *
- * Is a Struct core type, and has access to Struct methods internally. Note that the Default config is not part of
- * the Struct fields.
+ * Is a Struct core type, and has access to Struct methods internally. Note that the default config is not
+ * part of the Struct fields.
  */
 
 DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
@@ -81,6 +86,20 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
      * @param[out] info The module information.
      */
     virtual ErrCode INTERFACE_FUNC getModuleInfo(IModuleInfo** info) = 0;
+
+    /*!
+     * @brief Gets the credential descriptors this component type supports authenticating with, keyed by their
+     * own authentication method id.
+     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id.
+     */
+    // [templateType(descriptors, IString, ICredentialDescriptor)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) = 0;
+
+    /*!
+     * @brief Gets the id of the authentication method this component type supports by default.
+     * @param[out] defaultAuthenticationMethodId The default authentication method id.
+     */
+    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString** defaultAuthenticationMethodId) = 0;
 };
 /*!@}*/
 

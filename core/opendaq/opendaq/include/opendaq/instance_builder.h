@@ -379,22 +379,19 @@ DECLARE_OPENDAQ_INTERFACE(IInstanceBuilder, IBaseObject)
 
     virtual ErrCode INTERFACE_FUNC getLoadAuthenticatedModulesOnly(Bool* authOnly) = 0;
 
-    // [templateType(providers, IString, ICredentialProvider)]
     /*!
-     * @brief Gets the dictionary of credential providers added so far, keyed by their own id.
-     * @param[out] providers The dictionary of added credential providers.
+     * @brief Gets the credential provider to be registered on the built instance's `Context`.
+     * @param[out] provider The credential provider to be registered, or `nullptr` if none has been set.
      */
-    virtual ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) = 0;
+    virtual ErrCode INTERFACE_FUNC getCredentialProvider(ICredentialProvider** provider) = 0;
 
     // [returnSelf]
     /*!
-     * @brief Adds a credential provider to be registered on the built instance's `Context`, in addition to
-     * whatever is already added.
-     * @param providerId The id to key the provider by. Must be unique among the added providers.
-     * @param provider The credential provider to add.
-     * @retval OPENDAQ_ERR_ALREADYEXISTS if a provider is already added under `providerId`.
+     * @brief Sets the credential provider to be registered on the built instance's `Context`, replacing
+     * whatever was set before. Only one credential provider can ever be registered on an instance.
+     * @param provider The credential provider to register.
      */
-    virtual ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) = 0;
+    virtual ErrCode INTERFACE_FUNC setCredentialProvider(ICredentialProvider* provider) = 0;
 };
 /*!@}*/
 

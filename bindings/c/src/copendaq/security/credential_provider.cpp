@@ -22,9 +22,9 @@ void daqCredentialProvider_getInterfaceId(daqIntfID* intfId)
     *intfId = DAQ_CREDENTIAL_PROVIDER_INTF_ID;
 }
 
-daqErrCode daqCredentialProvider_getId(daqCredentialProvider* self, daqString** id)
+daqErrCode daqCredentialProvider_getDescription(daqCredentialProvider* self, daqString** description)
 {
-    return reinterpret_cast<daq::ICredentialProvider*>(self)->getId(reinterpret_cast<daq::IString**>(id));
+    return reinterpret_cast<daq::ICredentialProvider*>(self)->getDescription(reinterpret_cast<daq::IString**>(description));
 }
 
 daqErrCode daqCredentialProvider_requestCredentials(daqCredentialProvider* self, daqCredentialRequest* request, daqPropertyObject** credentials)
@@ -46,14 +46,6 @@ daqErrCode daqCredentialProvider_createCmdLineCredentialProvider(daqCredentialPr
 {
     daq::ICredentialProvider* ptr = nullptr;
     daqErrCode err = daq::createCmdLineCredentialProvider(&ptr);
-    *obj = reinterpret_cast<daqCredentialProvider*>(ptr);
-    return err;
-}
-
-daqErrCode daqCredentialProvider_createFileCredentialProvider(daqCredentialProvider** obj)
-{
-    daq::ICredentialProvider* ptr = nullptr;
-    daqErrCode err = daq::createFileCredentialProvider(&ptr);
     *obj = reinterpret_cast<daqCredentialProvider*>(ptr);
     return err;
 }

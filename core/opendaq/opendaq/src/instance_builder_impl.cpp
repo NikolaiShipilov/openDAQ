@@ -57,7 +57,6 @@ InstanceBuilderImpl::InstanceBuilderImpl()
     , providers(List<IConfigProvider>())
     , options(GetDefaultOptions())
     , discoveryServers(List<IString>())
-    , credentialProviders(Dict<IString, ICredentialProvider>())
 {
 }
 
@@ -477,23 +476,18 @@ ErrCode InstanceBuilderImpl::getLoadAuthenticatedModulesOnly(Bool* authenticated
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode InstanceBuilderImpl::getCredentialProviders(IDict** providers)
+ErrCode InstanceBuilderImpl::getCredentialProvider(ICredentialProvider** provider)
 {
-    OPENDAQ_PARAM_NOT_NULL(providers);
+    OPENDAQ_PARAM_NOT_NULL(provider);
 
-    *providers = this->credentialProviders.addRefAndReturn();
+    *provider = this->credentialProvider.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode InstanceBuilderImpl::addCredentialProvider(IString* providerId, ICredentialProvider* provider)
+ErrCode InstanceBuilderImpl::setCredentialProvider(ICredentialProvider* provider)
 {
-    OPENDAQ_PARAM_NOT_NULL(providerId);
-    OPENDAQ_PARAM_NOT_NULL(provider);
-
-    if (this->credentialProviders.hasKey(providerId))
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_ALREADYEXISTS, fmt::format(R"("A credential provider is already added under the id '{}'.)", StringPtr::Borrow(providerId)));
-
-    return this->credentialProviders->set(providerId, provider);
+    this->credentialProvider = provider;
+    return OPENDAQ_SUCCESS;
 }
 
 /////////////////////

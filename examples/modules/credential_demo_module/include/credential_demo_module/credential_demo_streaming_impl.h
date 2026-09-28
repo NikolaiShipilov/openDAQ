@@ -38,7 +38,9 @@ public:
                                          const StringPtr& authenticationMethodId,
                                          const PropertyObjectPtr& credentials);
 
-    static StreamingTypePtr CreateType();
+    static constexpr const char* Prefix = "daq.credential_demo_streaming";
+
+    static StreamingTypePtr CreateType(const ContextPtr& context);
 
 protected:
     void onSetActive(bool active) override;

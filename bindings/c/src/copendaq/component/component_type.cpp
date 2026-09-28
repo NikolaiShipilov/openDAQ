@@ -46,3 +46,13 @@ daqErrCode daqComponentType_getModuleInfo(daqComponentType* self, daqModuleInfo*
 {
     return reinterpret_cast<daq::IComponentType*>(self)->getModuleInfo(reinterpret_cast<daq::IModuleInfo**>(info));
 }
+
+daqErrCode daqComponentType_getSupportedAuthenticationMethods(daqComponentType* self, daqDict** descriptors)
+{
+    return reinterpret_cast<daq::IComponentType*>(self)->getSupportedAuthenticationMethods(reinterpret_cast<daq::IDict**>(descriptors));
+}
+
+daqErrCode daqComponentType_getDefaultAuthenticationMethodId(daqComponentType* self, daqString** defaultAuthenticationMethodId)
+{
+    return reinterpret_cast<daq::IComponentType*>(self)->getDefaultAuthenticationMethodId(reinterpret_cast<daq::IString**>(defaultAuthenticationMethodId));
+}

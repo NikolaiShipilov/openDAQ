@@ -40,9 +40,9 @@ void defineIStreamingType(pybind11::module_ m, PyDaqIntf<daq::IStreamingType, da
 {
     cls.doc() = "Provides information on what streaming type can be created by a given module. Can be used to obtain the default configuration used when either adding/creating a new device, or establishing a new streaming connection.";
 
-    m.def("StreamingType", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& name, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, std::variant<daq::IString*, py::str, daq::IEvalValue*>& prefix, daq::IPropertyObject* defaultConfig){
-        return daq::StreamingType_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(name), getVariantValue<daq::IString*>(description), getVariantValue<daq::IString*>(prefix), defaultConfig);
-    }, py::arg("id"), py::arg("name"), py::arg("description"), py::arg("prefix"), py::arg("default_config"));
+    m.def("StreamingType", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& name, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, std::variant<daq::IString*, py::str, daq::IEvalValue*>& prefix, daq::IPropertyObject* defaultConfig, std::variant<daq::IDict*, py::dict>& supportedAuthenticationMethods, std::variant<daq::IString*, py::str, daq::IEvalValue*>& defaultAuthenticationMethodId){
+        return daq::StreamingType_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(name), getVariantValue<daq::IString*>(description), getVariantValue<daq::IString*>(prefix), defaultConfig, getVariantValue<daq::IDict*>(supportedAuthenticationMethods), getVariantValue<daq::IString*>(defaultAuthenticationMethodId));
+    }, py::arg("id"), py::arg("name"), py::arg("description"), py::arg("prefix"), py::arg("default_config"), py::arg("supported_authentication_methods"), py::arg("default_authentication_method_id"));
 
 
     cls.def_property_readonly("connection_string_prefix",

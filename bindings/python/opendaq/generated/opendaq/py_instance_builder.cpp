@@ -373,22 +373,19 @@ void defineIInstanceBuilder(pybind11::module_ m, PyDaqIntf<daq::IInstanceBuilder
             objectPtr.setLoadAuthenticatedModulesOnly(authOnly);
         },
         "");
-    cls.def_property_readonly("credential_providers",
+    cls.def_property("credential_provider",
         [](daq::IInstanceBuilder *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::InstanceBuilderPtr::Borrow(object);
-            return objectPtr.getCredentialProviders().detach();
+            return objectPtr.getCredentialProvider().detach();
         },
-        py::return_value_policy::take_ownership,
-        "");
-    cls.def("add_credential_provider",
-        [](daq::IInstanceBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& providerId, daq::ICredentialProvider* provider)
+        [](daq::IInstanceBuilder *object, daq::ICredentialProvider* provider)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::InstanceBuilderPtr::Borrow(object);
-            objectPtr.addCredentialProvider(getVariantValue<daq::IString*>(providerId), provider);
+            objectPtr.setCredentialProvider(provider);
         },
-        py::arg("provider_id"), py::arg("provider"),
-        "");
+        py::return_value_policy::take_ownership,
+        "Gets or sets the credential provider to be registered on the built instance's `Context`. At most one can ever be registered.");
 }

@@ -43,12 +43,11 @@ extern "C"
     EXPORTED extern const daqIntfID DAQ_CREDENTIAL_PROVIDER_INTF_ID;
     void EXPORTED daqCredentialProvider_getInterfaceId(daqIntfID* intfId);
 
-    daqErrCode EXPORTED daqCredentialProvider_getId(daqCredentialProvider* self, daqString** id);
+    daqErrCode EXPORTED daqCredentialProvider_getDescription(daqCredentialProvider* self, daqString** description);
     daqErrCode EXPORTED daqCredentialProvider_requestCredentials(daqCredentialProvider* self, daqCredentialRequest* request, daqPropertyObject** credentials);
     daqErrCode EXPORTED daqCredentialProvider_cacheCredentials(daqCredentialProvider* self, daqCredentialRequest* request, daqPropertyObject* secret);
     daqErrCode EXPORTED daqCredentialProvider_getSupportedFormats(daqCredentialProvider* self, daqList** formats);
     daqErrCode EXPORTED daqCredentialProvider_createCmdLineCredentialProvider(daqCredentialProvider** obj);
-    daqErrCode EXPORTED daqCredentialProvider_createFileCredentialProvider(daqCredentialProvider** obj);
 
 #ifdef __cplusplus
 }

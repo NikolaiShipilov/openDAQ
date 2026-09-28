@@ -81,4 +81,21 @@ void defineIComponentType(pybind11::module_ m, PyDaqIntf<daq::IComponentType, da
         },
         py::return_value_policy::take_ownership,
         "Retrieves the module information.");
+    cls.def_property_readonly("supported_authentication_methods",
+        [](daq::IComponentType *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::ComponentTypePtr::Borrow(object);
+            return objectPtr.getSupportedAuthenticationMethods().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the credential descriptors this component type supports authenticating with, keyed by their own authentication method id.");
+    cls.def_property_readonly("default_authentication_method_id",
+        [](daq::IComponentType *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::ComponentTypePtr::Borrow(object);
+            return objectPtr.getDefaultAuthenticationMethodId().toStdString();
+        },
+        "Gets the id of the authentication method this component type supports by default.");
 }

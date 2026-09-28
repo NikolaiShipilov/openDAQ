@@ -37,12 +37,13 @@ extern "C"
     typedef struct daqStreamingType daqStreamingType;
     typedef struct daqString daqString;
     typedef struct daqPropertyObject daqPropertyObject;
+    typedef struct daqDict daqDict;
 
     EXPORTED extern const daqIntfID DAQ_STREAMING_TYPE_INTF_ID;
     void EXPORTED daqStreamingType_getInterfaceId(daqIntfID* intfId);
 
     daqErrCode EXPORTED daqStreamingType_getConnectionStringPrefix(daqStreamingType* self, daqString** prefix);
-    daqErrCode EXPORTED daqStreamingType_createStreamingType(daqStreamingType** obj, daqString* id, daqString* name, daqString* description, daqString* prefix, daqPropertyObject* defaultConfig);
+    daqErrCode EXPORTED daqStreamingType_createStreamingType(daqStreamingType** obj, daqString* id, daqString* name, daqString* description, daqString* prefix, daqPropertyObject* defaultConfig, daqDict* supportedAuthenticationMethods, daqString* defaultAuthenticationMethodId);
 
 #ifdef __cplusplus
 }

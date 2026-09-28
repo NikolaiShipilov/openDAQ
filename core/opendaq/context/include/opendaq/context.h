@@ -120,23 +120,14 @@ DECLARE_OPENDAQ_INTERFACE(IContext, IBaseObject)
      */
     virtual ErrCode INTERFACE_FUNC getRootDevice(IBaseObject** device) = 0;
 
-    // [templateType(providers, IString, ICredentialProvider)]
     /*!
-     * @brief Gets the dictionary of registered credential providers, keyed by their own id.
-     * @param[out] providers The dictionary of registered credential providers.
-     */
-    virtual ErrCode INTERFACE_FUNC getCredentialProviders(IDict** providers) = 0;
-
-    /*!
-     * @brief Registers a credential provider on this context, in addition to whatever is already registered.
-     * @param providerId The id to key the provider by. Must be unique among the registered providers.
-     * @param provider The credential provider to register.
-     * @retval OPENDAQ_ERR_ALREADYEXISTS if a provider is already registered under `providerId`.
+     * @brief Gets the credential provider registered on this context.
+     * @param[out] provider The registered credential provider, or `nullptr` if none is registered.
      *
-     * Unlike `IInstanceBuilder::addCredentialProvider`, which only affects the instance being built, this
-     * registers directly on an already-built `Context`.
+     * At most one credential provider can ever be registered, and only at instance-build time (see
+     * `IInstanceBuilder::setCredentialProvider`).
      */
-    virtual ErrCode INTERFACE_FUNC addCredentialProvider(IString* providerId, ICredentialProvider* provider) = 0;
+    virtual ErrCode INTERFACE_FUNC getCredentialProvider(ICredentialProvider** provider) = 0;
 };
 /*!@}*/
 
@@ -157,7 +148,7 @@ OPENDAQ_DECLARE_CLASS_FACTORY(
     IAuthenticationProvider*, authenticationProvider,
     IDict*, options,
     IDict*, discoveryServers,
-    IDict*, credentialProviders
+    ICredentialProvider*, credentialProvider
 )
 
 /*!@}*/

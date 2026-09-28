@@ -30,7 +30,9 @@ public:
                             const StringPtr& name,
                             const StringPtr& description,
                             const PropertyObjectPtr& defaultConfig,
-                            const StringPtr& prefix);
+                            const StringPtr& prefix,
+                            const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                            const StringPtr& defaultAuthenticationMethodId);
 
     explicit DeviceTypeImpl(const ComponentTypeBuilderPtr& builder);
 

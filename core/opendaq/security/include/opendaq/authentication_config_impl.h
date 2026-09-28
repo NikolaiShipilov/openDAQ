@@ -20,7 +20,6 @@
 #include <coretypes/dictobject_factory.h>
 #include <coretypes/listobject_factory.h>
 #include <opendaq/credential_descriptor_ptr.h>
-#include <opendaq/context_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -29,56 +28,62 @@ class AuthenticationConfigImpl : public GenericPropertyObjectImpl<IAuthenticatio
 public:
     using Super = GenericPropertyObjectImpl<IAuthenticationConfig>;
 
-    // `context` must be assigned - throws otherwise. `typeId` has no default instead: every caller states
-    // explicitly whether it has one (`nullptr` included), rather than a config silently ending up type-less
-    // by omission. `typeId` lets a saved config re-resolve `credentialDescriptors`/`context` fresh on reload
-    // (see `serialize`/`Deserialize`) - a config built with no type behind it can't meaningfully round-trip
-    // through save/reload.
-    AuthenticationConfigImpl(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
-                             const StringPtr& defaultAuthenticationMethodId,
-                             const ContextPtr& context,
-                             const StringPtr& typeId);
+    // The first entry of `credentialDescriptors` (in dict iteration order) starts out selected.
+    explicit AuthenticationConfigImpl(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors);
 
-    ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) override;
-    ErrCode INTERFACE_FUNC getCredentialDescriptor(ICredentialDescriptor** descriptor) override;
-    ErrCode INTERFACE_FUNC getCredentialProviderId(IString** providerId) override;
+    // Stub constructor used only by `Deserialize` (mirrors `DeviceInfoConfigImpl`'s own default constructor) -
+    // produces an object with no properties at all yet, not even "AuthenticationMethod", so the generic
+    // PropertyObject deserialization pipeline can add it back fresh from its own serialized definition, the
+    // same way it would for any other Property. None of the typed getters/setters are valid on an object built
+    // this way until that happens - not meant for direct use otherwise.
+    AuthenticationConfigImpl();
+
+    ErrCode INTERFACE_FUNC getSelectedAuthenticationMethodId(IString** authenticationMethodId) override;
+    ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) override;
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) override;
     ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) override;
 
-    // Intercepted to keep "CredentialProviderId" live and dependent on "AuthenticationMethod" (recomputed from
-    // `context` on every "AuthenticationMethod" write, added/removed as compatibility changes), to remember the
-    // user's last explicit provider choice, and to validate/auto-clear "SuppliedSecret" against whichever
-    // descriptor is currently selected.
+    // An `IAuthenticationConfig` needs to be nestable as an ordinary Object-type property value, but
+    // `GenericPropertyObjectImpl::checkContainerType` only allows a nested value whose own
+    // `IInspectable::getInterfaceIds()[0]` is exactly `IPropertyObject::Id` - any other primary interface is
+    // rejected with `InvalidTypeException`. Overriding it to report `IPropertyObject::Id` first (the real
+    // interface list, `IAuthenticationConfig` included, still follows right after - `QueryInterface`/casting
+    // to it is entirely unaffected, only the reported order changes).
+    ErrCode INTERFACE_FUNC getInterfaceIds(SizeT* idCount, IntfID** ids) override;
+
+    // Intercepted to validate/auto-clear "SuppliedSecret" against whichever descriptor is currently selected
+    // whenever "AuthenticationMethod" changes. `setProtectedPropertyValue` gets the same treatment (see
+    // `onPropertyValueChanged`) since it's the path generic deserialization (`DeserializePropertyValues`) writes
+    // through, bypassing `setPropertyValue`/`setPropertySelectionValue` entirely.
     ErrCode INTERFACE_FUNC setPropertyValue(IString* propertyName, IBaseObject* value) override;
     ErrCode INTERFACE_FUNC setPropertySelectionValue(IString* propertyName, IBaseObject* value) override;
+    ErrCode INTERFACE_FUNC setProtectedPropertyValue(IString* propertyName, IBaseObject* value) override;
 
-    // Fully custom - replaces generic PropertyObject serialization entirely. `typeId`, the selected
-    // authentication method id, and - when present - the selected "CredentialProviderId" are written; "SuppliedSecret"
-    // (a secret) is never serialized. On deserialize, the saved provider id is restored only if it's still
-    // among the freshly-rebuilt compatible candidates - otherwise the normal live default applies.
-    ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
+    // Relies on the generic PropertyObject serialization for "AuthenticationMethod" (its candidates and
+    // selected value round-trip through it correctly on their own - see `serializeProperty`/
+    // `serializePropertyValue`) but not for "SuppliedSecret" - a secret, so it must never be persisted at all
+    // (same two overrides, excluding it).
+    // Deserializing builds a bare stub first (the constructor above), then runs the entirely generic
+    // PropertyObject pipeline on it: `DeserializePropertyOrder`/`DeserializeLocalProperties`/
+    // `DeserializePropertyValues` add "AuthenticationMethod" back from its own serialized definition (candidates
+    // and all) and restore its saved selection override, if one was saved - routed through
+    // `setProtectedPropertyValue` (see above). No manual JSON parsing of its own.
+    ErrCode serializeProperty(const PropertyPtr& property, ISerializer* serializer) override;
+    ErrCode serializePropertyValue(const StringPtr& name, const ObjectPtr<IBaseObject>& value, ISerializer* serializer, bool forUpdate) override;
     ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
     static ConstCharPtr SerializeId();
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
 
 private:
     static constexpr const char* AuthenticationMethodPropertyName = "AuthenticationMethod";
-    static constexpr const char* CredentialProviderIdPropertyName = "CredentialProviderId";
     static constexpr const char* SuppliedSecretPropertyName = "SuppliedSecret";
-    static constexpr const char* TypeIdSerializedKey = "TypeId";
-    static constexpr const char* AuthenticationMethodIdSerializedKey = "AuthenticationMethodId";
-    static constexpr const char* ProviderIdSerializedKey = "ProviderId";
 
-    ContextPtr context;
-    StringPtr typeId;
-    StringPtr preferredCredentialProviderId;
+    void initProperties(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors);
 
-    void initProperties(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors,
-                        const StringPtr& defaultAuthenticationMethodId);
-
-    // Always re-queries `context.getCredentialProviders()` fresh (never a cached snapshot), filters by
-    // `selectedDescriptor`'s format, and adds/removes/replaces "CredentialProviderId" to match - present
-    // only when at least one registered provider currently supports the selected format.
-    void rebuildCredentialProviderCandidates(const CredentialDescriptorPtr& selectedDescriptor);
+    // Shared tail of `setPropertyValue`/`setPropertySelectionValue`/`setProtectedPropertyValue`, run after the
+    // write itself already succeeded: auto-clears an incompatible "SuppliedSecret" on an "AuthenticationMethod"
+    // write.
+    ErrCode onPropertyValueChanged(const StringPtr& name);
 
     void clearSuppliedSecretIfIncompatible(const CredentialDescriptorPtr& selectedDescriptor);
 
@@ -86,6 +91,8 @@ private:
     // would produce? The blessed workflow is to build from that template and fill it in, but this doesn't
     // check provenance, only shape.
     static bool IsSuppliedSecretShapeValid(const PropertyObjectPtr& secret, const CredentialDescriptorPtr& selectedDescriptor);
+
+    static DictPtr<IString, ICredentialDescriptor> ToCredentialDescriptorDict(const ListPtr<IStruct>& candidates);
 };
 
 END_NAMESPACE_OPENDAQ

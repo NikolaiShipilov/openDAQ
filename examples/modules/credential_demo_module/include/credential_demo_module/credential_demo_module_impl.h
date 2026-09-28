@@ -50,9 +50,6 @@ public:
                                                 const StringPtr& authenticationMethodId,
                                                 const PropertyObjectPtr& credentials) override;
 
-    DictPtr<IString, ICredentialDescriptor> onGetSupportedAuthenticationMethods(const StringPtr& typeId) override;
-    StringPtr onGetDefaultAuthenticationMethodId(const StringPtr& typeId) override;
-
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);
 };

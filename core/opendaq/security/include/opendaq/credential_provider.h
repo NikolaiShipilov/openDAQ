@@ -36,12 +36,10 @@ BEGIN_NAMESPACE_OPENDAQ
 DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 {
     /*!
-     * @brief Gets the id that uniquely identifies the credential provider - the same id used to key it
-     * within `IInstanceBuilder::addCredentialProvider`/`IContext::getCredentialProviders`, and that
-     * `IAuthenticationConfig`'s `"CredentialProviderId"` property names when a caller selects one explicitly.
-     * @param[out] id The provider id.
+     * @brief Gets a human-readable description of the credential provider.
+     * @param[out] description The provider's description.
      */
-    virtual ErrCode INTERFACE_FUNC getId(IString** id) = 0;
+    virtual ErrCode INTERFACE_FUNC getDescription(IString** description) = 0;
 
     /*!
      * @brief Requests credentials for the given request, in the format described by its credential descriptor.
@@ -74,15 +72,10 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 };
 
 /*!
- * @brief Creates a `ICredentialProvider` that prompts the user for secrets via the command line.
+ * @brief Creates a `ICredentialProvider` that prompts the user for secrets via the command line - supporting
+ * every `CredentialFormat`, including `FilePath` (validated locally - retried if the entered path isn't
+ * accessible - and cached in-memory per `(manufacturer, serialNumber)` for the active session).
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, CmdLineCredentialProvider, ICredentialProvider)
-
-/*!
- * @brief Creates a `ICredentialProvider` dedicated to file-backed secrets. Prompts for the file's path
- * via the command line, the same way `CmdLineCredentialProvider` does, and hands back the path itself for
- * a `FilePath`-format request.
- */
-OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FileCredentialProvider, ICredentialProvider)
 
 END_NAMESPACE_OPENDAQ

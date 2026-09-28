@@ -130,8 +130,10 @@ inline StructTypePtr NoneDescriptorStructType()
 }
 
 /*!
- * @brief Registers the four formats' backing `IStructType`s, plus the standard descriptors' own
- * empty-secret `IPropertyObjectClass`es, with `typeManager`. Called once by `Context` up front.
+ * @brief Registers the `KeyValuePairs`/`String`/`FilePath` formats' backing `IStructType`s, plus the
+ * standard descriptors' own empty-secret `IPropertyObjectClass`es, with `typeManager`. Called once by
+ * `Context` up front. The `None` format's `IStructType` is never registered with any type manager - see
+ * `NoneDescriptor`.
  * @param typeManager The type manager to register the credential descriptor types with.
  */
 inline void RegisterCredentialDescriptorTypes(const TypeManagerPtr& typeManager)
@@ -140,8 +142,7 @@ inline void RegisterCredentialDescriptorTypes(const TypeManagerPtr& typeManager)
                              KeyValueDescriptorParametersStructType(),
                              StringDescriptorStructType(),
                              StringDescriptorParametersStructType(),
-                             FilePathDescriptorStructType(),
-                             NoneDescriptorStructType()})
+                             FilePathDescriptorStructType()})
     {
         checkErrorInfoExcept(typeManager->addType(type), OPENDAQ_ERR_ALREADYEXISTS);
     }
@@ -222,18 +223,15 @@ inline CredentialDescriptorPtr FilePathDescriptor(const StringPtr& id,
  * @brief Creates a `CredentialDescriptor` describing a `None`-format method - no secret(s) at all,
  * for an authentication method that requires no credentials, e.g. typically an anonymous access. Unlike the other
  * formats, there is no secret to build, so no secret class is involved - `createEmptySecret()` is not
- * supported for it, and returns `OPENDAQ_ERR_NOT_SUPPORTED`.
+ * supported for it, and returns `OPENDAQ_ERR_NOT_SUPPORTED`. Unlike the other formats, its `IStructType` is
+ * never registered with any `ITypeManager` - a fixed, well-known shape regardless of which `Context` (if
+ * any) is involved - so, unlike the other three factories, this one needs no type manager at all.
  * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param description A human-readable description of the authentication method, for the user.
- * @param typeManager Must already have a `"NoneDescriptor"` type registered (see
- * `RegisterCredentialDescriptorTypes`) - a real `Context` always registers it up front. Throws
- * otherwise.
  */
-inline CredentialDescriptorPtr NoneDescriptor(const StringPtr& id,
-                                               const StringPtr& description,
-                                               const TypeManagerPtr& typeManager)
+inline CredentialDescriptorPtr NoneDescriptor(const StringPtr& id, const StringPtr& description)
 {
-    CredentialDescriptorPtr obj(NoneDescriptor_Create(id, description, typeManager));
+    CredentialDescriptorPtr obj(NoneDescriptor_Create(id, description));
     return obj;
 }
 
@@ -284,12 +282,18 @@ inline CredentialDescriptorPtr StandardPrivateKeyFileCredentialDescriptor(const 
 
 /*!
  * @brief The credential descriptor for the standard anonymous authentication method - a `None`-format
- * method, requiring no credentials at all.
- * @param typeManager See `NoneDescriptor`.
+ * method, requiring no credentials at all. Unlike the other three standard descriptors, needs no type
+ * manager - see `NoneDescriptor`.
  */
-inline CredentialDescriptorPtr StandardAnonymousCredentialDescriptor(const TypeManagerPtr& typeManager)
+inline CredentialDescriptorPtr StandardAnonymousCredentialDescriptor()
 {
-    return NoneDescriptor(StandardAnonymousId, "No credentials required", typeManager);
+    return NoneDescriptor(StandardAnonymousId, "No credentials required");
+}
+
+inline DictPtr<IString, ICredentialDescriptor> AnonymousOnlySupportedAuthenticationMethods()
+{
+    const auto anonymous = StandardAnonymousCredentialDescriptor();
+    return Dict<IString, ICredentialDescriptor>({{anonymous.getAuthenticationMethodId(), anonymous}});
 }
 
 END_NAMESPACE_OPENDAQ
