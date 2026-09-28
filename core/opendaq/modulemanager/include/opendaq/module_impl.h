@@ -155,8 +155,7 @@ public:
      * credentials for it - this, too, is handled here rather than by the module implementation. The manufacturer/
      * serial number identifying the device are never known upfront here (`config` carries no such metadata) - if
      * the created device's own info supplies them afterward, the already-obtained credentials are handed again
-     * (`cacheCredentials`) to the exact same provider `requestCredentials` resolved originally (never re-searched),
-     * against a request rebuilt with them.
+     * (`cacheCredentials`) to the registered provider, against a request rebuilt with them.
      */
     ErrCode INTERFACE_FUNC createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config) override
     {
@@ -210,11 +209,10 @@ public:
         DevicePtr createdDevice;
         if (authenticated)
         {
-            CredentialProviderPtr resolvedProvider;
             PropertyObjectPtr credentials;
 
             errCode = wrapHandlerReturn(
-                this, &Module::obtainCredentials, credentials, resolvedAuthConfig, connectionString, nullptr, nullptr, deviceType, resolvedProvider);
+                this, &Module::obtainCredentials, credentials, resolvedAuthConfig, connectionString, nullptr, nullptr, deviceType);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
             const StringPtr authenticationMethodId = resolvedAuthConfig.getSelectedAuthenticationMethodId();
@@ -239,15 +237,16 @@ public:
                     const DeviceInfoPtr info = createdDevice.getInfo();
 
                     // Manufacturer/serial number are never known upfront here (see above) - if the created
-                    // device's own info now supplies them, hand the already-obtained credentials to the same
-                    // provider again, keyed by them too.
-                    if (resolvedProvider.assigned() && info.assigned() && info.getManufacturer().assigned() && info.getSerialNumber().assigned())
+                    // device's own info now supplies them, hand the already-obtained credentials to the
+                    // registered provider again, keyed by them too.
+                    const CredentialProviderPtr provider = context.getCredentialProvider();
+                    if (provider.assigned() && info.assigned() && info.getManufacturer().assigned() && info.getSerialNumber().assigned())
                     {
                         try
                         {
                             const auto enrichedRequest = buildCredentialRequest(
                                 resolvedAuthConfig, connectionString, info.getManufacturer(), info.getSerialNumber(), deviceType);
-                            resolvedProvider.cacheCredentials(enrichedRequest, credentials);
+                            provider.cacheCredentials(enrichedRequest, credentials);
                         }
                         catch (const DaqException& e)
                         {
@@ -452,7 +451,6 @@ public:
         StreamingPtr createdStreaming;
         if (authenticated)
         {
-            CredentialProviderPtr resolvedProvider;
             PropertyObjectPtr credentials;
             errCode = wrapHandlerReturn(this,
                                         &Module::obtainCredentials,
@@ -461,8 +459,7 @@ public:
                                         connectionString,
                                         manufacturer,
                                         serialNumber,
-                                        streamingType,
-                                        resolvedProvider);
+                                        streamingType);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
             const StringPtr authenticationMethodId = resolvedAuthConfig.getSelectedAuthenticationMethodId();
@@ -759,12 +756,12 @@ private:
     {
         if (authenticationConfig.assigned())
             return authenticationConfig;
-        return AuthenticationConfig(componentType, context);
+        return AuthenticationConfig(componentType);
     }
 
     // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
-    // then resolves credentials for it via `obtainCredentials` (see it for details on `resolvedProvider`).
-    // Throws `AuthenticationFailedException` if `authenticationConfig` is unassigned.
+    // then resolves credentials for it via `resolveCredentials`. Throws `AuthenticationFailedException` if
+    // `authenticationConfig` is unassigned.
     //
     // A `None`-format method needs no credentials at all, so it is resolved directly here, as unassigned
     // credentials - `createEmptySecret()` doesn't apply to it either, there being no secret to build. No
@@ -775,8 +772,7 @@ private:
                                         const StringPtr& connectionString,
                                         const StringPtr& manufacturer,
                                         const StringPtr& serialNumber,
-                                        const ComponentTypePtr& componentType,
-                                        CredentialProviderPtr& resolvedProvider)
+                                        const ComponentTypePtr& componentType)
     {
         if (!authenticationConfig.assigned())
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no authentication config was provided");
@@ -785,7 +781,7 @@ private:
             return nullptr;
 
         const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, componentType);
-        return resolveCredentials(authenticationConfig, credentialRequest, resolvedProvider);
+        return resolveCredentials(authenticationConfig, credentialRequest);
     }
 
     // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
@@ -811,24 +807,20 @@ private:
 
     // Resolves the credentials for `credentialRequest` - always a non-`None`-format method (see
     // `requestCredentials`, its only caller, which resolves `None` itself beforehand). Consumes whichever
-    // provider id `authenticationConfig.getSelectedCredentialProviderId()` currently returns. If
-    // `authenticationConfig.getSuppliedSecret()` returns one, it is used directly instead of asking a
-    // provider to obtain one - though the currently-selected provider, if any, is still handed the secret
-    // via `cacheCredentials`, so a later request for the same context can be served from its cache.
-    // `resolvedProvider` receives whichever provider was actually involved, or stays unassigned if none was.
+    // single credential provider `context.getCredentialProvider()` currently returns (see
+    // `IContext::getCredentialProvider`). If `authenticationConfig.getSuppliedSecret()` returns one, it is
+    // used directly instead of asking the provider to obtain one - though the provider, if registered, is
+    // still handed the secret via `cacheCredentials`, so a later request for the same context can be served
+    // from its cache.
     //
     // Throws `AuthenticationFailedException` if:
-    // - `getSelectedCredentialProviderId()` returns nothing at all,
-    // - the returned provider id no longer names a registered provider,
-    // - the returned provider no longer supports the required format, or
-    // - the resolved credentials (supplied by the caller, or obtained from a provider) don't match
+    // - no credential provider is registered at all,
+    // - the registered provider does not support the required format, or
+    // - the resolved credentials (supplied by the caller, or obtained from the provider) don't match
     //   `credentialDescriptor`'s expected shape.
-    PropertyObjectPtr resolveCredentials(const AuthenticationConfigPtr& authenticationConfig,
-                                         const CredentialRequestPtr& credentialRequest,
-                                         CredentialProviderPtr& resolvedProvider)
+    PropertyObjectPtr resolveCredentials(const AuthenticationConfigPtr& authenticationConfig, const CredentialRequestPtr& credentialRequest)
     {
-        const auto providers = context.getCredentialProviders();
-        const auto providerId = authenticationConfig.getSelectedCredentialProviderId();
+        const CredentialProviderPtr provider = context.getCredentialProvider();
         const PropertyObjectPtr suppliedSecret = authenticationConfig.getSuppliedSecret();
 
         if (suppliedSecret.assigned())
@@ -837,32 +829,30 @@ private:
                 DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret does not match the expected shape");
 
             // Already shaped like the credential descriptor's `createEmptySecret` template (filled in by the
-            // caller), so it is used directly as the credential, no provider asked to obtain anything.
-            // If a provider is currently selected too, it still gets a chance to cache the secret, so a later
-            // interactive request for the same context reuses it.
-            if (providerId.assigned())
+            // caller), so it is used directly as the credential, no provider asked to obtain anything. If one
+            // is registered too, it still gets a chance to cache the secret, so a later interactive request
+            // for the same context reuses it.
+            if (provider.assigned())
             {
-                resolvedProvider = findMatchingCredentialProvider(providers, credentialRequest.getDescriptor(), providerId);
-                if (!resolvedProvider.assigned())
+                if (!supportsCredentialFormat(provider, credentialRequest.getDescriptor()))
                     DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                         "Authentication is required but no credential provider supporting a compatible format is registered");
+                                         "Authentication is required but the registered credential provider does not support the required format");
 
-                resolvedProvider.cacheCredentials(credentialRequest, suppliedSecret);
+                provider.cacheCredentials(credentialRequest, suppliedSecret);
             }
 
             return suppliedSecret;
         }
 
-        resolvedProvider = findMatchingCredentialProvider(providers, credentialRequest.getDescriptor(), providerId);
-        if (!resolvedProvider.assigned())
+        if (!provider.assigned())
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no credential provider is registered");
+        if (!supportsCredentialFormat(provider, credentialRequest.getDescriptor()))
             DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                 "Authentication is required but no credential provider supporting a compatible format is registered");
+                                "Authentication is required but the registered credential provider does not support the required format");
 
-        const PropertyObjectPtr credentials = resolvedProvider.requestCredentials(credentialRequest);
+        const PropertyObjectPtr credentials = provider.requestCredentials(credentialRequest);
         if (!secretShapeMatches(credentials, credentialRequest.getDescriptor()))
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                 "Credential provider \"{}\" returned credentials that do not match the expected shape",
-                                 resolvedProvider.getId());
+            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Credential provider returned credentials that do not match the expected shape");
 
         return credentials;
     }
@@ -898,40 +888,6 @@ private:
         }
 
         return false;
-    }
-
-    // Looks up `providerId` among the registered `providers` and validates it supports `credentialDescriptor`'s
-    // format. `providerId` is expected to already be whatever `authenticationConfig.getSelectedCredentialProviderId()`
-    // currently returns, pre-filtered to compatible providers. An unassigned `providerId` simply returns
-    // unassigned; it is the caller's job (`obtainCredentials`) to treat that as a failure.
-    //
-    // Throws `AuthenticationFailedException` if `providerId` is assigned but:
-    // - names no registered provider, or
-    // - names a provider that no longer supports the required format.
-    static CredentialProviderPtr findMatchingCredentialProvider(const DictPtr<IString, ICredentialProvider>& providers,
-                                                                const CredentialDescriptorPtr& credentialDescriptor,
-                                                                const StringPtr& providerId = nullptr)
-    {
-        if (!providerId.assigned())
-            return nullptr;
-
-        if (!providers.assigned() || !providers.hasKey(providerId))
-        {
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException,
-                                 "Authentication is required but the selected credential provider \"{}\" is not registered",
-                                 providerId);
-        }
-
-        auto provider = providers.get(providerId);
-        if (!supportsCredentialFormat(provider, credentialDescriptor))
-        {
-            DAQ_THROW_EXCEPTION(
-                AuthenticationFailedException,
-                "Authentication is required but the selected credential provider \"{}\" does not support the required format",
-                providerId);
-        }
-
-        return provider;
     }
 
     StringPtr getPrefixFromConnectionString(const StringPtr& connectionString) const

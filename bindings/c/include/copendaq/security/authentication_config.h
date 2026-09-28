@@ -38,8 +38,6 @@ extern "C"
     typedef struct daqString daqString;
     typedef struct daqPropertyObject daqPropertyObject;
     typedef struct daqDict daqDict;
-    typedef struct daqList daqList;
-    typedef struct daqContext daqContext;
 
     EXPORTED extern const daqIntfID DAQ_AUTHENTICATION_CONFIG_INTF_ID;
     void EXPORTED daqAuthenticationConfig_getInterfaceId(daqIntfID* intfId);
@@ -47,11 +45,8 @@ extern "C"
     daqErrCode EXPORTED daqAuthenticationConfig_getSelectedAuthenticationMethodId(daqAuthenticationConfig* self, daqString** authenticationMethodId);
     daqErrCode EXPORTED daqAuthenticationConfig_setAuthenticationMethodId(daqAuthenticationConfig* self, daqString* authenticationMethodId);
     daqErrCode EXPORTED daqAuthenticationConfig_getSupportedAuthenticationMethods(daqAuthenticationConfig* self, daqDict** descriptors);
-    daqErrCode EXPORTED daqAuthenticationConfig_getSelectedCredentialProviderId(daqAuthenticationConfig* self, daqString** providerId);
-    daqErrCode EXPORTED daqAuthenticationConfig_setCredentialProviderId(daqAuthenticationConfig* self, daqString* providerId);
-    daqErrCode EXPORTED daqAuthenticationConfig_getSupportedCredentialProviderIds(daqAuthenticationConfig* self, daqList** providerIds);
     daqErrCode EXPORTED daqAuthenticationConfig_getSuppliedSecret(daqAuthenticationConfig* self, daqPropertyObject** secret);
-    daqErrCode EXPORTED daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* credentialDescriptors, daqContext* context);
+    daqErrCode EXPORTED daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* credentialDescriptors);
 
 #ifdef __cplusplus
 }

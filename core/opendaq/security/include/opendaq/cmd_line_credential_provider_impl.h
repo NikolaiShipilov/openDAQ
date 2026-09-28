@@ -31,7 +31,7 @@ class CmdLineCredentialProviderImpl : public ImplementationOf<ICredentialProvide
 public:
     explicit CmdLineCredentialProviderImpl();
 
-    ErrCode INTERFACE_FUNC getId(IString** id) override;
+    ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) override;
     ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* secret) override;
     ErrCode INTERFACE_FUNC getSupportedFormats(IList** formats) override;
@@ -44,6 +44,12 @@ private:
     static PropertyObjectPtr readStringSecret(const CredentialDescriptorPtr& descriptor);
     static std::string readLine(const std::string& prompt, bool hide);
     static CacheKey MakeFilePathCacheKey(const CredentialRequestPtr& request);
+
+    // Prompts for a file path, retrying (up to `MaxFilePathAttempts`) as long as the entered path isn't
+    // accessible - unlike a plain String secret, a FilePath one is validated locally before ever being
+    // handed back, since the module reading it expects a real, readable file.
+    static PropertyObjectPtr readFilePathSecret(const CredentialDescriptorPtr& descriptor);
+    static bool isFileAccessible(const std::string& path);
 
     // FilePath secrets only, cached in-memory for the lifetime of this provider (i.e. for the active
     // session) - keyed by (manufacturer, serialNumber), so re-authenticating a second connection to the

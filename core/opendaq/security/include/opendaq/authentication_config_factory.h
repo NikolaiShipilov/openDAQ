@@ -17,7 +17,6 @@
 #pragma once
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/credential_descriptor_ptr.h>
-#include <opendaq/context_ptr.h>
 #include <opendaq/component_type_ptr.h>
 #include <coretypes/dictobject_factory.h>
 
@@ -27,12 +26,10 @@ BEGIN_NAMESPACE_OPENDAQ
  * @brief Builds an `AuthenticationConfig` for `componentType`, out of its own
  * `IComponentType::getSupportedAuthenticationMethods()`.
  * @param componentType The device or streaming type to build the config for.
- * @param context The `Context` to live-filter `"CredentialProviderId"`'s candidates from (see
- * `IAuthenticationConfig`) - must be assigned. Throws otherwise.
  */
-inline AuthenticationConfigPtr AuthenticationConfig(const ComponentTypePtr& componentType, const ContextPtr& context)
+inline AuthenticationConfigPtr AuthenticationConfig(const ComponentTypePtr& componentType)
 {
-    AuthenticationConfigPtr obj(AuthenticationConfig_Create(componentType.getSupportedAuthenticationMethods(), context));
+    AuthenticationConfigPtr obj(AuthenticationConfig_Create(componentType.getSupportedAuthenticationMethods()));
     return obj;
 }
 

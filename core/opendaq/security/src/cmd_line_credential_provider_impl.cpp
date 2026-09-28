@@ -1,8 +1,10 @@
 #include <opendaq/cmd_line_credential_provider_impl.h>
+#include <coreobjects/exceptions.h>
 #include <coretypes/listobject_factory.h>
 #include <coretypes/dictobject_factory.h>
 #include <fmt/format.h>
 #include <iostream>
+#include <fstream>
 
 #ifdef _WIN32
 #include <conio.h>
@@ -15,17 +17,18 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-static const std::string CmdLineCredentialProviderId = "CmdLineCredentialProvider";
+static const std::string CmdLineCredentialProviderDescription = "Prompts for credentials interactively via the command line.";
+static constexpr int MaxFilePathAttempts = 3;
 
 CmdLineCredentialProviderImpl::CmdLineCredentialProviderImpl()
 {
 }
 
-ErrCode CmdLineCredentialProviderImpl::getId(IString** id)
+ErrCode CmdLineCredentialProviderImpl::getDescription(IString** description)
 {
-    OPENDAQ_PARAM_NOT_NULL(id);
+    OPENDAQ_PARAM_NOT_NULL(description);
 
-    *id = String(CmdLineCredentialProviderId).detach();
+    *description = String(CmdLineCredentialProviderDescription).detach();
     return OPENDAQ_SUCCESS;
 }
 
@@ -161,10 +164,43 @@ PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const 
     }
 
     printRequestDetails(request);
-    const auto secret = readStringSecret(descriptor);
+    const auto secret = readFilePathSecret(descriptor);
     const StringPtr secretValue = secret.getPropertyValue(secret.getAllProperties()[0].getName());
     filePathSecretCache[cacheKey] = secretValue.toStdString();
     return secret;
+}
+
+PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecret(const CredentialDescriptorPtr& descriptor)
+{
+    const StringPtr description = descriptor.getDescription();
+    const std::string prompt = fmt::format("{}: ", description.assigned() ? description.toStdString() : "File path");
+
+    for (int attempt = 1; attempt <= MaxFilePathAttempts; ++attempt)
+    {
+        const std::string value = readLine(prompt, false);
+
+        if (isFileAccessible(value))
+        {
+            auto secret = descriptor.createEmptySecret();
+            secret.setPropertyValue(secret.getAllProperties()[0].getName(), String(value));
+            return secret;
+        }
+
+        const int attemptsLeft = MaxFilePathAttempts - attempt;
+        std::cout << "File \"" << value << "\" does not exist or is not accessible.";
+        if (attemptsLeft > 0)
+            std::cout << " " << attemptsLeft << " attempt(s) left.\n";
+        else
+            std::cout << '\n';
+    }
+
+    DAQ_THROW_EXCEPTION(AuthenticationFailedException,
+                         "Credential provider could not obtain an accessible file path after {} attempts", MaxFilePathAttempts);
+}
+
+bool CmdLineCredentialProviderImpl::isFileAccessible(const std::string& path)
+{
+    return std::ifstream(path).good();
 }
 
 void CmdLineCredentialProviderImpl::printRequestDetails(const CredentialRequestPtr& request)

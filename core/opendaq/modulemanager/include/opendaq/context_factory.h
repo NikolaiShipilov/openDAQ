@@ -44,9 +44,9 @@ inline ContextPtr Context(const SchedulerPtr& scheduler,
                           const AuthenticationProviderPtr& authenticationProvider = nullptr,
                           const DictPtr<IString, IBaseObject> options = Dict<IString, IBaseObject>(),
                           const DictPtr<IString, IDiscoveryServer> discoveryServers = Dict<IString, IDiscoveryServer>(),
-                          const DictPtr<IString, ICredentialProvider> credentialProviders = Dict<IString, ICredentialProvider>())
+                          const CredentialProviderPtr& credentialProvider = nullptr)
 {
-    ContextPtr obj(Context_Create(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServers, credentialProviders));
+    ContextPtr obj(Context_Create(scheduler, logger, typeManager, moduleManager, authenticationProvider, options, discoveryServers, credentialProvider));
     return obj;
 }
 
@@ -59,7 +59,7 @@ inline ContextPtr NullContext(const LoggerPtr& logger = Logger(),
                               const TypeManagerPtr& typeManager = TypeManager(),
                               const DictPtr<IString, IBaseObject> options = Dict<IString, IBaseObject>())
 {
-    ContextPtr obj(Context_Create(nullptr, logger, typeManager, nullptr, nullptr, options, Dict<IString, IDiscoveryServer>(), Dict<IString, ICredentialProvider>()));
+    ContextPtr obj(Context_Create(nullptr, logger, typeManager, nullptr, nullptr, options, Dict<IString, IDiscoveryServer>(), nullptr));
     return obj;
 }
 

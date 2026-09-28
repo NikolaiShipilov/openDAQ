@@ -863,7 +863,7 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device, IString* conne
             AuthenticationConfigPtr defaultAuthenticationConfig;
             try
             {
-                defaultAuthenticationConfig = AuthenticationConfig(deviceType, context);
+                defaultAuthenticationConfig = AuthenticationConfig(deviceType);
             }
             catch (const std::exception&)
             {

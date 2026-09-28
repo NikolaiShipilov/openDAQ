@@ -96,8 +96,8 @@ extern "C"
     daqErrCode EXPORTED daqInstanceBuilder_getModuleAuthenticator(daqInstanceBuilder* self, daqModuleAuthenticator** authenticator);
     daqErrCode EXPORTED daqInstanceBuilder_setLoadAuthenticatedModulesOnly(daqInstanceBuilder* self, daqBool authOnly);
     daqErrCode EXPORTED daqInstanceBuilder_getLoadAuthenticatedModulesOnly(daqInstanceBuilder* self, daqBool* authOnly);
-    daqErrCode EXPORTED daqInstanceBuilder_getCredentialProviders(daqInstanceBuilder* self, daqDict** providers);
-    daqErrCode EXPORTED daqInstanceBuilder_addCredentialProvider(daqInstanceBuilder* self, daqString* providerId, daqCredentialProvider* provider);
+    daqErrCode EXPORTED daqInstanceBuilder_getCredentialProvider(daqInstanceBuilder* self, daqCredentialProvider** provider);
+    daqErrCode EXPORTED daqInstanceBuilder_setCredentialProvider(daqInstanceBuilder* self, daqCredentialProvider* provider);
     daqErrCode EXPORTED daqInstanceBuilder_createInstanceBuilder(daqInstanceBuilder** obj);
 
 #ifdef __cplusplus

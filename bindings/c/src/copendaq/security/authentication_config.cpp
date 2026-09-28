@@ -37,30 +37,15 @@ daqErrCode daqAuthenticationConfig_getSupportedAuthenticationMethods(daqAuthenti
     return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSupportedAuthenticationMethods(reinterpret_cast<daq::IDict**>(descriptors));
 }
 
-daqErrCode daqAuthenticationConfig_getSelectedCredentialProviderId(daqAuthenticationConfig* self, daqString** providerId)
-{
-    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSelectedCredentialProviderId(reinterpret_cast<daq::IString**>(providerId));
-}
-
-daqErrCode daqAuthenticationConfig_setCredentialProviderId(daqAuthenticationConfig* self, daqString* providerId)
-{
-    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->setCredentialProviderId(reinterpret_cast<daq::IString*>(providerId));
-}
-
-daqErrCode daqAuthenticationConfig_getSupportedCredentialProviderIds(daqAuthenticationConfig* self, daqList** providerIds)
-{
-    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSupportedCredentialProviderIds(reinterpret_cast<daq::IList**>(providerIds));
-}
-
 daqErrCode daqAuthenticationConfig_getSuppliedSecret(daqAuthenticationConfig* self, daqPropertyObject** secret)
 {
     return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSuppliedSecret(reinterpret_cast<daq::IPropertyObject**>(secret));
 }
 
-daqErrCode daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* credentialDescriptors, daqContext* context)
+daqErrCode daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* credentialDescriptors)
 {
     daq::IAuthenticationConfig* ptr = nullptr;
-    daqErrCode err = daq::createAuthenticationConfig(&ptr, reinterpret_cast<daq::IDict*>(credentialDescriptors), reinterpret_cast<daq::IContext*>(context));
+    daqErrCode err = daq::createAuthenticationConfig(&ptr, reinterpret_cast<daq::IDict*>(credentialDescriptors));
     *obj = reinterpret_cast<daqAuthenticationConfig*>(ptr);
     return err;
 }
