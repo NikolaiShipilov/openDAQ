@@ -57,7 +57,6 @@
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/authentication_config_factory.h>
 #include <coreobjects/property_factory.h>
-#include <coreobjects/callable_info_factory.h>
 #include <coretypes/function_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -2173,20 +2172,11 @@ void GenericDevice<TInterface, Interfaces...>::updateDevice(const std::string& d
         else if (serializedDevice.hasKey("ComponentConfig"))
             updatetableDeviceConfig.updateInternal(serializedDevice.readSerializedObject("ComponentConfig"), context);
 
-        // Stashed under "__AuthenticationConfig" as a zero-argument Function property that returns it when
-        // called - neither a plain Object-type property value (the property framework only accepts a literal
-        // `IPropertyObject`, not a more specific derived interface like `IAuthenticationConfig` - throws
-        // `InvalidTypeException`, see `GenericPropertyObjectImpl::checkIsChildObjectProperty` in
-        // `property_object_impl.h`) nor a List/Dict item (Container-type properties explicitly forbid
-        // object-type items/keys entirely) will hold it; a Function property's return value goes through
-        // neither check. This key must match the one `Module`/`ModuleManagerImpl` extract it back out with
-        // (`module_impl.h`) - duplicated as a literal rather than a shared named constant, since this
-        // component (`device`) can't depend on `modulemanager` without creating a circular dependency.
+        // Stashed under "__AuthenticationConfig" as an ordinary Object-type property.
         if (serializedDevice.hasKey("AuthenticationConfig"))
         {
             const AuthenticationConfigPtr authenticationConfig = serializedDevice.readObject("AuthenticationConfig", context);
-            deviceConfig.addProperty(FunctionProperty("__AuthenticationConfig", FunctionInfo(ctObject)));
-            deviceConfig.setPropertyValue("__AuthenticationConfig", Function([authenticationConfig]() { return authenticationConfig; }));
+            deviceConfig.addProperty(ObjectProperty("__AuthenticationConfig", authenticationConfig));
         }
 
         DeviceInfoPtr discoveredDeviceInfo;

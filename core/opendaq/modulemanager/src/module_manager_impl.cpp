@@ -791,7 +791,7 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device, IString* conne
     // smuggles an `IAuthenticationConfig` onto the top-level `config` it passes in, rather than a dedicated
     // parameter - the now-removed `createAuthenticatedDevice` used to take one instead.
     const AuthenticationConfigPtr authenticationConfig = ExtractAuthenticationConfig(inputConfig);
-    const bool authenticated = authenticationConfig.assigned();
+    const bool authenticationRequested = authenticationConfig.assigned();
     const ErrCode errCode = daqTry([&]()
     {
         PropertyObjectPtr addDeviceConfig;
@@ -860,17 +860,9 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device, IString* conne
             if (!deviceType.assigned())
                 continue;
 
-            AuthenticationConfigPtr defaultAuthenticationConfig;
-            try
-            {
-                defaultAuthenticationConfig = AuthenticationConfig(deviceType);
-            }
-            catch (const std::exception&)
-            {
-            }
-            const bool authSupported = defaultAuthenticationConfig.assigned();
+            const bool authSupported = ComponentTypeSupportsAuthentication(deviceType);
 
-            if (authenticated && !authSupported)
+            if (authenticationRequested && !authSupported)
             {
                 deviceTypeFoundButAuthNotSupported = true;
                 continue;
@@ -882,18 +874,13 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device, IString* conne
             // `deviceTypeConfig` is freshly built from the device type's own default config shape (above) - the
             // authentication config smuggled onto `inputConfig` doesn't survive that unless re-injected here, so
             // `Module::createDevice`'s own `ExtractAuthenticationConfig` can find it (see that helper).
-            if (authenticated)
+            if (authenticationRequested)
                 InjectAuthenticationConfig(deviceTypeConfig, authenticationConfig);
 
             ErrCode err = library.module->createDevice(device, connectionStringPtr, parent, deviceTypeConfig);
 
-            // The module has read whatever it needed from `deviceTypeConfig` above - strip the smuggled auth
-            // config again now, before `addDeviceConfig` (which embeds this same `deviceTypeConfig` under
-            // "Device") gets persisted onto the device below and so serialized on save. See the identical
-            // concern where `addDeviceConfig` is cloned from `inputConfig`, above. Best-effort: some modules
-            // may freeze the config they were given, in which case there's nothing more to do about it here -
-            // it's the module's own copy, not the one embedded in `addDeviceConfig`/persisted, if it cloned it.
-            if (authenticated && deviceTypeConfig.hasProperty(AuthenticationConfigConfigKey))
+            // Remove injected auth config from saved (see below) add-device config
+            if (authenticationRequested && deviceTypeConfig.hasProperty(AuthenticationConfigConfigKey))
             {
                 try
                 {

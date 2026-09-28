@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <coreobjects/callable_info_factory.h>
 #include <opendaq/opendaq.h>
 #include <opendaq/module_manager_utils_ptr.h>
 
@@ -58,17 +57,13 @@ void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const
 // overloads remain. Until the real config-schema integration lands, `authConfig` is instead smuggled onto an
 // otherwise plain `config` property object under this property name, which `Module`/`ModuleManagerImpl` look
 // for and honor exactly as the old, now-removed parameter used to be - this key must match theirs exactly
-// (see `AuthenticationConfigConfigKey` in `module_impl.h`). Stashed as a zero-argument Function property that
-// returns it when called, since neither a plain Object-type property value (the property framework only
-// accepts a literal `IPropertyObject`, not a more specific derived interface like `IAuthenticationConfig`) nor
-// a List/Dict item (Container-type properties forbid object-type items/keys entirely) will hold it.
+// (see `AuthenticationConfigConfigKey` in `module_impl.h`). Stashed as an ordinary Object-type property.
 static const char* AuthenticationConfigConfigKey = "__AuthenticationConfig";
 
 PropertyObjectPtr WithAuthenticationConfig(const AuthenticationConfigPtr& authConfig)
 {
     auto config = PropertyObject();
-    config.addProperty(FunctionProperty(AuthenticationConfigConfigKey, FunctionInfo(ctObject)));
-    config.setPropertyValue(AuthenticationConfigConfigKey, Function([authConfig]() { return authConfig; }));
+    config.addProperty(ObjectProperty(AuthenticationConfigConfigKey, authConfig));
     return config;
 }
 

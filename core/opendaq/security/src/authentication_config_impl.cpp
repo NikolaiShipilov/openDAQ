@@ -139,6 +139,21 @@ ErrCode AuthenticationConfigImpl::getSuppliedSecret(IPropertyObject** secret)
     });
 }
 
+ErrCode AuthenticationConfigImpl::getInterfaceIds(SizeT* idCount, IntfID** ids)
+{
+    OPENDAQ_PARAM_NOT_NULL(idCount);
+
+    *idCount = InterfaceIds::Count() + 1;
+    if (ids == nullptr)
+        return OPENDAQ_SUCCESS;
+
+    **ids = IPropertyObject::Id;
+    (*ids)++;
+
+    InterfaceIds::AddInterfaceIds(*ids);
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode AuthenticationConfigImpl::setPropertySelectionValue(IString* propertyName, IBaseObject* value)
 {
     const ErrCode errCode = Super::setPropertySelectionValue(propertyName, value);
@@ -187,7 +202,7 @@ ErrCode AuthenticationConfigImpl::setPropertyValue(IString* propertyName, IBaseO
             if (!objPtr.hasProperty(SuppliedSecretPropertyName))
                 return Super::addProperty(ObjectProperty(SuppliedSecretPropertyName, secret));
 
-            return Super::setPropertyValue(propertyName, value);
+            return Super::setProtectedPropertyValue(propertyName, value);
         });
     }
 

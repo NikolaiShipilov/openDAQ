@@ -43,6 +43,14 @@ public:
     ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) override;
     ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) override;
 
+    // An `IAuthenticationConfig` needs to be nestable as an ordinary Object-type property value, but
+    // `GenericPropertyObjectImpl::checkContainerType` only allows a nested value whose own
+    // `IInspectable::getInterfaceIds()[0]` is exactly `IPropertyObject::Id` - any other primary interface is
+    // rejected with `InvalidTypeException`. Overriding it to report `IPropertyObject::Id` first (the real
+    // interface list, `IAuthenticationConfig` included, still follows right after - `QueryInterface`/casting
+    // to it is entirely unaffected, only the reported order changes).
+    ErrCode INTERFACE_FUNC getInterfaceIds(SizeT* idCount, IntfID** ids) override;
+
     // Intercepted to validate/auto-clear "SuppliedSecret" against whichever descriptor is currently selected
     // whenever "AuthenticationMethod" changes. `setProtectedPropertyValue` gets the same treatment (see
     // `onPropertyValueChanged`) since it's the path generic deserialization (`DeserializePropertyValues`) writes

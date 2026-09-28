@@ -45,8 +45,6 @@
 #include <coreobjects/exceptions.h>
 #include <opendaq/component_type_ptr.h>
 #include <coreobjects/property_factory.h>
-#include <coreobjects/callable_info_factory.h>
-#include <coretypes/function_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -58,18 +56,14 @@ BEGIN_NAMESPACE_OPENDAQ
 // must match this exact key.
 static constexpr const char* AuthenticationConfigConfigKey = "__AuthenticationConfig";
 
-// Stashes `authenticationConfig` on `config` under `AuthenticationConfigConfigKey`, as a zero-argument
-// Function property that returns it when called - neither a direct Object-type property value (the property
-// framework only allows a literal `IPropertyObject`, not a more specific derived interface like
-// `IAuthenticationConfig` - see `GenericPropertyObjectImpl::checkIsChildObjectProperty`/`checkContainerType`
-// in `coreobjects/property_object_impl.h`) nor a List/Dict item (Container-type properties explicitly forbid
-// object-type items/keys entirely - see `PropertyImpl`'s own validation) will hold it. A Function property's
-// return value goes through neither check.
+// Stashes `authenticationConfig` on `config` under `AuthenticationConfigConfigKey`, as an ordinary Object-type
+// property.
 inline void InjectAuthenticationConfig(const PropertyObjectPtr& config, const AuthenticationConfigPtr& authenticationConfig)
 {
-    if (!config.hasProperty(AuthenticationConfigConfigKey))
-        config.addProperty(FunctionProperty(AuthenticationConfigConfigKey, FunctionInfo(ctObject)));
-    config.setPropertyValue(AuthenticationConfigConfigKey, Function([authenticationConfig]() { return authenticationConfig; }));
+    if (config.hasProperty(AuthenticationConfigConfigKey))
+        config.asPtr<IPropertyObjectProtected>(true).setProtectedPropertyValue(AuthenticationConfigConfigKey, authenticationConfig);
+    else
+        config.addProperty(ObjectProperty(AuthenticationConfigConfigKey, authenticationConfig));
 }
 
 // The extraction half of `InjectAuthenticationConfig` - returns the `IAuthenticationConfig` stashed on
@@ -78,10 +72,17 @@ inline AuthenticationConfigPtr ExtractAuthenticationConfig(const PropertyObjectP
 {
     if (!config.assigned() || !config.hasProperty(AuthenticationConfigConfigKey))
         return nullptr;
-    const FunctionPtr getter = config.getPropertyValue(AuthenticationConfigConfigKey);
-    if (!getter.assigned())
-        return nullptr;
-    return getter.call().asPtrOrNull<IAuthenticationConfig>();
+    return config.getPropertyValue(AuthenticationConfigConfigKey).asPtrOrNull<IAuthenticationConfig>();
+}
+
+// `AuthenticationConfig(componentType)` requires at least one supported method and throws otherwise -
+// `ComponentTypeBuilderImpl::build` only fills in the standard "Anonymous" default for a Device/Streaming
+// type whose builder never called `setSupportedAuthenticationMethods` at all; a type sort explicitly built
+// with an empty methods dict, or one not built via `ComponentTypeBuilder` in the first place, can still legitimately have none.
+inline bool ComponentTypeSupportsAuthentication(const ComponentTypePtr& componentType)
+{
+    const auto supportedMethods = componentType.getSupportedAuthenticationMethods();
+    return supportedMethods.assigned() && supportedMethods.getCount() > 0;
 }
 
 class Module : public ImplementationOf<IModule>
@@ -188,19 +189,9 @@ public:
         // just without a default to fall back to.
         AuthenticationConfigPtr resolvedAuthConfig;
         if (deviceType.assigned())
-        {
-            try
-            {
-                resolvedAuthConfig = resolveDefaultAuthenticationConfig(ExtractAuthenticationConfig(PropertyObjectPtr::Borrow(config)), deviceType);
-            }
-            catch (const std::exception&)
-            {
-            }
-        }
+            resolvedAuthConfig = resolveDefaultAuthenticationConfig(ExtractAuthenticationConfig(PropertyObjectPtr::Borrow(config)), deviceType);
         else
-        {
             resolvedAuthConfig = ExtractAuthenticationConfig(PropertyObjectPtr::Borrow(config));
-        }
 
         const bool authenticated =
             resolvedAuthConfig.assigned() &&
@@ -751,11 +742,14 @@ protected:
     }
 
 private:
-    // Returns `authenticationConfig` unchanged if assigned. Otherwise builds and returns the default config for `componentType`.
+    // Returns `authenticationConfig` unchanged if assigned. Otherwise builds and returns the default config for
+    // `componentType`, or unassigned if `componentType` authentication options are malformed.
     AuthenticationConfigPtr resolveDefaultAuthenticationConfig(const AuthenticationConfigPtr& authenticationConfig, const ComponentTypePtr& componentType)
     {
         if (authenticationConfig.assigned())
             return authenticationConfig;
+        if (!ComponentTypeSupportsAuthentication(componentType))
+            return nullptr;
         return AuthenticationConfig(componentType);
     }
 
