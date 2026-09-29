@@ -38,7 +38,7 @@ PyDaqIntf<daq::ICredentialProvider, daq::IBaseObject> declareICredentialProvider
 
 void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialProvider, daq::IBaseObject> cls)
 {
-    cls.doc() = "Supplies the secrets requested via a `ICredentialRequest` - e.g. by prompting the user, reading from a file, or fetching from a secret store.";
+    cls.doc() = "Supplies the credentials requested via a `ICredentialRequest` - e.g. by prompting the user, reading from a file, or fetching from a credential store.";
 
     m.def("CmdLineCredentialProvider", &daq::CmdLineCredentialProvider_Create);
 
@@ -60,14 +60,14 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
         py::arg("request"),
         "Requests credentials for the given request, in the format described by its authentication method.");
     cls.def("cache_credentials",
-        [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, daq::IPropertyObject* secret)
+        [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, daq::IPropertyObject* credential)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
-            objectPtr.cacheCredentials(request, secret);
+            objectPtr.cacheCredentials(request, credential);
         },
-        py::arg("request"), py::arg("secret"),
-        "Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s `\"SuppliedSecret\"` property - so an implementation that caches values it obtains interactively caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a secret - the caller already has the secret and uses it directly. Implementations for which caching doesn't apply may treat this as a no-op.");
+        py::arg("request"), py::arg("credential"),
+        "Accepts a credential already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s `\"SuppliedCredential\"` property - so an implementation that caches values it obtains interactively caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a credential - the caller already has it and uses it directly. Implementations for which caching doesn't apply may treat this as a no-op.");
     cls.def_property_readonly("supported_formats",
         [](daq::ICredentialProvider *object)
         {

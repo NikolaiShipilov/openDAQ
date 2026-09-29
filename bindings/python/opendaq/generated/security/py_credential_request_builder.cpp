@@ -139,5 +139,5 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             objectPtr.setAuthenticationMethod(authenticationMethod);
         },
         py::return_value_policy::take_ownership,
-        "Gets the authentication method currently set on the builder. / Sets the authentication method the provider must provide a secret for - typically read from `IAuthenticationConfig` when the request is being built. Required.");
+        "Gets the authentication method currently set on the builder. / Sets the authentication method the provider must provide a credential for - typically read from `IAuthenticationConfig` when the request is being built. Required.");
 }

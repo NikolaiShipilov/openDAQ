@@ -84,49 +84,49 @@ As an application developer, I want the simplest possible path to work: get the 
 
 ## 3. Manual authenticated device — supplied credential
 
-### 3.1 — Correct supplied secret, provider registered
+### 3.1 — Correct supplied credential, provider registered
 
-- **Given** `authConfig = AuthenticationConfig(componentType)` with the desired `"AuthenticationMethod"` selected (`SelectAuthenticationMethod`) and `"SuppliedSecret"` set to a correctly-shaped, correct `secret`, with a format-compatible credential provider registered on the instance
+- **Given** `authConfig = AuthenticationConfig(componentType)` with the desired `"AuthenticationMethod"` selected (`SelectAuthenticationMethod`) and `"SuppliedCredential"` set to a correctly-shaped, correct `credential`, with a format-compatible credential provider registered on the instance
   **When** I call `addAuthenticatedDevice`
-  **Then** authentication succeeds with **no interactive prompt at all** (verify via a non-interactive/scripted run - if the harness would hang on stdin, that's a bug or a wrong assumption about this path), and the provider's `cacheCredentials(request, secret)` is invoked - confirmed indirectly by then making a *second*, separate connection attempt (same manufacturer/serial or canonical connection string) using only `requestCredentials` (no supplied secret) and observing it also completes without a prompt.
+  **Then** authentication succeeds with **no interactive prompt at all** (verify via a non-interactive/scripted run - if the harness would hang on stdin, that's a bug or a wrong assumption about this path), and the provider's `cacheCredentials(request, credential)` is invoked - confirmed indirectly by then making a *second*, separate connection attempt (same manufacturer/serial or canonical connection string) using only `requestCredentials` (no supplied credential) and observing it also completes without a prompt.
 
-### 3.2 — Correct supplied secret, no provider registered
+### 3.2 — Correct supplied credential, no provider registered
 
 - **Given** the same as 3.1 but with no credential provider registered on the instance at all
   **When** I call `addAuthenticatedDevice`
-  **Then** authentication still succeeds with no prompt (the supplied secret is used directly, no provider ever consulted per §8 step 3), **and** nothing is cached anywhere, since there is no provider to cache into.
+  **Then** authentication still succeeds with no prompt (the supplied credential is used directly, no provider ever consulted per §8 step 3), **and** nothing is cached anywhere, since there is no provider to cache into.
 
-### 3.3 — Incorrect supplied secret
+### 3.3 — Incorrect supplied credential
 
-- **Given** a supplied secret shaped correctly but with a wrong value (e.g. wrong password, wrong PIN)
+- **Given** a supplied credential shaped correctly but with a wrong value (e.g. wrong password, wrong PIN (credential))
   **When** I call `addAuthenticatedDevice`
-  **Then** it throws `AuthenticationFailedException` - verifying that a caller can't bypass the module's own verification step just by constructing the secret shape correctly; supplying a secret skips the *provider*, not the *authenticator*.
+  **Then** it throws `AuthenticationFailedException` - verifying that a caller can't bypass the module's own verification step just by constructing the credential shape correctly; supplying a credential skips the *provider*, not the *authenticator*.
 
-### 3.4 — Malformed supplied secret (robustness)
+### 3.4 — Malformed supplied credential (robustness)
 
-As an application developer, I want a clear failure, not a confusing one, if I get the supplied-secret shape wrong.
+As an application developer, I want a clear failure, not a confusing one, if I get the supplied-credential shape wrong.
 
-- **Given** a supplied secret property object missing an expected property (e.g. a `KeyValuePairs` secret missing `"Password"`), or with an extra/misnamed one
+- **Given** a supplied credential property object missing an expected property (e.g. a `KeyValuePairs` credential missing `"Password"`), or with an extra/misnamed one
   **When** I call `addAuthenticatedDevice`
-  **Then** document (via the example) exactly what happens today - does it throw a clear, actionable error, or fail cryptically deep inside verification? This is worth an explicit example even if the answer turns out to be "not very friendly today," since it tells us whether `createEmptySecret()` really needs to be used as the template (as documented) rather than treated as optional guidance.
+  **Then** document (via the example) exactly what happens today - does it throw a clear, actionable error, or fail cryptically deep inside verification? This is worth an explicit example even if the answer turns out to be "not very friendly today," since it tells us whether `createEmptyCredential()` really needs to be used as the template (as documented) rather than treated as optional guidance.
 
 ---
 
 ## 4. Tuning the default config before use
 
-Between "use the unmodified default" (§2) and "supply a secret directly" (§3), there's the actual expected common path: get the default, change one or two things, use it. With no per-config provider selection, the only thing left to tune here is `"SuppliedSecret"`.
+Between "use the unmodified default" (§2) and "supply a credential directly" (§3), there's the actual expected common path: get the default, change one or two things, use it. With no per-config provider selection, the only thing left to tune here is `"SuppliedCredential"`.
 
-### 4.1 — An incompatible `"SuppliedSecret"` write is rejected
+### 4.1 — An incompatible `"SuppliedCredential"` write is rejected
 
 - **Given** a config with `"AuthenticationMethod"` selected to a `KeyValuePairs`-format method (e.g. `UserNamePassword`)
-  **When** I call `setPropertyValue("SuppliedSecret", ...)` with an object shaped for a *different* format (e.g. a single `"Pin"` property, matching `String`/`FilePath` instead)
-  **Then** the write throws and `"SuppliedSecret"` is not set - confirming validation happens against the object's actual property names/count, not just "any object goes."
+  **When** I call `setPropertyValue("SuppliedCredential", ...)` with an object shaped for a *different* format (e.g. a single `"Pin"` property, matching `String`/`FilePath` instead)
+  **Then** the write throws and `"SuppliedCredential"` is not set - confirming validation happens against the object's actual property names/count, not just "any object goes."
 
-### 4.2 — Changing the selected authentication method silently clears an incompatible `"SuppliedSecret"`
+### 4.2 — Changing the selected authentication method silently clears an incompatible `"SuppliedCredential"`
 
-- **Given** a config with a valid `"SuppliedSecret"` set for the currently-selected `"AuthenticationMethod"`
-  **When** I switch `"AuthenticationMethod"` to a different method whose `createEmptySecret()` shape doesn't match the existing secret
-  **Then** the selection change succeeds (no exception) and `hasProperty("SuppliedSecret")` becomes `false` afterward - the stale secret is silently cleared, not left in place mismatched with the new selection, and not blocking the method switch. Calling `addAuthenticatedDevice` afterward with no secret re-supplied falls through to the normal provider-based path (§2).
+- **Given** a config with a valid `"SuppliedCredential"` set for the currently-selected `"AuthenticationMethod"`
+  **When** I switch `"AuthenticationMethod"` to a different method whose `createEmptyCredential()` shape doesn't match the existing credential
+  **Then** the selection change succeeds (no exception) and `hasProperty("SuppliedCredential")` becomes `false` afterward - the stale credential is silently cleared, not left in place mismatched with the new selection, and not blocking the method switch. Calling `addAuthenticatedDevice` afterward with no credential re-supplied falls through to the normal provider-based path (§2).
 
 ---
 
@@ -174,7 +174,7 @@ As an application developer relying on `PrioritizedStreamingProtocols`/`Automati
 
 ## 7. Save & load
 
-The custom persistence model: `AuthenticationConfigImpl`'s serialization writes every candidate authentication method and the selected method id, generically, as an ordinary property; `"SuppliedSecret"` is never written. There is no credential-provider information saved at all - a provider is registered once per `Instance`, not per config, so nothing about it needs to survive a save/reload round trip. Reload rebuilds the config directly from the saved authentication methods and method id - it never re-consults the module/type registry.
+The custom persistence model: `AuthenticationConfigImpl`'s serialization writes every candidate authentication method and the selected method id, generically, as an ordinary property; `"SuppliedCredential"` is never written. There is no credential-provider information saved at all - a provider is registered once per `Instance`, not per config, so nothing about it needs to survive a save/reload round trip. Reload rebuilds the config directly from the saved authentication methods and method id - it never re-consults the module/type registry.
 
 ### 7.1 — Reload with a compatible provider registered succeeds
 
@@ -194,11 +194,11 @@ The custom persistence model: `AuthenticationConfigImpl`'s serialization writes 
   **When** the new instance calls `loadConfiguration(savedConfiguration)`
   **Then** the reload fails hard (custom `Deserialize` throws) rather than silently substituting the type's current default method - confirming a reload never silently authenticates via a method the user didn't actually choose.
 
-### 7.4 — A supplied-secret device does not skip the prompt on reload
+### 7.4 — A supplied-credential device does not skip the prompt on reload
 
-- **Given** a device originally authenticated via `setSuppliedSecret` (§3.1/3.2)
+- **Given** a device originally authenticated via a directly-supplied `"SuppliedCredential"` (§3.1/3.2)
   **When** it's saved and reloaded into a new instance with a compatible provider registered
-  **Then** the reload prompts (or fails, if no provider is registered) exactly as a from-scratch connection would - confirming the supplied secret never survives serialization at all, only the candidate authentication methods and method id do.
+  **Then** the reload prompts (or fails, if no provider is registered) exactly as a from-scratch connection would - confirming the supplied credential never survives serialization at all, only the candidate authentication methods and method id do.
 
 ---
 
@@ -212,7 +212,7 @@ The custom persistence model: `AuthenticationConfigImpl`'s serialization writes 
 
 ## 9. Anonymous / `None`-format authentication
 
-A `None`-format method needs no credentials at all - selecting it is the entire authentication step, with no secret, no provider, and no supplied secret involved anywhere.
+A `None`-format method needs no credentials at all - selecting it is the entire authentication step, with no provider and no supplied credential involved anywhere.
 
 ### 9.1 — Selecting a `None`-format method needs no registered provider
 
@@ -220,17 +220,17 @@ A `None`-format method needs no credentials at all - selecting it is the entire 
   **When** I select that method (`SelectAuthenticationMethod(config, "Anonymous")`) and call `addAuthenticatedDevice`
   **Then** it succeeds - unlike §2.3, the absence of any registered provider doesn't matter here, since none is ever consulted for this method.
 
-### 9.2 — A `"SuppliedSecret"` write is rejected while a `None`-format method is selected
+### 9.2 — A `"SuppliedCredential"` write is rejected while a `None`-format method is selected
 
 - **Given** a config with a `None`-format method currently selected
-  **When** I call `setPropertyValue("SuppliedSecret", secret)` for any property object at all, including an empty one
-  **Then** the write throws - `None` has no `createEmptySecret()` template to match against, so no object is ever a valid shape for it (compare §4.1, the analogous rejection for a real format).
+  **When** I call `setPropertyValue("SuppliedCredential", credential)` for any property object at all, including an empty one
+  **Then** the write throws - `None` has no `createEmptyCredential()` template to match against, so no object is ever a valid shape for it (compare §4.1, the analogous rejection for a real format).
 
-### 9.3 — Switching *to* a `None`-format method clears an existing `"SuppliedSecret"`
+### 9.3 — Switching *to* a `None`-format method clears an existing `"SuppliedCredential"`
 
-- **Given** a config with a valid `"SuppliedSecret"` set for the currently-selected, non-`None` `"AuthenticationMethod"`
+- **Given** a config with a valid `"SuppliedCredential"` set for the currently-selected, non-`None` `"AuthenticationMethod"`
   **When** I switch the selection to a `None`-format method
-  **Then** the selection change succeeds and `hasProperty("SuppliedSecret")` becomes `false` afterward - the same clearing behavior as §4.2, here covering the case where the new selection accepts no secret at all.
+  **Then** the selection change succeeds and `hasProperty("SuppliedCredential")` becomes `false` afterward - the same clearing behavior as §4.2, here covering the case where the new selection accepts no credential at all.
 
 ### 9.4 — Connecting via `None` behaves like the plain, unauthenticated path
 

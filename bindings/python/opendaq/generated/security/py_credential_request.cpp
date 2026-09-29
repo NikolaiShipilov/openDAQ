@@ -38,7 +38,7 @@ PyDaqIntf<daq::ICredentialRequest, daq::IBaseObject> declareICredentialRequest(p
 
 void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialRequest, daq::IBaseObject> cls)
 {
-    cls.doc() = "Carries the non-secret details of a credential request handed to `ICredentialProvider::requestCredentials` when authentication is required for a connection attempt.";
+    cls.doc() = "Carries the details of a credential request (but never the credential itself) handed to `ICredentialProvider::requestCredentials` when authentication is required for a connection attempt.";
 
     cls.def_property_readonly("component_type",
         [](daq::ICredentialRequest *object)
@@ -90,5 +90,5 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             return objectPtr.getAuthenticationMethod().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the authentication method the provider must provide a secret for, read from `IAuthenticationConfig` when the request was built.");
+        "Gets the authentication method the provider must provide a credential for, read from `IAuthenticationConfig` when the request was built.");
 }

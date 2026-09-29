@@ -123,7 +123,7 @@ virtual ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) = 0;
 virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;
 
 /*!
- * @brief Sets the authentication method the provider must provide a secret for - typically read from
+ * @brief Sets the authentication method the provider must provide a credential for - typically read from
  * `IAuthenticationConfig` when the request is being built. Required - `build()` fails if never set.
  * @param authenticationMethod The authentication method.
  */

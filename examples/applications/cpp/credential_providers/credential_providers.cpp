@@ -68,7 +68,7 @@ PropertyObjectPtr WithAuthenticationConfig(const AuthenticationConfigPtr& authCo
 }
 
 // PrivateKeyFile authentication - another String-format credential, but instead of comparing a
-// fixed secret, the module verifies a signed challenge against the public key configured via the
+// fixed value, the module verifies a signed challenge against the public key configured via the
 // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
 // to the matching private key.
 void demoPrivateKeyFileAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
@@ -125,12 +125,12 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     instance.removeDevice(device);
 }
 
-// CmdLineCredentialProvider caches FilePath secrets in-memory for the active session, keyed by
+// CmdLineCredentialProvider caches FilePath credentials in-memory for the active session, keyed by
 // (manufacturer, serialNumber) - so authenticating a second connection to the very same device via the
 // same FilePath-format method reuses the path already entered instead of prompting again. Demonstrated
 // here across two different connections to the same device - first the device itself, then a streaming
-// connection attached to it. The device's own path is supplied directly via `setSuppliedSecret` rather than
-// typed interactively - the registered provider still caches it (see `ICredentialProvider::cacheCredentials`),
+// connection attached to it. The device's own path is supplied directly via the `"SuppliedCredential"`
+// property rather than typed interactively - the registered provider still caches it (see `ICredentialProvider::cacheCredentials`),
 // so no user prompt is needed anywhere in this demo.
 void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
@@ -141,15 +141,15 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
     auto deviceAuthConfig = AuthenticationConfig(deviceType);
     SelectAuthenticationMethod(deviceAuthConfig, "PrivateKeyFile");
 
-    // The supplied secret must be shaped like the authentication method's own `createEmptySecret` template - here
+    // The supplied credential must be shaped like the authentication method's own `createEmptyCredential` template - here
     // just a single "PrivateKeyFilePath" property, filled in with the private key's path.
-    auto suppliedSecret = deviceAuthConfig.getSupportedAuthenticationMethods().get(deviceAuthConfig.getSelectedAuthenticationMethodId()).createEmptySecret();
-    suppliedSecret.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
-    deviceAuthConfig.setPropertyValue("SuppliedSecret", suppliedSecret);
+    auto suppliedCredential = deviceAuthConfig.getSupportedAuthenticationMethods().get(deviceAuthConfig.getSelectedAuthenticationMethodId()).createEmptyCredential();
+    suppliedCredential.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
+    deviceAuthConfig.setPropertyValue("SuppliedCredential", suppliedCredential);
 
     auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(deviceAuthConfig));
     std::cout << "Connected to \"" << device.getInfo().getName()
-              << "\" with private-key challenge authentication, using a secret supplied directly - no prompt." << std::endl;
+              << "\" with private-key challenge authentication, using a credential supplied directly - no prompt." << std::endl;
 
     std::cout << "Attaching a streaming connection authenticated the same way - same device, same FilePath-format "
                  "method - so no path prompt should appear this time; the provider serves it from its cache instead."
@@ -198,8 +198,8 @@ void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTyp
     std::cin.get();
 
     // Saving the instance carries the connected device's authentication config along with it, but only in
-    // reduced form - every candidate authentication method and the selected one's id - never the supplied
-    // secret or the credentials themselves.
+    // reduced form - every candidate authentication method and the selected one's id - never a supplied or
+    // obtained credential.
     auto savedConfiguration = instance.saveConfiguration();
 
     // A completely separate instance, loading the saved configuration - it needs its own credential provider

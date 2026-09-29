@@ -41,7 +41,7 @@ public:
     ErrCode INTERFACE_FUNC getSelectedAuthenticationMethodId(IString** authenticationMethodId) override;
     ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) override;
     ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) override;
-    ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) override;
+    ErrCode INTERFACE_FUNC getSuppliedCredential(IPropertyObject** credential) override;
 
     // An `IAuthenticationConfig` needs to be nestable as an ordinary Object-type property value, but
     // `GenericPropertyObjectImpl::checkContainerType` only allows a nested value whose own
@@ -51,7 +51,7 @@ public:
     // to it is entirely unaffected, only the reported order changes).
     ErrCode INTERFACE_FUNC getInterfaceIds(SizeT* idCount, IntfID** ids) override;
 
-    // Intercepted to validate/auto-clear "SuppliedSecret" against whichever authentication method is currently selected
+    // Intercepted to validate/auto-clear "SuppliedCredential" against whichever authentication method is currently selected
     // whenever "AuthenticationMethod" changes. `setProtectedPropertyValue` gets the same treatment (see
     // `onPropertyValueChanged`) since it's the path generic deserialization (`DeserializePropertyValues`) writes
     // through, bypassing `setPropertyValue`/`setPropertySelectionValue` entirely.
@@ -61,7 +61,7 @@ public:
 
     // Relies on the generic PropertyObject serialization for "AuthenticationMethod" (its candidates and
     // selected value round-trip through it correctly on their own - see `serializeProperty`/
-    // `serializePropertyValue`) but not for "SuppliedSecret" - a secret, so it must never be persisted at all
+    // `serializePropertyValue`) but not for "SuppliedCredential" - a credential, so it must never be persisted at all
     // (same two overrides, excluding it).
     // Deserializing builds a bare stub first (the constructor above), then runs the entirely generic
     // PropertyObject pipeline on it: `DeserializePropertyOrder`/`DeserializeLocalProperties`/
@@ -76,21 +76,21 @@ public:
 
 private:
     static constexpr const char* AuthenticationMethodPropertyName = "AuthenticationMethod";
-    static constexpr const char* SuppliedSecretPropertyName = "SuppliedSecret";
+    static constexpr const char* SuppliedCredentialPropertyName = "SuppliedCredential";
 
     void initProperties(const DictPtr<IString, IAuthenticationMethod>& authenticationMethods);
 
     // Shared tail of `setPropertyValue`/`setPropertySelectionValue`/`setProtectedPropertyValue`, run after the
-    // write itself already succeeded: auto-clears an incompatible "SuppliedSecret" on an "AuthenticationMethod"
+    // write itself already succeeded: auto-clears an incompatible "SuppliedCredential" on an "AuthenticationMethod"
     // write.
     ErrCode onPropertyValueChanged(const StringPtr& name);
 
-    void clearSuppliedSecretIfIncompatible(const AuthenticationMethodPtr& selectedDescriptor);
+    void clearSuppliedCredentialIfIncompatible(const AuthenticationMethodPtr& selectedMethod);
 
-    // Structural check: does `secret` have exactly the property names `selectedDescriptor.createEmptySecret()`
+    // Structural check: does `credential` have exactly the property names `selectedMethod.createEmptyCredential()`
     // would produce? The blessed workflow is to build from that template and fill it in, but this doesn't
     // check provenance, only shape.
-    static bool IsSuppliedSecretShapeValid(const PropertyObjectPtr& secret, const AuthenticationMethodPtr& selectedDescriptor);
+    static bool IsSuppliedCredentialShapeValid(const PropertyObjectPtr& credential, const AuthenticationMethodPtr& selectedMethod);
 
     static DictPtr<IString, IAuthenticationMethod> ToAuthenticationMethodDict(const ListPtr<IStruct>& candidates);
 };

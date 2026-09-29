@@ -37,9 +37,9 @@ daqErrCode daqAuthenticationConfig_getSupportedAuthenticationMethods(daqAuthenti
     return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSupportedAuthenticationMethods(reinterpret_cast<daq::IDict**>(authenticationMethods));
 }
 
-daqErrCode daqAuthenticationConfig_getSuppliedSecret(daqAuthenticationConfig* self, daqPropertyObject** secret)
+daqErrCode daqAuthenticationConfig_getSuppliedCredential(daqAuthenticationConfig* self, daqPropertyObject** credential)
 {
-    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSuppliedSecret(reinterpret_cast<daq::IPropertyObject**>(secret));
+    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSuppliedCredential(reinterpret_cast<daq::IPropertyObject**>(credential));
 }
 
 daqErrCode daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* authenticationMethods)

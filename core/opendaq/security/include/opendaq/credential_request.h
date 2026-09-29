@@ -37,9 +37,9 @@ struct IComponentType;
  * @brief Carries the details of a credential request handed to `ICredentialProvider::requestCredentials`
  * when authentication is required for a connection attempt.
  *
- * Built via `ICredentialRequestBuilder`. Never carries the actual secrets - only
+ * Built via `ICredentialRequestBuilder`. Never carries the actual credentials - only
  * enough context (the component type, connection details, and the negotiated authentication method - whose
- * own id names the authentication method) for the provider to determine how to provide the secrets.
+ * own id names the authentication method) for the provider to determine how to provide the credentials.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
 {
@@ -82,7 +82,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
     /*!
-     * @brief Gets the authentication method the provider must provide a secret for, read from
+     * @brief Gets the authentication method the provider must provide a credential for, read from
      * `IAuthenticationConfig` when the request was built.
      * @param[out] authenticationMethod The authentication method.
      */

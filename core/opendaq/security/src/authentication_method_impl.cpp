@@ -23,7 +23,7 @@ namespace detail
         if (!typeManager.assigned())
             DAQ_THROW_EXCEPTION(InvalidParameterException, "Type manager must be assigned when creating an authentication method");
         if (!className.assigned())
-            DAQ_THROW_EXCEPTION(InvalidParameterException, "Secret class name must be assigned");
+            DAQ_THROW_EXCEPTION(InvalidParameterException, "Credential class name must be assigned");
         if (!typeManager.hasType(className))
             DAQ_THROW_EXCEPTION(InvalidParameterException, "Type \"{}\" is not registered in the type manager", className);
         return className;
@@ -81,35 +81,35 @@ AuthenticationMethodImpl::AuthenticationMethodImpl(
     const DictPtr<IString, IBoolean>& keys,
     const StringPtr& description,
     const TypeManagerPtr& typeManager,
-    const StringPtr& secretClassName)
+    const StringPtr& credentialClassName)
     : AuthenticationMethodImpl(
           CredentialFormat::KeyValuePairs,
           detail::RequireRegisteredType(typeManager, KeyValueAuthenticationMethodStructType().getName()),
           BuildFields(id, keys, description, detail::RequireRegisteredType(typeManager, KeyValueAuthenticationMethodParametersStructType().getName())),
           typeManager,
-          detail::RequireRegisteredClassName(typeManager, secretClassName))
+          detail::RequireRegisteredClassName(typeManager, credentialClassName))
 {
 }
 
 AuthenticationMethodImpl::AuthenticationMethodImpl(
-    const StringPtr& id, const StringPtr& description, Bool hidden, const TypeManagerPtr& typeManager, const StringPtr& secretClassName)
+    const StringPtr& id, const StringPtr& description, Bool hidden, const TypeManagerPtr& typeManager, const StringPtr& credentialClassName)
     : AuthenticationMethodImpl(
           CredentialFormat::String,
           detail::RequireRegisteredType(typeManager, StringAuthenticationMethodStructType().getName()),
           BuildFields(id, description, hidden, detail::RequireRegisteredType(typeManager, StringAuthenticationMethodParametersStructType().getName())),
           typeManager,
-          detail::RequireRegisteredClassName(typeManager, secretClassName))
+          detail::RequireRegisteredClassName(typeManager, credentialClassName))
 {
 }
 
 AuthenticationMethodImpl::AuthenticationMethodImpl(
-    const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager, const StringPtr& secretClassName)
+    const StringPtr& id, const StringPtr& description, const TypeManagerPtr& typeManager, const StringPtr& credentialClassName)
     : AuthenticationMethodImpl(
           CredentialFormat::FilePath,
           detail::RequireRegisteredType(typeManager, FilePathAuthenticationMethodStructType().getName()),
           BuildFields(id, description),
           typeManager,
-          detail::RequireRegisteredClassName(typeManager, secretClassName))
+          detail::RequireRegisteredClassName(typeManager, credentialClassName))
 {
 }
 
@@ -122,11 +122,11 @@ AuthenticationMethodImpl::AuthenticationMethodImpl(CredentialFormat format,
                                                     const StructTypePtr& structType,
                                                     const DictPtr<IString, IBaseObject>& fields,
                                                     const TypeManagerPtr& typeManager,
-                                                    const StringPtr& secretClassName)
+                                                    const StringPtr& credentialClassName)
     : GenericStructImpl<IAuthenticationMethod, IStruct>(structType, fields)
     , format(format)
     , typeManager(typeManager)
-    , secretClassName(secretClassName)
+    , credentialClassName(credentialClassName)
 {
 }
 
@@ -168,14 +168,14 @@ ErrCode AuthenticationMethodImpl::getDescription(IString** description)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode AuthenticationMethodImpl::createEmptySecret(IPropertyObject** secret)
+ErrCode AuthenticationMethodImpl::createEmptyCredential(IPropertyObject** credential)
 {
-    OPENDAQ_PARAM_NOT_NULL(secret);
+    OPENDAQ_PARAM_NOT_NULL(credential);
 
     if (format == CredentialFormat::None)
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "The \"None\" format requires no credentials, so it has no secret to build");
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "The \"None\" format requires no credentials, so it has no credential to build");
 
-    *secret = PropertyObject(typeManager, secretClassName).detach();
+    *credential = PropertyObject(typeManager, credentialClassName).detach();
     return OPENDAQ_SUCCESS;
 }
 
@@ -193,10 +193,10 @@ ErrCode AuthenticationMethodImpl::serialize(ISerializer* serializer)
         const auto serializableFields = this->fields.asPtr<ISerializable>(true);
         checkErrorInfo(serializableFields->serialize(serializer));
 
-        if (secretClassName.assigned())
+        if (credentialClassName.assigned())
         {
-            serializer->key(SecretClassNameSerializedKey);
-            serializer->writeString(secretClassName.getCharPtr(), secretClassName.getLength());
+            serializer->key(CredentialClassNameSerializedKey);
+            serializer->writeString(credentialClassName.getCharPtr(), credentialClassName.getLength());
         }
 
         serializer->endObject();
@@ -228,9 +228,9 @@ ErrCode AuthenticationMethodImpl::Deserialize(ISerializedObject* serialized, IBa
         const StringPtr typeName = serializedObj.readString("typeName");
         const DictPtr<IString, IBaseObject> fields = serializedObj.readObject("fields", context, factoryCallback).asPtr<IDict>();
 
-        StringPtr secretClassName;
-        if (serializedObj.hasKey(SecretClassNameSerializedKey))
-            secretClassName = serializedObj.readString(SecretClassNameSerializedKey);
+        StringPtr credentialClassName;
+        if (serializedObj.hasKey(CredentialClassNameSerializedKey))
+            credentialClassName = serializedObj.readString(CredentialClassNameSerializedKey);
 
         const StringPtr id = fields.get("AuthenticationMethodId");
         const StringPtr description = fields.get("Description");
@@ -240,17 +240,17 @@ ErrCode AuthenticationMethodImpl::Deserialize(ISerializedObject* serialized, IBa
         {
             const StructPtr parameters = fields.get("Parameters");
             const DictPtr<IString, IBoolean> keys = parameters.get("Keys");
-            result = KeyValueAuthenticationMethod(id, keys, description, typeManager, secretClassName);
+            result = KeyValueAuthenticationMethod(id, keys, description, typeManager, credentialClassName);
         }
         else if (typeName == StringAuthenticationMethodStructType().getName())
         {
             const StructPtr parameters = fields.get("Parameters");
             const Bool hidden = parameters.get("Hidden");
-            result = StringAuthenticationMethod(id, description, hidden, typeManager, secretClassName);
+            result = StringAuthenticationMethod(id, description, hidden, typeManager, credentialClassName);
         }
         else if (typeName == FilePathAuthenticationMethodStructType().getName())
         {
-            result = FilePathAuthenticationMethod(id, description, typeManager, secretClassName);
+            result = FilePathAuthenticationMethod(id, description, typeManager, credentialClassName);
         }
         else if (typeName == NoneAuthenticationMethodStructType().getName())
         {
@@ -266,9 +266,9 @@ ErrCode AuthenticationMethodImpl::Deserialize(ISerializedObject* serialized, IBa
     });
 }
 
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValueAuthenticationMethod, IAuthenticationMethod, IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, secretClassName)
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringAuthenticationMethod, IAuthenticationMethod, IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, secretClassName)
-OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathAuthenticationMethod, IAuthenticationMethod, IString*, id, IString*, description, ITypeManager*, typeManager, IString*, secretClassName)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, KeyValueAuthenticationMethod, IAuthenticationMethod, IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, credentialClassName)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, StringAuthenticationMethod, IAuthenticationMethod, IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, credentialClassName)
+OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, FilePathAuthenticationMethod, IAuthenticationMethod, IString*, id, IString*, description, ITypeManager*, typeManager, IString*, credentialClassName)
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(LIBRARY_FACTORY, NoneAuthenticationMethod, IAuthenticationMethod, IString*, id, IString*, description)
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(AuthenticationMethodImpl)

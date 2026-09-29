@@ -565,7 +565,7 @@ public:
      * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for (see
      * `IAuthenticationConfig::getSelectedAuthenticationMethodId`).
      * @param credentials The already-resolved credentials to authenticate with - `createDevice`
-     * has already obtained this (via `requestCredentials`, from a supplied secret or a credential provider)
+     * has already obtained this (via `requestCredentials`, from a supplied credential or a credential provider)
      * before calling this method, so the implementation only needs to verify it, never to resolve it itself.
      * @returns The device object created to communicate with and control the device.
      */
@@ -637,7 +637,7 @@ public:
      * @param authenticationMethodId The id of the authentication method the resolved `credentials` are shaped for (see
      * `IAuthenticationConfig::getSelectedAuthenticationMethodId`).
      * @param credentials The already-resolved credentials to authenticate with - `createStreaming`
-     * has already obtained this (via `requestCredentials`, from a supplied secret or a credential provider)
+     * has already obtained this (via `requestCredentials`, from a supplied credential or a credential provider)
      * before calling this method, so the implementation only needs to verify it, never to resolve it itself.
      * @returns The created streaming object.
      */
@@ -753,15 +753,15 @@ private:
         return AuthenticationConfig(componentType);
     }
 
-    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential authenticationMethod,
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected authentication method,
     // then resolves credentials for it via `resolveCredentials`. Throws `AuthenticationFailedException` if
     // `authenticationConfig` is unassigned.
     //
     // A `None`-format method needs no credentials at all, so it is resolved directly here, as unassigned
-    // credentials - `createEmptySecret()` doesn't apply to it either, there being no secret to build. No
+    // credentials - `createEmptyCredential()` doesn't apply to it either, there being no credential to build. No
     // `ICredentialRequest` is even formed for it, since nothing will ever be requested with it: not from a
     // credential provider (none is expected to declare support for `None` - there is nothing for one to
-    // provide) and not via a caller-supplied secret either.
+    // provide) and not via a caller-supplied credential either.
     PropertyObjectPtr obtainCredentials(const AuthenticationConfigPtr& authenticationConfig,
                                         const StringPtr& connectionString,
                                         const StringPtr& manufacturer,
@@ -778,7 +778,7 @@ private:
         return resolveCredentials(authenticationConfig, credentialRequest);
     }
 
-    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential authenticationMethod,
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected authentication method,
     // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`,
     // and `componentType`. Split out of `requestCredentials` so `createDevice` can call it a second time, with
     // manufacturer/serial number resolved from the created device's own info, to re-cache credentials that
@@ -802,9 +802,9 @@ private:
     // Resolves the credentials for `credentialRequest` - always a non-`None`-format method (see
     // `requestCredentials`, its only caller, which resolves `None` itself beforehand). Consumes whichever
     // single credential provider `context.getCredentialProvider()` currently returns (see
-    // `IContext::getCredentialProvider`). If `authenticationConfig.getSuppliedSecret()` returns one, it is
+    // `IContext::getCredentialProvider`). If `authenticationConfig.getSuppliedCredential()` returns one, it is
     // used directly instead of asking the provider to obtain one - though the provider, if registered, is
-    // still handed the secret via `cacheCredentials`, so a later request for the same context can be served
+    // still handed the credential via `cacheCredentials`, so a later request for the same context can be served
     // from its cache.
     //
     // Throws `AuthenticationFailedException` if:
@@ -815,16 +815,16 @@ private:
     PropertyObjectPtr resolveCredentials(const AuthenticationConfigPtr& authenticationConfig, const CredentialRequestPtr& credentialRequest)
     {
         const CredentialProviderPtr provider = context.getCredentialProvider();
-        const PropertyObjectPtr suppliedSecret = authenticationConfig.getSuppliedSecret();
+        const PropertyObjectPtr suppliedCredential = authenticationConfig.getSuppliedCredential();
 
-        if (suppliedSecret.assigned())
+        if (suppliedCredential.assigned())
         {
-            if (!secretShapeMatches(suppliedSecret, credentialRequest.getAuthenticationMethod()))
-                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret does not match the expected shape");
+            if (!credentialShapeMatches(suppliedCredential, credentialRequest.getAuthenticationMethod()))
+                DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied credential does not match the expected shape");
 
-            // Already shaped like the credential authenticationMethod's `createEmptySecret` template (filled in by the
+            // Already shaped like the authentication method's `createEmptyCredential` template (filled in by the
             // caller), so it is used directly as the credential, no provider asked to obtain anything. If one
-            // is registered too, it still gets a chance to cache the secret, so a later interactive request
+            // is registered too, it still gets a chance to cache the credential, so a later interactive request
             // for the same context reuses it.
             if (provider.assigned())
             {
@@ -832,10 +832,10 @@ private:
                     DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                                          "Authentication is required but the registered credential provider does not support the required format");
 
-                provider.cacheCredentials(credentialRequest, suppliedSecret);
+                provider.cacheCredentials(credentialRequest, suppliedCredential);
             }
 
-            return suppliedSecret;
+            return suppliedCredential;
         }
 
         if (!provider.assigned())
@@ -845,28 +845,28 @@ private:
                                 "Authentication is required but the registered credential provider does not support the required format");
 
         const PropertyObjectPtr credentials = provider.requestCredentials(credentialRequest);
-        if (!secretShapeMatches(credentials, credentialRequest.getAuthenticationMethod()))
+        if (!credentialShapeMatches(credentials, credentialRequest.getAuthenticationMethod()))
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Credential provider returned credentials that do not match the expected shape");
 
         return credentials;
     }
 
-    // Structural check: does `secret` have exactly the property names `authenticationMethod.createEmptySecret()`
+    // Structural check: does `credential` have exactly the property names `authenticationMethod.createEmptyCredential()`
     // would produce? Doesn't check provenance, only shape.
-    static bool secretShapeMatches(const PropertyObjectPtr& secret, const AuthenticationMethodPtr& authenticationMethod)
+    static bool credentialShapeMatches(const PropertyObjectPtr& credential, const AuthenticationMethodPtr& authenticationMethod)
     {
-        if (!secret.assigned() || !authenticationMethod.assigned())
+        if (!credential.assigned() || !authenticationMethod.assigned())
             return false;
 
-        const PropertyObjectPtr templateObj = authenticationMethod.createEmptySecret();
+        const PropertyObjectPtr templateObj = authenticationMethod.createEmptyCredential();
         const auto templateProps = templateObj.getAllProperties();
 
-        if (templateProps.getCount() != secret.getAllProperties().getCount())
+        if (templateProps.getCount() != credential.getAllProperties().getCount())
             return false;
 
         for (const auto& prop : templateProps)
         {
-            if (!secret.hasProperty(prop.getName()))
+            if (!credential.hasProperty(prop.getName()))
                 return false;
         }
 

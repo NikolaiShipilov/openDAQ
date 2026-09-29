@@ -53,7 +53,7 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
     const auto requestPtr = CredentialRequestPtr::Borrow(request);
     const auto authenticationMethod = requestPtr.getAuthenticationMethod();
     if (!authenticationMethod.assigned())
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no authenticationMethod set");
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no authentication method set");
 
     switch (authenticationMethod.getFormat())
     {
@@ -66,12 +66,12 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
         case CredentialFormat::String:
         {
             printRequestDetails(requestPtr);
-            *credentials = readStringSecret(authenticationMethod).detach();
+            *credentials = readStringCredential(authenticationMethod).detach();
             return OPENDAQ_SUCCESS;
         }
         case CredentialFormat::FilePath:
         {
-            *credentials = readFilePathSecretCached(requestPtr, authenticationMethod).detach();
+            *credentials = readFilePathCredentialCached(requestPtr, authenticationMethod).detach();
             return OPENDAQ_SUCCESS;
         }
         default:
@@ -79,27 +79,27 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
     }
 }
 
-ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IPropertyObject* secret)
+ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IPropertyObject* credential)
 {
     OPENDAQ_PARAM_NOT_NULL(request);
-    OPENDAQ_PARAM_NOT_NULL(secret);
+    OPENDAQ_PARAM_NOT_NULL(credential);
 
     const auto requestPtr = CredentialRequestPtr::Borrow(request);
     const auto authenticationMethod = requestPtr.getAuthenticationMethod();
     if (!authenticationMethod.assigned())
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no authenticationMethod set");
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no authentication method set");
 
-    // Only FilePath secrets are cached (see `readFilePathSecretCached`) - other formats are a no-op here,
+    // Only FilePath credentials are cached (see `readFilePathCredentialCached`) - other formats are a no-op here,
     // since this provider never caches them either when obtaining them interactively.
     if (authenticationMethod.getFormat() == CredentialFormat::FilePath)
     {
-        const auto secretObj = PropertyObjectPtr::Borrow(secret);
-        const StringPtr propertyName = authenticationMethod.createEmptySecret().getAllProperties()[0].getName();
-        if (!secretObj.hasProperty(propertyName))
-            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDTYPE, "Provided secret is not shaped like a FilePath-format secret");
+        const auto credentialObj = PropertyObjectPtr::Borrow(credential);
+        const StringPtr propertyName = authenticationMethod.createEmptyCredential().getAllProperties()[0].getName();
+        if (!credentialObj.hasProperty(propertyName))
+            return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDTYPE, "Provided credential is not shaped like a FilePath-format credential");
 
-        const StringPtr path = secretObj.getPropertyValue(propertyName);
-        filePathSecretCache[MakeFilePathCacheKey(requestPtr)] = path.assigned() ? path.toStdString() : std::string();
+        const StringPtr path = credentialObj.getPropertyValue(propertyName);
+        filePathCredentialCache[MakeFilePathCacheKey(requestPtr)] = path.assigned() ? path.toStdString() : std::string();
     }
 
     return OPENDAQ_SUCCESS;
@@ -109,24 +109,24 @@ PropertyObjectPtr CmdLineCredentialProviderImpl::readKeyValuePairs(const Authent
 {
     const DictPtr<IString, IBoolean> keys = authenticationMethod.getParameters().get("Keys");
 
-    auto secret = authenticationMethod.createEmptySecret();
+    auto credential = authenticationMethod.createEmptyCredential();
     for (const auto& [key, hidden] : keys)
-        secret.setPropertyValue(key, String(readLine(fmt::format("{}: ", key.toStdString()), hidden)));
+        credential.setPropertyValue(key, String(readLine(fmt::format("{}: ", key.toStdString()), hidden)));
 
-    return secret;
+    return credential;
 }
 
-PropertyObjectPtr CmdLineCredentialProviderImpl::readStringSecret(const AuthenticationMethodPtr& authenticationMethod)
+PropertyObjectPtr CmdLineCredentialProviderImpl::readStringCredential(const AuthenticationMethodPtr& authenticationMethod)
 {
     const StringPtr description = authenticationMethod.getDescription();
     const auto parameters = authenticationMethod.getParameters();
     const bool hidden = parameters.assigned() && parameters.hasField("Hidden") && (bool) parameters.get("Hidden");
 
-    auto secretValue = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Secret"), hidden);
+    auto credentialValue = readLine(fmt::format("{}: ", description.assigned() ? description.toStdString() : "Credential"), hidden);
 
-    auto secret = authenticationMethod.createEmptySecret();
-    secret.setPropertyValue(secret.getAllProperties()[0].getName(), String(secretValue));
-    return secret;
+    auto credential = authenticationMethod.createEmptyCredential();
+    credential.setPropertyValue(credential.getAllProperties()[0].getName(), String(credentialValue));
+    return credential;
 }
 
 CmdLineCredentialProviderImpl::CacheKey CmdLineCredentialProviderImpl::MakeFilePathCacheKey(const CredentialRequestPtr& request)
@@ -152,25 +152,25 @@ CmdLineCredentialProviderImpl::CacheKey CmdLineCredentialProviderImpl::MakeFileP
                           hasSerialNumber ? serialNumber.toStdString() : std::string());
 }
 
-PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecretCached(const CredentialRequestPtr& request, const AuthenticationMethodPtr& authenticationMethod)
+PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathCredentialCached(const CredentialRequestPtr& request, const AuthenticationMethodPtr& authenticationMethod)
 {
     const auto cacheKey = MakeFilePathCacheKey(request);
 
-    if (const auto it = filePathSecretCache.find(cacheKey); it != filePathSecretCache.end())
+    if (const auto it = filePathCredentialCache.find(cacheKey); it != filePathCredentialCache.end())
     {
-        auto secret = authenticationMethod.createEmptySecret();
-        secret.setPropertyValue(secret.getAllProperties()[0].getName(), String(it->second));
-        return secret;
+        auto credential = authenticationMethod.createEmptyCredential();
+        credential.setPropertyValue(credential.getAllProperties()[0].getName(), String(it->second));
+        return credential;
     }
 
     printRequestDetails(request);
-    const auto secret = readFilePathSecret(authenticationMethod);
-    const StringPtr secretValue = secret.getPropertyValue(secret.getAllProperties()[0].getName());
-    filePathSecretCache[cacheKey] = secretValue.toStdString();
-    return secret;
+    const auto credential = readFilePathCredential(authenticationMethod);
+    const StringPtr credentialValue = credential.getPropertyValue(credential.getAllProperties()[0].getName());
+    filePathCredentialCache[cacheKey] = credentialValue.toStdString();
+    return credential;
 }
 
-PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecret(const AuthenticationMethodPtr& authenticationMethod)
+PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathCredential(const AuthenticationMethodPtr& authenticationMethod)
 {
     const StringPtr description = authenticationMethod.getDescription();
     const std::string prompt = fmt::format("{}: ", description.assigned() ? description.toStdString() : "File path");
@@ -181,9 +181,9 @@ PropertyObjectPtr CmdLineCredentialProviderImpl::readFilePathSecret(const Authen
 
         if (isFileAccessible(value))
         {
-            auto secret = authenticationMethod.createEmptySecret();
-            secret.setPropertyValue(secret.getAllProperties()[0].getName(), String(value));
-            return secret;
+            auto credential = authenticationMethod.createEmptyCredential();
+            credential.setPropertyValue(credential.getAllProperties()[0].getName(), String(value));
+            return credential;
         }
 
         const int attemptsLeft = MaxFilePathAttempts - attempt;

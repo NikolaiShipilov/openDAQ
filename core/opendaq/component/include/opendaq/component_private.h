@@ -103,9 +103,9 @@ DECLARE_OPENDAQ_INTERFACE(IComponentPrivate, IBaseObject)
      * directly rather than obtained from a provider, the credentials - used to authenticate the component.
      *
      * Kept alongside the component so a reload can re-request credentials for it. Note that this stores the
-     * config exactly as given - including a directly-supplied secret (`IAuthenticationConfig`'s
-     * `"SuppliedSecret"` property), if the caller set one - though `IAuthenticationConfig`'s own
-     * serialization never writes that secret out.
+     * config exactly as given - including a directly-supplied credential (`IAuthenticationConfig`'s
+     * `"SuppliedCredential"` property), if the caller set one - though `IAuthenticationConfig`'s own
+     * serialization never writes that credential out.
      */
     virtual ErrCode INTERFACE_FUNC setAuthenticationConfig(IAuthenticationConfig* authenticationConfig) = 0;
 

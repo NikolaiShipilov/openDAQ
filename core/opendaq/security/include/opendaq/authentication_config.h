@@ -37,14 +37,14 @@ BEGIN_NAMESPACE_OPENDAQ
  * are bound together as one `"AuthenticationMethod"` Selection property (its selection value is the
  * `IAuthenticationMethod` Struct itself, so the two can never be set out of sync - the authentication
  * method id is simply the selected authentication method's own `IAuthenticationMethod::getId()`).
- * A directly-supplied secret is carried, when present, as a `"SuppliedSecret"` property, validated on every
+ * A directly-supplied credential is carried, when present, as a `"SuppliedCredential"` property, validated on every
  * write against whatever `"AuthenticationMethod"` is currently selected (its property names must match
- * the selected authentication method's `createEmptySecret()`'s exactly - the blessed workflow is to build from that template, fill
- * it in, and submit it) - a mismatched write is rejected, and an already-set `"SuppliedSecret"` that a
+ * the selected authentication method's `createEmptyCredential()`'s exactly - the blessed workflow is to build from that template, fill
+ * it in, and submit it) - a mismatched write is rejected, and an already-set `"SuppliedCredential"` that a
  * `"AuthenticationMethod"` change leaves incompatible is silently cleared. The typed getters/setters below
  * are an equal, typed alternative to tuning the config through these properties directly - a caller can
  * customize it either way, entirely through `IAuthenticationConfig` itself or entirely through the generic
- * `IPropertyObject` interface this object also implements; `"SuppliedSecret"` and `"AuthenticationMethod"`
+ * `IPropertyObject` interface this object also implements; `"SuppliedCredential"` and `"AuthenticationMethod"`
  * can both equally be read and set through either.
  */
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
@@ -61,7 +61,7 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
      * `setPropertySelectionValue("AuthenticationMethod", authenticationMethod)`: looks the matching
      * authentication method up among `getSupportedAuthenticationMethods()` internally, so the caller only ever needs
      * to name the id, never the Struct itself. Selecting a new method may clear an incompatible
-     * `"SuppliedSecret"`.
+     * `"SuppliedCredential"`.
      * @param authenticationMethodId The id of one of `getSupportedAuthenticationMethods()`'s own keys.
      * @throws NotFoundException if `authenticationMethodId` doesn't match any of this config's supported
      * authentication methods.
@@ -79,11 +79,11 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
     virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) = 0;
 
     /*!
-     * @brief Gets the secret supplied directly by the caller - the value of the corresponding property.
-     * @param[out] secret The supplied secret, or `nullptr` if the config has no such property
+     * @brief Gets the credential supplied directly by the caller - the value of the corresponding property.
+     * @param[out] credential The supplied credential, or `nullptr` if the config has no such property
      * at all - in which case the module obtains one from the registered credential provider instead.
      */
-    virtual ErrCode INTERFACE_FUNC getSuppliedSecret(IPropertyObject** secret) = 0;
+    virtual ErrCode INTERFACE_FUNC getSuppliedCredential(IPropertyObject** credential) = 0;
 };
 
 /*!

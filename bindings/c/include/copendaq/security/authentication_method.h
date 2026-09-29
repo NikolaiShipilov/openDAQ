@@ -48,10 +48,10 @@ extern "C"
     daqErrCode EXPORTED daqAuthenticationMethod_getFormat(daqAuthenticationMethod* self, daqCredentialFormat* format);
     daqErrCode EXPORTED daqAuthenticationMethod_getParameters(daqAuthenticationMethod* self, daqStruct** parameters);
     daqErrCode EXPORTED daqAuthenticationMethod_getDescription(daqAuthenticationMethod* self, daqString** description);
-    daqErrCode EXPORTED daqAuthenticationMethod_createEmptySecret(daqAuthenticationMethod* self, daqPropertyObject** secret);
-    daqErrCode EXPORTED daqAuthenticationMethod_createKeyValueAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqDict* keys, daqString* description, daqTypeManager* typeManager, daqString* secretClassName);
-    daqErrCode EXPORTED daqAuthenticationMethod_createStringAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description, daqBool hidden, daqTypeManager* typeManager, daqString* secretClassName);
-    daqErrCode EXPORTED daqAuthenticationMethod_createFilePathAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description, daqTypeManager* typeManager, daqString* secretClassName);
+    daqErrCode EXPORTED daqAuthenticationMethod_createEmptyCredential(daqAuthenticationMethod* self, daqPropertyObject** credential);
+    daqErrCode EXPORTED daqAuthenticationMethod_createKeyValueAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqDict* keys, daqString* description, daqTypeManager* typeManager, daqString* credentialClassName);
+    daqErrCode EXPORTED daqAuthenticationMethod_createStringAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description, daqBool hidden, daqTypeManager* typeManager, daqString* credentialClassName);
+    daqErrCode EXPORTED daqAuthenticationMethod_createFilePathAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description, daqTypeManager* typeManager, daqString* credentialClassName);
     daqErrCode EXPORTED daqAuthenticationMethod_createNoneAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description);
 
 #ifdef __cplusplus

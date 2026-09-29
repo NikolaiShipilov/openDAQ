@@ -73,13 +73,13 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         },
         py::return_value_policy::take_ownership,
         "Gets every authentication method this config supports, keyed by their own id - the full set of `\"AuthenticationMethod\"` selection candidates.");
-    cls.def_property_readonly("supplied_secret",
+    cls.def_property_readonly("supplied_credential",
         [](daq::IAuthenticationConfig *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getSuppliedSecret().detach();
+            return objectPtr.getSuppliedCredential().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the secret supplied directly by the caller - the value of the `\"SuppliedSecret\"` property.");
+        "Gets the credential supplied directly by the caller - the value of the `\"SuppliedCredential\"` property.");
 }
