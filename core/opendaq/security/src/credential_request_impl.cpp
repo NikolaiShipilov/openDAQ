@@ -13,7 +13,7 @@ CredentialRequestImpl::CredentialRequestImpl(ICredentialRequestBuilder* credenti
     metaData = builderPtr.getMetaData();
     manufacturer = builderPtr.getManufacturer();
     serialNumber = builderPtr.getSerialNumber();
-    descriptor = builderPtr.getDescriptor();
+    authenticationMethod = builderPtr.getAuthenticationMethod();
 
     if (!componentType.assigned())
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Component type must be assigned when creating a credential request");
@@ -21,8 +21,8 @@ CredentialRequestImpl::CredentialRequestImpl(ICredentialRequestBuilder* credenti
     if (!connectionString.assigned() || connectionString.getLength() == 0)
         DAQ_THROW_EXCEPTION(InvalidParameterException, "Connection string must be assigned when creating a credential request");
 
-    if (!descriptor.assigned())
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "Credential descriptor must be assigned when creating a credential request");
+    if (!authenticationMethod.assigned())
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "Authentication method must be assigned when creating a credential request");
 }
 
 ErrCode CredentialRequestImpl::getComponentType(IComponentType** componentType)
@@ -65,11 +65,11 @@ ErrCode CredentialRequestImpl::getSerialNumber(IString** serialNumber)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestImpl::getDescriptor(ICredentialDescriptor** descriptor)
+ErrCode CredentialRequestImpl::getAuthenticationMethod(IAuthenticationMethod** authenticationMethod)
 {
-    OPENDAQ_PARAM_NOT_NULL(descriptor);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethod);
 
-    *descriptor = this->descriptor.addRefAndReturn();
+    *authenticationMethod = this->authenticationMethod.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

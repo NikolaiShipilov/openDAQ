@@ -20,7 +20,7 @@
 #include <coretypes/intfs.h>
 #include <coretypes/string_ptr.h>
 #include <opendaq/module_info_ptr.h>
-#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/authentication_method_ptr.h>
 #include <coretypes/dict_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -49,8 +49,8 @@ public:
     ErrCode INTERFACE_FUNC setDefaultConfig(IPropertyObject* defaultConfig) override;
     ErrCode INTERFACE_FUNC getDefaultConfig(IPropertyObject** defaultConfig) override;
 
-    ErrCode INTERFACE_FUNC setSupportedAuthenticationMethods(IDict* descriptors) override;
-    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) override;
+    ErrCode INTERFACE_FUNC setSupportedAuthenticationMethods(IDict* authenticationMethods) override;
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) override;
 
     ErrCode INTERFACE_FUNC setDefaultAuthenticationMethodId(IString* defaultAuthenticationMethodId) override;
     ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString** defaultAuthenticationMethodId) override;
@@ -63,7 +63,7 @@ private:
     StringPtr description;
     PropertyObjectPtr defaultConfig;
     ModuleInfoPtr moduleInfo;
-    DictPtr<IString, ICredentialDescriptor> supportedAuthenticationMethods;
+    DictPtr<IString, IAuthenticationMethod> supportedAuthenticationMethods;
     StringPtr defaultAuthenticationMethodId;
 };
 

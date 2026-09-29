@@ -17,15 +17,15 @@
 #pragma once
 #include <coretypes/baseobject.h>
 #include <coreobjects/property_object_ptr.h>
-#include <opendaq/credential_descriptor.h>
+#include <opendaq/authentication_method.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
- * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationMethod, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationMethod, AuthenticationMethodPtr, "<opendaq/authentication_method_ptr.h>")]
  * [interfaceLibrary(IComponentType, "opendaq")]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr, "<opendaq/component_type_ptr.h>")]
  */
@@ -37,9 +37,9 @@ struct IComponentType;
  * @brief Carries the details of a credential request handed to `ICredentialProvider::requestCredentials`
  * when authentication is required for a connection attempt.
  *
- * Built via `ICredentialRequestBuilder`. Never carries the actual secrets - only
- * enough context (the component type, connection details, and the negotiated credential descriptor - whose
- * own id names the authentication method) for the provider to determine how to provide the secrets.
+ * Built via `ICredentialRequestBuilder`. Never carries the actual credentials - only
+ * enough context (the component type, connection details, and the negotiated authentication method - whose
+ * own id names the authentication method) for the provider to determine how to provide the credentials.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
 {
@@ -82,11 +82,11 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
     /*!
-     * @brief Gets the credential descriptor the provider must provide a secret for, read from
+     * @brief Gets the authentication method the provider must provide a credential for, read from
      * `IAuthenticationConfig` when the request was built.
-     * @param[out] descriptor The credential descriptor.
+     * @param[out] authenticationMethod The authentication method.
      */
-    virtual ErrCode INTERFACE_FUNC getDescriptor(ICredentialDescriptor** descriptor) = 0;
+    virtual ErrCode INTERFACE_FUNC getAuthenticationMethod(IAuthenticationMethod** authenticationMethod) = 0;
 };
 
 /*!

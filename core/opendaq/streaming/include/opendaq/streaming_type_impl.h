@@ -33,7 +33,7 @@ public:
                                const StringPtr& description,
                                const StringPtr& prefix,
                                const PropertyObjectPtr& defaultConfig,
-                               const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                               const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods,
                                const StringPtr& defaultAuthenticationMethodId);
 
     explicit StreamingTypeImpl(const ComponentTypeBuilderPtr& builder);

@@ -1,7 +1,7 @@
 #include <credential_demo_module/credential_demo_streaming_impl.h>
 
 #include <opendaq/streaming_type_factory.h>
-#include <opendaq/credential_descriptor_factory.h>
+#include <opendaq/authentication_method_factory.h>
 #include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
@@ -19,17 +19,17 @@ CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connec
 
 StreamingTypePtr CredentialDemoStreamingImpl::CreateType(const ContextPtr& context)
 {
-    auto userNamePasswordDescriptor = StandardUserNamePasswordCredentialDescriptor(context.getTypeManager());
-    auto pinDescriptor = StandardPinCredentialDescriptor(context.getTypeManager());
-    auto privateKeyDescriptor = StandardPrivateKeyFileCredentialDescriptor(context.getTypeManager());
-    auto anonymousDescriptor = StandardAnonymousCredentialDescriptor();
+    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod(context.getTypeManager());
+    auto pinMethod = StandardPinAuthenticationMethod(context.getTypeManager());
+    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod(context.getTypeManager());
+    auto anonymousMethod = StandardAnonymousAuthenticationMethod();
 
     // Showcases the same four authentication methods as the device, defaulting to PIN.
     auto supportedMethods =
-        Dict<IString, ICredentialDescriptor>({{userNamePasswordDescriptor.getAuthenticationMethodId(), userNamePasswordDescriptor},
-                                              {pinDescriptor.getAuthenticationMethodId(), pinDescriptor},
-                                              {privateKeyDescriptor.getAuthenticationMethodId(), privateKeyDescriptor},
-                                              {anonymousDescriptor.getAuthenticationMethodId(), anonymousDescriptor}});
+        Dict<IString, IAuthenticationMethod>({{userNamePasswordMethod.getId(), userNamePasswordMethod},
+                                              {pinMethod.getId(), pinMethod},
+                                              {privateKeyMethod.getId(), privateKeyMethod},
+                                              {anonymousMethod.getId(), anonymousMethod}});
 
     return StreamingTypeBuilder()
         .setId(CredentialDemoStreamingTypeId)

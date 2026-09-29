@@ -26,8 +26,8 @@ BEGIN_NAMESPACE_OPENDAQ
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
  * [interfaceLibrary(IProperty, "coreobjects")]
  * [interfaceSmartPtr(IProperty, PropertyPtr, "<coreobjects/property_ptr.h>")]
- * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationMethod, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationMethod, AuthenticationMethodPtr, "<opendaq/authentication_method_ptr.h>")]
  * [interfaceLibrary(IComponentType, "opendaq")]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr, "<opendaq/component_type_ptr.h>")]
  */
@@ -40,7 +40,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequestBuilder, IBaseObject)
 {
 /*!
  * @brief Builds and returns a `CredentialRequest` using the currently configured values. Fails if
- * `componentType`, `connectionString`, or `descriptor` was never set.
+ * `componentType`, `connectionString`, or `authenticationMethod` was never set.
  * @param[out] request The built credential request.
  */
 virtual ErrCode INTERFACE_FUNC build(ICredentialRequest** request) = 0;
@@ -123,18 +123,18 @@ virtual ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) = 0;
 virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;
 
 /*!
- * @brief Sets the credential descriptor the provider must provide a secret for - typically read from
+ * @brief Sets the authentication method the provider must provide a credential for - typically read from
  * `IAuthenticationConfig` when the request is being built. Required - `build()` fails if never set.
- * @param descriptor The credential descriptor.
+ * @param authenticationMethod The authentication method.
  */
 // [returnSelf]
-virtual ErrCode INTERFACE_FUNC setDescriptor(ICredentialDescriptor* descriptor) = 0;
+virtual ErrCode INTERFACE_FUNC setAuthenticationMethod(IAuthenticationMethod* authenticationMethod) = 0;
 
 /*!
- * @brief Gets the credential descriptor currently set on the builder.
- * @param[out] descriptor The credential descriptor.
+ * @brief Gets the authentication method currently set on the builder.
+ * @param[out] authenticationMethod The authentication method.
  */
-virtual ErrCode INTERFACE_FUNC getDescriptor(ICredentialDescriptor** descriptor) = 0;
+virtual ErrCode INTERFACE_FUNC getAuthenticationMethod(IAuthenticationMethod** authenticationMethod) = 0;
 };
 
 /*!

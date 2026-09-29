@@ -16,7 +16,7 @@
 
 #pragma once
 #include <opendaq/authentication_config_ptr.h>
-#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/authentication_method_ptr.h>
 #include <opendaq/component_type_ptr.h>
 #include <coretypes/dictobject_factory.h>
 

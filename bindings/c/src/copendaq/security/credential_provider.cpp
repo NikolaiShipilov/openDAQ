@@ -32,9 +32,9 @@ daqErrCode daqCredentialProvider_requestCredentials(daqCredentialProvider* self,
     return reinterpret_cast<daq::ICredentialProvider*>(self)->requestCredentials(reinterpret_cast<daq::ICredentialRequest*>(request), reinterpret_cast<daq::IPropertyObject**>(credentials));
 }
 
-daqErrCode daqCredentialProvider_cacheCredentials(daqCredentialProvider* self, daqCredentialRequest* request, daqPropertyObject* secret)
+daqErrCode daqCredentialProvider_cacheCredentials(daqCredentialProvider* self, daqCredentialRequest* request, daqPropertyObject* credential)
 {
-    return reinterpret_cast<daq::ICredentialProvider*>(self)->cacheCredentials(reinterpret_cast<daq::ICredentialRequest*>(request), reinterpret_cast<daq::IPropertyObject*>(secret));
+    return reinterpret_cast<daq::ICredentialProvider*>(self)->cacheCredentials(reinterpret_cast<daq::ICredentialRequest*>(request), reinterpret_cast<daq::IPropertyObject*>(credential));
 }
 
 daqErrCode daqCredentialProvider_getSupportedFormats(daqCredentialProvider* self, daqList** formats)

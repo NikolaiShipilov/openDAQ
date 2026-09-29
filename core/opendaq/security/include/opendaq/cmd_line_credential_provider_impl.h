@@ -19,7 +19,7 @@
 #include <coretypes/impl.h>
 #include <opendaq/credential_provider.h>
 #include <opendaq/credential_request_ptr.h>
-#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/authentication_method_ptr.h>
 #include <coreobjects/property_object_ptr.h>
 #include <map>
 #include <utility>
@@ -33,31 +33,31 @@ public:
 
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) override;
-    ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* secret) override;
+    ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* credential) override;
     ErrCode INTERFACE_FUNC getSupportedFormats(IList** formats) override;
 
 private:
     using CacheKey = std::pair<std::string, std::string>;
 
     static void printRequestDetails(const CredentialRequestPtr& request);
-    static PropertyObjectPtr readKeyValuePairs(const CredentialDescriptorPtr& descriptor);
-    static PropertyObjectPtr readStringSecret(const CredentialDescriptorPtr& descriptor);
+    static PropertyObjectPtr readKeyValuePairs(const AuthenticationMethodPtr& authenticationMethod);
+    static PropertyObjectPtr readStringCredential(const AuthenticationMethodPtr& authenticationMethod);
     static std::string readLine(const std::string& prompt, bool hide);
     static CacheKey MakeFilePathCacheKey(const CredentialRequestPtr& request);
 
     // Prompts for a file path, retrying (up to `MaxFilePathAttempts`) as long as the entered path isn't
-    // accessible - unlike a plain String secret, a FilePath one is validated locally before ever being
+    // accessible - unlike a plain String credential, a FilePath one is validated locally before ever being
     // handed back, since the module reading it expects a real, readable file.
-    static PropertyObjectPtr readFilePathSecret(const CredentialDescriptorPtr& descriptor);
+    static PropertyObjectPtr readFilePathCredential(const AuthenticationMethodPtr& authenticationMethod);
     static bool isFileAccessible(const std::string& path);
 
-    // FilePath secrets only, cached in-memory for the lifetime of this provider (i.e. for the active
+    // FilePath credentials only, cached in-memory for the lifetime of this provider (i.e. for the active
     // session) - keyed by (manufacturer, serialNumber), so re-authenticating a second connection to the
     // same device (e.g. attaching streaming after the device itself) reuses the path already entered
     // instead of prompting again.
-    PropertyObjectPtr readFilePathSecretCached(const CredentialRequestPtr& request, const CredentialDescriptorPtr& descriptor);
+    PropertyObjectPtr readFilePathCredentialCached(const CredentialRequestPtr& request, const AuthenticationMethodPtr& authenticationMethod);
 
-    std::map<CacheKey, std::string> filePathSecretCache;
+    std::map<CacheKey, std::string> filePathCredentialCache;
 };
 
 END_NAMESPACE_OPENDAQ

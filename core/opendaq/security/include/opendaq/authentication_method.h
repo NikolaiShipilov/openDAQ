@@ -24,14 +24,14 @@
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief The shape of the secret(s) a credential descriptor describes.
+ * @brief The shape of the credential value(s) an authentication method describes.
  */
 enum class CredentialFormat : EnumType
 {
-    None = 0,       ///< No secret(s) at all - typically for anonymous access, nothing to supply or verify.
+    None = 0,       ///< No credential value(s) at all - typically for anonymous access, nothing to supply or verify.
     KeyValuePairs,  ///< N string pairs - e.g. UserName / Password.
     String,         ///< one string - token, API key, PIN.
-    FilePath        ///< one string - path to a file containing the secret, e.g. a private key.
+    FilePath        ///< one string - path to a file containing the credential value, e.g. a private key.
 };
 
 /*#
@@ -42,34 +42,34 @@ enum class CredentialFormat : EnumType
  */
 
 /*!
- * @brief Describes the shape of the secret(s) required by an authentication method used by the module and
- * produced by a credential provider.
+ * @brief Describes the shape of the credential value(s) required by an authentication method used by the
+ * module and produced by a credential provider.
  *
- * A descriptor carries the method's id, format, its format-specific parameter set (if any), and a
+ * An authentication method carries its own id, format, format-specific parameter set (if any), and a
  * human-readable description. The id uniquely identifies the authentication method at least within the module that
  * offers it (e.g. `"UserNamePassword"`, `"Pin"`) - the same id `AuthenticationConfig` keys the resulting
- * config's `"AuthenticationMethod"` candidates by. In practice the id is often unique system-wide, deliberately reused across modules: the `Standard*CredentialDescriptor`
- * factories below key off shared, well-known ids and resolve their Struct/secret class from the one
+ * config's `"AuthenticationMethod"` candidates by. In practice the id is often unique system-wide, deliberately reused across modules: the `Standard*AuthenticationMethod`
+ * factories below key off shared, well-known ids and resolve their Struct/credential class from the one
  * `ITypeManager` shared by the whole `Context`, so any two modules using the same standard id (with the same
- * `Context`) produce identically-shaped descriptors. Where a format has a parameter set,
+ * `Context`) produce identically-shaped authentication methods. Where a format has a parameter set,
  * it is itself a Struct: for a `KeyValuePairs` format, a `"Keys"` dict field maps each expected key
  * to its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String` format, a
- * single `"Hidden"` bool field applies to the one secret. A `FilePath` format has no format-specific
- * parameters. A `None` format requires no secret(s) at all - for an authentication method that
+ * single `"Hidden"` bool field applies to the one value. A `FilePath` format has no format-specific
+ * parameters. A `None` format requires no credential value(s) at all - for an authentication method that
  * needs no credentials, e.g. anonymous access - and has no parameters.
  */
-DECLARE_OPENDAQ_INTERFACE(ICredentialDescriptor, IBaseObject)
+DECLARE_OPENDAQ_INTERFACE(IAuthenticationMethod, IBaseObject)
 {
     /*!
-     * @brief Gets the id that uniquely identifies the authentication method this descriptor belongs to,
-     * at least within the module that offers it.
-     * @param[out] authenticationMethodId The authentication method id.
+     * @brief Gets the id that uniquely identifies this authentication method, at least within the module
+     * that offers it.
+     * @param[out] id The authentication method id.
      */
-    virtual ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) = 0;
+    virtual ErrCode INTERFACE_FUNC getId(IString** id) = 0;
 
     /*!
-     * @brief Gets the format of the described secret(s).
-     * @param[out] format The secret format.
+     * @brief Gets the format of the described credential value(s).
+     * @param[out] format The credential format.
      */
     virtual ErrCode INTERFACE_FUNC getFormat(CredentialFormat* format) = 0;
 
@@ -88,40 +88,40 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialDescriptor, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getDescription(IString** description) = 0;
 
     /*!
-     * @brief Builds an empty secret matching this descriptor's shape - a property object with
-     * one empty (default `""`) String property per secret value the format expects: for `KeyValuePairs`, one
+     * @brief Builds an empty credential matching this authentication method's shape - a property object with
+     * one empty (default `""`) String property per value the format expects: for `KeyValuePairs`, one
      * property per key named in `getParameters()`'s `"Keys"` dict (e.g. `"UserName"`, `"Password"`); for
-     * `String` and `FilePath`, a single property, named and described by the descriptor's own registered
-     * secret class.
+     * `String` and `FilePath`, a single property, named and described by the authentication method's own
+     * registered credential class.
      *
-     * Meant to be filled in with the actual secret value(s) and used as the credential itself -
-     * either by the caller, to supply a secret directly (`IAuthenticationConfig`'s `"SuppliedSecret"`
-     * property), or by a credential provider, once it has obtained the secret(s) interactively.
+     * Meant to be filled in with the actual value(s) and used as the credential itself -
+     * either by the caller, to supply one directly (`IAuthenticationConfig`'s `"SuppliedCredential"`
+     * property), or by a credential provider, once it has obtained it interactively.
      *
      * Not supported for `None` - a `None`-format authentication method requires no credentials at all, so
-     * no secret is ever needed for it in the first place; therefore returns `OPENDAQ_ERR_NOT_SUPPORTED`.
-     * @param[out] secret The empty secret.
+     * none is ever needed for it in the first place; therefore returns `OPENDAQ_ERR_NOT_SUPPORTED`.
+     * @param[out] credential The empty credential.
      */
-    virtual ErrCode INTERFACE_FUNC createEmptySecret(IPropertyObject** secret) = 0;
+    virtual ErrCode INTERFACE_FUNC createEmptyCredential(IPropertyObject** credential) = 0;
 };
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
-    LIBRARY_FACTORY, KeyValueDescriptor, ICredentialDescriptor,
-    IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, secretClassName
+    LIBRARY_FACTORY, KeyValueAuthenticationMethod, IAuthenticationMethod,
+    IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, credentialClassName
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
-    LIBRARY_FACTORY, StringDescriptor, ICredentialDescriptor,
-    IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, secretClassName
+    LIBRARY_FACTORY, StringAuthenticationMethod, IAuthenticationMethod,
+    IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, credentialClassName
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
-    LIBRARY_FACTORY, FilePathDescriptor, ICredentialDescriptor,
-    IString*, id, IString*, description, ITypeManager*, typeManager, IString*, secretClassName
+    LIBRARY_FACTORY, FilePathAuthenticationMethod, IAuthenticationMethod,
+    IString*, id, IString*, description, ITypeManager*, typeManager, IString*, credentialClassName
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
-    LIBRARY_FACTORY, NoneDescriptor, ICredentialDescriptor,
+    LIBRARY_FACTORY, NoneAuthenticationMethod, IAuthenticationMethod,
     IString*, id, IString*, description
 )
 

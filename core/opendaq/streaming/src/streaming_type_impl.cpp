@@ -8,7 +8,7 @@ StreamingTypeImpl::StreamingTypeImpl(const StringPtr& id,
                                             const StringPtr& description,
                                             const StringPtr& prefix,
                                             const PropertyObjectPtr& defaultConfig,
-                                            const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                                            const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods,
                                             const StringPtr& defaultAuthenticationMethodId)
     : Super(StreamingTypeStructType(), id, name, description, prefix, defaultConfig, supportedAuthenticationMethods, defaultAuthenticationMethodId)
 {
@@ -137,7 +137,7 @@ ErrCode StreamingTypeImpl::Deserialize(ISerializedObject* serialized, IBaseObjec
         if (serializedObj.hasKey("defaultConfig"))
             defaultConfig = serializedObj.readObject("defaultConfig", contextPtr, factoryCallbackPtr);
 
-        DictPtr<IString, ICredentialDescriptor> supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods();
+        DictPtr<IString, IAuthenticationMethod> supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods();
         if (serializedObj.hasKey("supportedAuthenticationMethods"))
             supportedAuthenticationMethods = serializedObj.readObject("supportedAuthenticationMethods", contextPtr, factoryCallbackPtr).asPtr<IDict>();
 

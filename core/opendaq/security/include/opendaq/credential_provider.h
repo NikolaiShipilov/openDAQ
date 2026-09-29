@@ -18,7 +18,7 @@
 #include <coretypes/baseobject.h>
 #include <coreobjects/property_object.h>
 #include <opendaq/credential_request.h>
-#include <opendaq/credential_descriptor.h>
+#include <opendaq/authentication_method.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -30,8 +30,8 @@ BEGIN_NAMESPACE_OPENDAQ
  */
 
 /*!
- * @brief Supplies the secrets requested via a `ICredentialRequest` - e.g. by prompting the user, reading
- * from a file, or fetching from a secret store.
+ * @brief Supplies the credentials requested via a `ICredentialRequest` - e.g. by prompting the user, reading
+ * from a file, or fetching from a credential store.
  */
 DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 {
@@ -42,25 +42,25 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getDescription(IString** description) = 0;
 
     /*!
-     * @brief Requests credentials for the given request, in the format described by its credential descriptor.
+     * @brief Requests credentials for the given request, in the format described by its authentication method.
      * @param request The credential request to obtain credentials for.
-     * @param[out] credentials The obtained secret - a property object built from the request's
-     * credential descriptor's `createEmptySecret` template, filled in with the obtained secret(s).
+     * @param[out] credentials The obtained credential - a property object built from the request's
+     * authentication method's `createEmptyCredential` template, filled in with the obtained value(s).
      */
     virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IPropertyObject** credentials) = 0;
 
     /*!
-     * @brief Accepts a secret already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s
-     * `"SuppliedSecret"` property - so an implementation that caches values it obtains interactively caches
+     * @brief Accepts a credential already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s
+     * `"SuppliedCredential"` property - so an implementation that caches values it obtains interactively caches
      * this one the same way. A later interactive `requestCredentials` call for the same context then reuses
-     * it instead of prompting again. Does not itself produce a secret - the caller already has
-     * the secret and uses it directly. Implementations for which caching doesn't apply may treat this as a
+     * it instead of prompting again. Does not itself produce a credential - the caller already has
+     * it and uses it directly. Implementations for which caching doesn't apply may treat this as a
      * no-op.
-     * @param request The credential request the secret is being supplied for.
-     * @param secret The secret, shaped like the request's credential descriptor's `createEmptySecret`
-     * template - a property object filled in with the actual secret value(s).
+     * @param request The credential request the credential is being supplied for.
+     * @param credential The credential, shaped like the request's authentication method's
+     * `createEmptyCredential` template - a property object filled in with the actual value(s).
      */
-    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* secret) = 0;
+    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IPropertyObject* credential) = 0;
 
     // [elementType(formats, IInteger)]
     /*!
@@ -72,7 +72,7 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
 };
 
 /*!
- * @brief Creates a `ICredentialProvider` that prompts the user for secrets via the command line - supporting
+ * @brief Creates a `ICredentialProvider` that prompts the user for credentials via the command line - supporting
  * every `CredentialFormat`, including `FilePath` (validated locally - retried if the entered path isn't
  * accessible - and cached in-memory per `(manufacturer, serialNumber)` for the active session).
  */

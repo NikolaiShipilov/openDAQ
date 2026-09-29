@@ -77,14 +77,14 @@ daqErrCode daqCredentialRequestBuilder_getMetaData(daqCredentialRequestBuilder* 
     return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->getMetaData(reinterpret_cast<daq::IPropertyObject**>(property));
 }
 
-daqErrCode daqCredentialRequestBuilder_setDescriptor(daqCredentialRequestBuilder* self, daqCredentialDescriptor* descriptor)
+daqErrCode daqCredentialRequestBuilder_setAuthenticationMethod(daqCredentialRequestBuilder* self, daqAuthenticationMethod* authenticationMethod)
 {
-    return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->setDescriptor(reinterpret_cast<daq::ICredentialDescriptor*>(descriptor));
+    return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->setAuthenticationMethod(reinterpret_cast<daq::IAuthenticationMethod*>(authenticationMethod));
 }
 
-daqErrCode daqCredentialRequestBuilder_getDescriptor(daqCredentialRequestBuilder* self, daqCredentialDescriptor** descriptor)
+daqErrCode daqCredentialRequestBuilder_getAuthenticationMethod(daqCredentialRequestBuilder* self, daqAuthenticationMethod** authenticationMethod)
 {
-    return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->getDescriptor(reinterpret_cast<daq::ICredentialDescriptor**>(descriptor));
+    return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->getAuthenticationMethod(reinterpret_cast<daq::IAuthenticationMethod**>(authenticationMethod));
 }
 
 daqErrCode daqCredentialRequestBuilder_createCredentialRequestBuilder(daqCredentialRequestBuilder** obj)
