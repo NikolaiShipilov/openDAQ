@@ -17,7 +17,7 @@
 #pragma once
 #include <coretypes/baseobject.h>
 #include <coreobjects/property_object.h>
-#include <opendaq/credential_descriptor.h>
+#include <opendaq/authentication_method.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -33,13 +33,13 @@ BEGIN_NAMESPACE_OPENDAQ
  * `IComponentPrivate::setAuthenticationConfig`), so that reloading it later goes through the same
  * credential-request process again.
  *
- * Is itself a Property object - the authentication method id and its corresponding credential descriptor are bound
- * together as one `"AuthenticationMethod"` Selection property (its selection value is the
- * `ICredentialDescriptor` Struct itself, so the two can never be set out of sync - the authentication
- * method id is simply the selected descriptor's own `ICredentialDescriptor::getAuthenticationMethodId()`).
+ * Is itself a Property object - the authentication method id and the `IAuthenticationMethod` it corresponds to
+ * are bound together as one `"AuthenticationMethod"` Selection property (its selection value is the
+ * `IAuthenticationMethod` Struct itself, so the two can never be set out of sync - the authentication
+ * method id is simply the selected authentication method's own `IAuthenticationMethod::getId()`).
  * A directly-supplied secret is carried, when present, as a `"SuppliedSecret"` property, validated on every
  * write against whatever `"AuthenticationMethod"` is currently selected (its property names must match
- * `descriptor.createEmptySecret()`'s exactly - the blessed workflow is to build from that template, fill
+ * the selected authentication method's `createEmptySecret()`'s exactly - the blessed workflow is to build from that template, fill
  * it in, and submit it) - a mismatched write is rejected, and an already-set `"SuppliedSecret"` that a
  * `"AuthenticationMethod"` change leaves incompatible is silently cleared. The typed getters/setters below
  * are an equal, typed alternative to tuning the config through these properties directly - a caller can
@@ -51,15 +51,15 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
     /*!
      * @brief Gets the id of the authentication method currently selected - the selected
-     * `"AuthenticationMethod"` property value's own `ICredentialDescriptor::getAuthenticationMethodId()`.
+     * `"AuthenticationMethod"` property value's own `IAuthenticationMethod::getId()`.
      * @param[out] authenticationMethodId The authentication method id.
      */
     virtual ErrCode INTERFACE_FUNC getSelectedAuthenticationMethodId(IString** authenticationMethodId) = 0;
 
     /*!
      * @brief Selects the authentication method to use, by its own id - the typed equivalent of
-     * `setPropertySelectionValue("AuthenticationMethod", descriptor)`: looks the matching credential
-     * descriptor up among `getSupportedAuthenticationMethods()` internally, so the caller only ever needs
+     * `setPropertySelectionValue("AuthenticationMethod", authenticationMethod)`: looks the matching
+     * authentication method up among `getSupportedAuthenticationMethods()` internally, so the caller only ever needs
      * to name the id, never the Struct itself. Selecting a new method may clear an incompatible
      * `"SuppliedSecret"`.
      * @param authenticationMethodId The id of one of `getSupportedAuthenticationMethods()`'s own keys.
@@ -73,10 +73,10 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
      * `"AuthenticationMethod"` selection candidates, i.e. the same shape `IComponentType::getSupportedAuthenticationMethods()`
      * has, since this config was built from exactly that set. An equal, typed alternative to reading the
      * candidates generically off the `"AuthenticationMethod"` property.
-     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id.
+     * @param[out] authenticationMethods The supported authentication methods, keyed by their own id.
      */
-    // [templateType(descriptors, IString, ICredentialDescriptor)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) = 0;
+    // [templateType(authenticationMethods, IString, IAuthenticationMethod)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) = 0;
 
     /*!
      * @brief Gets the secret supplied directly by the caller - the value of the corresponding property.
@@ -88,16 +88,16 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 
 /*!
  * @brief Builds an `AuthenticationConfig` supporting every authentication method described in
- * `credentialDescriptors`. Each entry becomes one candidate value of the resulting config's
+ * `authenticationMethods`. Each entry becomes one candidate value of the resulting config's
  * `"AuthenticationMethod"` Selection property (see `IAuthenticationConfig`); its first entry,
  * in dict iteration order, starts out selected.
  *
  * A config that only ever supports one method is simply the one-entry case of this: pass a
- * `credentialDescriptors` dict with a single key/value pair.
+ * `authenticationMethods` dict with a single key/value pair.
  */
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IDict*, credentialDescriptors
+    IDict*, authenticationMethods
 )
 
 END_NAMESPACE_OPENDAQ

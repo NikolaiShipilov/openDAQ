@@ -20,7 +20,7 @@
 #include <opendaq/credential_request.h>
 #include <opendaq/credential_request_builder.h>
 #include <opendaq/component_type_ptr.h>
-#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/authentication_method_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -34,7 +34,7 @@ public:
     ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** metaData) override;
     ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) override;
     ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) override;
-    ErrCode INTERFACE_FUNC getDescriptor(ICredentialDescriptor** descriptor) override;
+    ErrCode INTERFACE_FUNC getAuthenticationMethod(IAuthenticationMethod** authenticationMethod) override;
 
 private:
     ComponentTypePtr componentType;
@@ -42,7 +42,7 @@ private:
     PropertyObjectPtr metaData;
     StringPtr manufacturer;
     StringPtr serialNumber;
-    CredentialDescriptorPtr descriptor;
+    AuthenticationMethodPtr authenticationMethod;
 };
 
 END_NAMESPACE_OPENDAQ

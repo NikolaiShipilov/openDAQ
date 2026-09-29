@@ -41,9 +41,9 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
 {
     cls.doc() = "Carries the authentication settings used for a single connection attempt to a component.";
 
-    m.def("AuthenticationConfig", [](std::variant<daq::IDict*, py::dict>& credentialDescriptors){
-        return daq::AuthenticationConfig_Create(getVariantValue<daq::IDict*>(credentialDescriptors));
-    }, py::arg("credential_descriptors"));
+    m.def("AuthenticationConfig", [](std::variant<daq::IDict*, py::dict>& authenticationMethods){
+        return daq::AuthenticationConfig_Create(getVariantValue<daq::IDict*>(authenticationMethods));
+    }, py::arg("authentication_methods"));
 
     m.def("AuthenticationConfig", [](daq::IComponentType* componentType){
         return daq::AuthenticationConfig(componentType).detach();
@@ -63,7 +63,7 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
             objectPtr.setAuthenticationMethodId(getVariantValue<daq::IString*>(authenticationMethodId));
         },
-        "Gets or selects the authentication method currently used, by its own id - the selected `\"AuthenticationMethod\"` property value's own `ICredentialDescriptor::getAuthenticationMethodId()`. Setting it looks the matching descriptor up among `supported_authentication_methods` internally.");
+        "Gets or selects the authentication method currently used, by its own id - the selected `\"AuthenticationMethod\"` property value's own `IAuthenticationMethod::getId()`. Setting it looks the matching authentication method up among `supported_authentication_methods` internally.");
     cls.def_property_readonly("supported_authentication_methods",
         [](daq::IAuthenticationConfig *object)
         {

@@ -38,7 +38,7 @@ extern "C"
     typedef struct daqComponentType daqComponentType;
     typedef struct daqString daqString;
     typedef struct daqPropertyObject daqPropertyObject;
-    typedef struct daqCredentialDescriptor daqCredentialDescriptor;
+    typedef struct daqAuthenticationMethod daqAuthenticationMethod;
 
     EXPORTED extern const daqIntfID DAQ_CREDENTIAL_REQUEST_INTF_ID;
     void EXPORTED daqCredentialRequest_getInterfaceId(daqIntfID* intfId);
@@ -48,7 +48,7 @@ extern "C"
     daqErrCode EXPORTED daqCredentialRequest_getMetaData(daqCredentialRequest* self, daqPropertyObject** metaData);
     daqErrCode EXPORTED daqCredentialRequest_getManufacturer(daqCredentialRequest* self, daqString** manufacturer);
     daqErrCode EXPORTED daqCredentialRequest_getSerialNumber(daqCredentialRequest* self, daqString** serialNumber);
-    daqErrCode EXPORTED daqCredentialRequest_getDescriptor(daqCredentialRequest* self, daqCredentialDescriptor** descriptor);
+    daqErrCode EXPORTED daqCredentialRequest_getAuthenticationMethod(daqCredentialRequest* self, daqAuthenticationMethod** authenticationMethod);
 
 #ifdef __cplusplus
 }

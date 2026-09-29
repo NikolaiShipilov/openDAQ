@@ -15,7 +15,7 @@
  */
 
 #pragma once
-#include <opendaq/credential_descriptor.h>
+#include <opendaq/authentication_method.h>
 #include <coretypes/impl.h>
 #include <coretypes/dict_ptr.h>
 #include <coretypes/boolean_factory.h>
@@ -25,18 +25,18 @@
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief `IStruct` impl for the parameter set nested inside a `CredentialDescriptorImpl`.
+ * @brief `IStruct` impl for the parameter set nested inside a `AuthenticationMethodImpl`.
  */
-class CredentialDescriptorParametersImpl final : public GenericStructImpl<IStruct>
+class AuthenticationMethodParametersImpl final : public GenericStructImpl<IStruct>
 {
 public:
-    CredentialDescriptorParametersImpl(const StructTypePtr& structType, const DictPtr<IString, IBaseObject>& fields);
+    AuthenticationMethodParametersImpl(const StructTypePtr& structType, const DictPtr<IString, IBaseObject>& fields);
 };
 
 /*!
- * @brief `ICredentialDescriptor` impl for all four formats.
+ * @brief `IAuthenticationMethod` impl for all four formats.
  */
-class CredentialDescriptorImpl final : public GenericStructImpl<ICredentialDescriptor, IStruct>
+class AuthenticationMethodImpl final : public GenericStructImpl<IAuthenticationMethod, IStruct>
 {
 public:
     // `secretClassName`, if given and registered with `typeManager`, is the `IPropertyObjectClass`
@@ -44,26 +44,26 @@ public:
     // and, unlike the other three formats, its Struct type is never registered with a type manager either.
 
     // KeyValuePairs
-    CredentialDescriptorImpl(const StringPtr& id,
+    AuthenticationMethodImpl(const StringPtr& id,
                              const DictPtr<IString, IBoolean>& keys,
                              const StringPtr& description,
                              const TypeManagerPtr& typeManager,
                              const StringPtr& secretClassName);
     // String
-    CredentialDescriptorImpl(const StringPtr& id,
+    AuthenticationMethodImpl(const StringPtr& id,
                              const StringPtr& description,
                              Bool hidden,
                              const TypeManagerPtr& typeManager,
                              const StringPtr& secretClassName);
     // FilePath
-    CredentialDescriptorImpl(const StringPtr& id,
+    AuthenticationMethodImpl(const StringPtr& id,
                              const StringPtr& description,
                              const TypeManagerPtr& typeManager,
                              const StringPtr& secretClassName);
     // None
-    CredentialDescriptorImpl(const StringPtr& id, const StringPtr& description);
+    AuthenticationMethodImpl(const StringPtr& id, const StringPtr& description);
 
-    ErrCode INTERFACE_FUNC getAuthenticationMethodId(IString** authenticationMethodId) override;
+    ErrCode INTERFACE_FUNC getId(IString** id) override;
     ErrCode INTERFACE_FUNC getFormat(CredentialFormat* format) override;
     ErrCode INTERFACE_FUNC getParameters(IStruct** parameters) override;
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
@@ -78,7 +78,7 @@ private:
     static constexpr const char* SecretClassNameSerializedKey = "SecretClassName";
 
     // Shared implementation constructor the four format-specific constructors above delegate to.
-    CredentialDescriptorImpl(CredentialFormat format,
+    AuthenticationMethodImpl(CredentialFormat format,
                              const StructTypePtr& structType,
                              const DictPtr<IString, IBaseObject>& fields,
                              const TypeManagerPtr& typeManager,
@@ -97,9 +97,9 @@ private:
     StringPtr secretClassName;
 };
 
-using KeyValueDescriptorImpl = CredentialDescriptorImpl;
-using StringDescriptorImpl = CredentialDescriptorImpl;
-using FilePathDescriptorImpl = CredentialDescriptorImpl;
-using NoneDescriptorImpl = CredentialDescriptorImpl;
+using KeyValueAuthenticationMethodImpl = AuthenticationMethodImpl;
+using StringAuthenticationMethodImpl = AuthenticationMethodImpl;
+using FilePathAuthenticationMethodImpl = AuthenticationMethodImpl;
+using NoneAuthenticationMethodImpl = AuthenticationMethodImpl;
 
 END_NAMESPACE_OPENDAQ

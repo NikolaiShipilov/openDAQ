@@ -93,17 +93,17 @@ ErrCode CredentialRequestBuilderImpl::getMetaData(IPropertyObject** metaData)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::setDescriptor(ICredentialDescriptor* descriptor)
+ErrCode CredentialRequestBuilderImpl::setAuthenticationMethod(IAuthenticationMethod* authenticationMethod)
 {
-    this->descriptor = descriptor;
+    this->authenticationMethod = authenticationMethod;
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestBuilderImpl::getDescriptor(ICredentialDescriptor** descriptor)
+ErrCode CredentialRequestBuilderImpl::getAuthenticationMethod(IAuthenticationMethod** authenticationMethod)
 {
-    OPENDAQ_PARAM_NOT_NULL(descriptor);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethod);
 
-    *descriptor = this->descriptor.addRefAndReturn();
+    *authenticationMethod = this->authenticationMethod.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

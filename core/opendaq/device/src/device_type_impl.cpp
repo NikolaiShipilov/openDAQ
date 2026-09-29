@@ -1,6 +1,6 @@
 #include <opendaq/device_type_impl.h>
 #include <opendaq/device_type_factory.h>
-#include <opendaq/credential_descriptor_factory.h>
+#include <opendaq/authentication_method_factory.h>
 #include <coretypes/validation.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -15,7 +15,7 @@ DeviceTypeImpl::DeviceTypeImpl(const StringPtr& id,
                                const StringPtr& description,
                                const PropertyObjectPtr& defaultConfig,
                                const StringPtr& prefix,
-                               const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods,
+                               const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods,
                                const StringPtr& defaultAuthenticationMethodId)
     : Super(detail::deviceTypeStructType, id, name, description, prefix, defaultConfig, supportedAuthenticationMethods, defaultAuthenticationMethodId)
 {
@@ -144,7 +144,7 @@ ErrCode DeviceTypeImpl::Deserialize(ISerializedObject* serialized, IBaseObject* 
         if (serializedObj.hasKey("defaultConfig"))
             defaultConfig = serializedObj.readObject("defaultConfig", contextPtr, factoryCallbackPtr);
 
-        DictPtr<IString, ICredentialDescriptor> supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods();
+        DictPtr<IString, IAuthenticationMethod> supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods();
         if (serializedObj.hasKey("supportedAuthenticationMethods"))
             supportedAuthenticationMethods = serializedObj.readObject("supportedAuthenticationMethods", contextPtr, factoryCallbackPtr).asPtr<IDict>();
 

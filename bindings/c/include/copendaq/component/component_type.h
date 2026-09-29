@@ -48,7 +48,7 @@ extern "C"
     daqErrCode EXPORTED daqComponentType_getDescription(daqComponentType* self, daqString** description);
     daqErrCode EXPORTED daqComponentType_createDefaultConfig(daqComponentType* self, daqPropertyObject** defaultConfig);
     daqErrCode EXPORTED daqComponentType_getModuleInfo(daqComponentType* self, daqModuleInfo** info);
-    daqErrCode EXPORTED daqComponentType_getSupportedAuthenticationMethods(daqComponentType* self, daqDict** descriptors);
+    daqErrCode EXPORTED daqComponentType_getSupportedAuthenticationMethods(daqComponentType* self, daqDict** authenticationMethods);
     daqErrCode EXPORTED daqComponentType_getDefaultAuthenticationMethodId(daqComponentType* self, daqString** defaultAuthenticationMethodId);
 
 #ifdef __cplusplus

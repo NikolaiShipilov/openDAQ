@@ -20,7 +20,7 @@
 #include <opendaq/device_impl.h>
 #include <opendaq/mirrored_device_impl.h>
 #include <opendaq/credential_request_ptr.h>
-#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/authentication_method_ptr.h>
 #include <coreobjects/property_object_ptr.h>
 
 /*

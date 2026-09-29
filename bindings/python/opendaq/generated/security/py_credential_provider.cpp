@@ -58,7 +58,7 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
             return objectPtr.requestCredentials(request).detach();
         },
         py::arg("request"),
-        "Requests credentials for the given request, in the format described by its credential descriptor.");
+        "Requests credentials for the given request, in the format described by its authentication method.");
     cls.def("cache_credentials",
         [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, daq::IPropertyObject* secret)
         {

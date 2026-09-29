@@ -24,7 +24,7 @@ Before ever prompting a user or attempting a connection, an application needs to
 
 As an application developer, I want to check whether a given device/streaming type supports authentication, so I can decide whether to offer an "authenticated connect" option in my UI at all.
 
-- **Given** a type id whose module declares supported authentication descriptors and a default one for it (e.g. `"CredentialDemoDevice"`)
+- **Given** a type id whose module declares supported authentication authentication methods and a default one for it (e.g. `"CredentialDemoDevice"`)
   **When** I call `AuthenticationConfig(componentType)`
   **Then** it succeeds and returns a config whose `"AuthenticationMethod"` selection has at least one candidate.
 - **Given** a type whose module never called `setSupportedAuthenticationMethods`/`setDefaultAuthenticationMethodId`
@@ -174,7 +174,7 @@ As an application developer relying on `PrioritizedStreamingProtocols`/`Automati
 
 ## 7. Save & load
 
-The custom persistence model: `AuthenticationConfigImpl`'s serialization writes every candidate credential descriptor and the selected method id, generically, as an ordinary property; `"SuppliedSecret"` is never written. There is no credential-provider information saved at all - a provider is registered once per `Instance`, not per config, so nothing about it needs to survive a save/reload round trip. Reload rebuilds the config directly from the saved descriptors and method id - it never re-consults the module/type registry.
+The custom persistence model: `AuthenticationConfigImpl`'s serialization writes every candidate authentication method and the selected method id, generically, as an ordinary property; `"SuppliedSecret"` is never written. There is no credential-provider information saved at all - a provider is registered once per `Instance`, not per config, so nothing about it needs to survive a save/reload round trip. Reload rebuilds the config directly from the saved authentication methods and method id - it never re-consults the module/type registry.
 
 ### 7.1 — Reload with a compatible provider registered succeeds
 
@@ -190,7 +190,7 @@ The custom persistence model: `AuthenticationConfigImpl`'s serialization writes 
 
 ### 7.3 — Reload with a stale saved method id
 
-- **Given** a saved configuration whose method id is no longer among the type's *currently* supported descriptors (e.g. the module was updated and dropped or renamed that method)
+- **Given** a saved configuration whose method id is no longer among the type's *currently* supported authentication methods (e.g. the module was updated and dropped or renamed that method)
   **When** the new instance calls `loadConfiguration(savedConfiguration)`
   **Then** the reload fails hard (custom `Deserialize` throws) rather than silently substituting the type's current default method - confirming a reload never silently authenticates via a method the user didn't actually choose.
 
@@ -198,7 +198,7 @@ The custom persistence model: `AuthenticationConfigImpl`'s serialization writes 
 
 - **Given** a device originally authenticated via `setSuppliedSecret` (§3.1/3.2)
   **When** it's saved and reloaded into a new instance with a compatible provider registered
-  **Then** the reload prompts (or fails, if no provider is registered) exactly as a from-scratch connection would - confirming the supplied secret never survives serialization at all, only the candidate descriptors and method id do.
+  **Then** the reload prompts (or fails, if no provider is registered) exactly as a from-scratch connection would - confirming the supplied secret never survives serialization at all, only the candidate authentication methods and method id do.
 
 ---
 

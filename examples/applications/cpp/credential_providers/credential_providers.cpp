@@ -36,14 +36,14 @@ void createJsonConfigFile()
 // "AuthenticationMethod" selection property, defaulting to the first one.
 // This switches that selection to the method named by `authenticationMethodId`, entirely through
 // plain property object calls: the candidates are read generically off the property itself, and the match
-// is found by comparing each candidate Struct's own "AuthenticationMethodId" field - no `ICredentialDescriptor`
-// cast needed for the comparison itself, only to read `getAuthenticationMethodId()` off it.
+// is found by comparing each candidate Struct's own "AuthenticationMethodId" field - no `IAuthenticationMethod`
+// cast needed for the comparison itself, only to read `getId()` off it.
 void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const StringPtr& authenticationMethodId)
 {
     ListPtr<IStruct> candidates = authConfig.getProperty("AuthenticationMethod").getSelectionValues();
     for (const auto& candidate : candidates)
     {
-        if (candidate.asPtr<ICredentialDescriptor>().getAuthenticationMethodId() == authenticationMethodId)
+        if (candidate.asPtr<IAuthenticationMethod>().getId() == authenticationMethodId)
         {
             authConfig.setPropertySelectionValue("AuthenticationMethod", candidate);
             return;
@@ -112,8 +112,8 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     auto authConfig = AuthenticationConfig(deviceType);
     SelectAuthenticationMethod(authConfig, "Pin");
 
-    StructPtr credentialDescriptor = authConfig.getPropertySelectionValue("AuthenticationMethod");
-    std::cout << "Authentication method id, read as a plain property object selection value: " << credentialDescriptor.get("AuthenticationMethodId") << std::endl;
+    StructPtr authenticationMethod = authConfig.getPropertySelectionValue("AuthenticationMethod");
+    std::cout << "Authentication method id, read as a plain property object selection value: " << authenticationMethod.get("AuthenticationMethodId") << std::endl;
 
     std::cout << "When prompted for the PIN, enter: 1234" << std::endl;
     auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(authConfig));
@@ -141,7 +141,7 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
     auto deviceAuthConfig = AuthenticationConfig(deviceType);
     SelectAuthenticationMethod(deviceAuthConfig, "PrivateKeyFile");
 
-    // The supplied secret must be shaped like the descriptor's own `createEmptySecret` template - here
+    // The supplied secret must be shaped like the authentication method's own `createEmptySecret` template - here
     // just a single "PrivateKeyFilePath" property, filled in with the private key's path.
     auto suppliedSecret = deviceAuthConfig.getSupportedAuthenticationMethods().get(deviceAuthConfig.getSelectedAuthenticationMethodId()).createEmptySecret();
     suppliedSecret.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
@@ -197,8 +197,9 @@ void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTyp
     std::cout << "Press \"enter\" to save the configuration and reload it into a new instance..." << std::endl;
     std::cin.get();
 
-    // Saving the instance carries the connected device's credential request along with it - its authentication method id,
-    // descriptor and non-secret metadata - but never the authentication config or the credentials themselves.
+    // Saving the instance carries the connected device's authentication config along with it, but only in
+    // reduced form - every candidate authentication method and the selected one's id - never the supplied
+    // secret or the credentials themselves.
     auto savedConfiguration = instance.saveConfiguration();
 
     // A completely separate instance, loading the saved configuration - it needs its own credential provider

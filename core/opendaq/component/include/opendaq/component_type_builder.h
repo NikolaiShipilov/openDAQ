@@ -21,7 +21,7 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-struct ICredentialDescriptor;
+struct IAuthenticationMethod;
 
 /*!
  * @ingroup objects_utility
@@ -41,8 +41,8 @@ enum class ComponentTypeSort
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceLibrary(IComponentType, "opendaq")]
- * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationMethod, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationMethod, AuthenticationMethodPtr, "<opendaq/authentication_method_ptr.h>")]
  */
 
 /*!
@@ -175,21 +175,21 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
 
     // [returnSelf]
     /*!
-     * @brief Sets the credential descriptors the built Component type will support authenticating with, keyed
+     * @brief Sets the authentication methods the built Component type will support authenticating with, keyed
      * by their own authentication method id. Only takes effect when the "Type" builder parameter is "Device"
      * or "Streaming" - ignored when building a Server or Function block type.
-     * @param descriptors The supported authentication credential descriptors, keyed by their own id.
+     * @param authenticationMethods The supported authentication methods, keyed by their own id.
      */
-    // [templateType(descriptors, IString, ICredentialDescriptor)]
-    virtual ErrCode INTERFACE_FUNC setSupportedAuthenticationMethods(IDict* descriptors) = 0;
+    // [templateType(authenticationMethods, IString, IAuthenticationMethod)]
+    virtual ErrCode INTERFACE_FUNC setSupportedAuthenticationMethods(IDict* authenticationMethods) = 0;
 
     /*!
-     * @brief Gets the credential descriptors currently set on the builder - see `setSupportedAuthenticationMethods`
+     * @brief Gets the authentication methods currently set on the builder - see `setSupportedAuthenticationMethods`
      * for when they take effect on the built Component type.
-     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id.
+     * @param[out] authenticationMethods The supported authentication methods, keyed by their own id.
      */
-    // [templateType(descriptors, IString, ICredentialDescriptor)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) = 0;
+    // [templateType(authenticationMethods, IString, IAuthenticationMethod)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) = 0;
 
     // [returnSelf]
     /*!

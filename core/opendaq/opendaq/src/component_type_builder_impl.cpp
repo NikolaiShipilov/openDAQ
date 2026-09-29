@@ -5,7 +5,7 @@
 #include <opendaq/streaming_type_impl.h>
 #include <coretypes/validation.h>
 #include <coretypes/dictobject_factory.h>
-#include <opendaq/credential_descriptor_factory.h>
+#include <opendaq/authentication_method_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -134,17 +134,17 @@ ErrCode ComponentTypeBuilderImpl::getDefaultConfig(IPropertyObject** defaultConf
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::setSupportedAuthenticationMethods(IDict* descriptors)
+ErrCode ComponentTypeBuilderImpl::setSupportedAuthenticationMethods(IDict* authenticationMethods)
 {
-    this->supportedAuthenticationMethods = descriptors;
+    this->supportedAuthenticationMethods = authenticationMethods;
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::getSupportedAuthenticationMethods(IDict** descriptors)
+ErrCode ComponentTypeBuilderImpl::getSupportedAuthenticationMethods(IDict** authenticationMethods)
 {
-    OPENDAQ_PARAM_NOT_NULL(descriptors);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethods);
 
-    *descriptors = this->supportedAuthenticationMethods.addRefAndReturn();
+    *authenticationMethods = this->supportedAuthenticationMethods.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

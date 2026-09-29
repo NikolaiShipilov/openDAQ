@@ -87,14 +87,14 @@ daqErrCode daqComponentTypeBuilder_getDefaultConfig(daqComponentTypeBuilder* sel
     return reinterpret_cast<daq::IComponentTypeBuilder*>(self)->getDefaultConfig(reinterpret_cast<daq::IPropertyObject**>(defaultConfig));
 }
 
-daqErrCode daqComponentTypeBuilder_setSupportedAuthenticationMethods(daqComponentTypeBuilder* self, daqDict* descriptors)
+daqErrCode daqComponentTypeBuilder_setSupportedAuthenticationMethods(daqComponentTypeBuilder* self, daqDict* authenticationMethods)
 {
-    return reinterpret_cast<daq::IComponentTypeBuilder*>(self)->setSupportedAuthenticationMethods(reinterpret_cast<daq::IDict*>(descriptors));
+    return reinterpret_cast<daq::IComponentTypeBuilder*>(self)->setSupportedAuthenticationMethods(reinterpret_cast<daq::IDict*>(authenticationMethods));
 }
 
-daqErrCode daqComponentTypeBuilder_getSupportedAuthenticationMethods(daqComponentTypeBuilder* self, daqDict** descriptors)
+daqErrCode daqComponentTypeBuilder_getSupportedAuthenticationMethods(daqComponentTypeBuilder* self, daqDict** authenticationMethods)
 {
-    return reinterpret_cast<daq::IComponentTypeBuilder*>(self)->getSupportedAuthenticationMethods(reinterpret_cast<daq::IDict**>(descriptors));
+    return reinterpret_cast<daq::IComponentTypeBuilder*>(self)->getSupportedAuthenticationMethods(reinterpret_cast<daq::IDict**>(authenticationMethods));
 }
 
 daqErrCode daqComponentTypeBuilder_setDefaultAuthenticationMethodId(daqComponentTypeBuilder* self, daqString* defaultAuthenticationMethodId)

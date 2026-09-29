@@ -38,7 +38,7 @@
 #include <coretypes/dictobject_factory.h>
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/authentication_config_factory.h>
-#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/authentication_method_ptr.h>
 #include <opendaq/credential_provider_ptr.h>
 #include <opendaq/credential_request_ptr.h>
 #include <opendaq/credential_request_factory.h>
@@ -753,7 +753,7 @@ private:
         return AuthenticationConfig(componentType);
     }
 
-    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential authenticationMethod,
     // then resolves credentials for it via `resolveCredentials`. Throws `AuthenticationFailedException` if
     // `authenticationConfig` is unassigned.
     //
@@ -778,7 +778,7 @@ private:
         return resolveCredentials(authenticationConfig, credentialRequest);
     }
 
-    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential descriptor,
+    // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected credential authenticationMethod,
     // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`,
     // and `componentType`. Split out of `requestCredentials` so `createDevice` can call it a second time, with
     // manufacturer/serial number resolved from the created device's own info, to re-cache credentials that
@@ -793,7 +793,7 @@ private:
         requestBuilder.setConnectionString(onGetCanonicalConnectionString(connectionString));
         requestBuilder.setManufacturer(manufacturer);
         requestBuilder.setSerialNumber(serialNumber);
-        requestBuilder.setDescriptor(authenticationConfig.getSupportedAuthenticationMethods().get(authenticationConfig.getSelectedAuthenticationMethodId()));
+        requestBuilder.setAuthenticationMethod(authenticationConfig.getSupportedAuthenticationMethods().get(authenticationConfig.getSelectedAuthenticationMethodId()));
         requestBuilder.setComponentType(componentType);
 
         return requestBuilder.build();
@@ -811,7 +811,7 @@ private:
     // - no credential provider is registered at all,
     // - the registered provider does not support the required format, or
     // - the resolved credentials (supplied by the caller, or obtained from the provider) don't match
-    //   `credentialDescriptor`'s expected shape.
+    //   `authenticationMethod`'s expected shape.
     PropertyObjectPtr resolveCredentials(const AuthenticationConfigPtr& authenticationConfig, const CredentialRequestPtr& credentialRequest)
     {
         const CredentialProviderPtr provider = context.getCredentialProvider();
@@ -819,16 +819,16 @@ private:
 
         if (suppliedSecret.assigned())
         {
-            if (!secretShapeMatches(suppliedSecret, credentialRequest.getDescriptor()))
+            if (!secretShapeMatches(suppliedSecret, credentialRequest.getAuthenticationMethod()))
                 DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Supplied secret does not match the expected shape");
 
-            // Already shaped like the credential descriptor's `createEmptySecret` template (filled in by the
+            // Already shaped like the credential authenticationMethod's `createEmptySecret` template (filled in by the
             // caller), so it is used directly as the credential, no provider asked to obtain anything. If one
             // is registered too, it still gets a chance to cache the secret, so a later interactive request
             // for the same context reuses it.
             if (provider.assigned())
             {
-                if (!supportsCredentialFormat(provider, credentialRequest.getDescriptor()))
+                if (!supportsCredentialFormat(provider, credentialRequest.getAuthenticationMethod()))
                     DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                                          "Authentication is required but the registered credential provider does not support the required format");
 
@@ -840,25 +840,25 @@ private:
 
         if (!provider.assigned())
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Authentication is required but no credential provider is registered");
-        if (!supportsCredentialFormat(provider, credentialRequest.getDescriptor()))
+        if (!supportsCredentialFormat(provider, credentialRequest.getAuthenticationMethod()))
             DAQ_THROW_EXCEPTION(AuthenticationFailedException,
                                 "Authentication is required but the registered credential provider does not support the required format");
 
         const PropertyObjectPtr credentials = provider.requestCredentials(credentialRequest);
-        if (!secretShapeMatches(credentials, credentialRequest.getDescriptor()))
+        if (!secretShapeMatches(credentials, credentialRequest.getAuthenticationMethod()))
             DAQ_THROW_EXCEPTION(AuthenticationFailedException, "Credential provider returned credentials that do not match the expected shape");
 
         return credentials;
     }
 
-    // Structural check: does `secret` have exactly the property names `credentialDescriptor.createEmptySecret()`
+    // Structural check: does `secret` have exactly the property names `authenticationMethod.createEmptySecret()`
     // would produce? Doesn't check provenance, only shape.
-    static bool secretShapeMatches(const PropertyObjectPtr& secret, const CredentialDescriptorPtr& credentialDescriptor)
+    static bool secretShapeMatches(const PropertyObjectPtr& secret, const AuthenticationMethodPtr& authenticationMethod)
     {
-        if (!secret.assigned() || !credentialDescriptor.assigned())
+        if (!secret.assigned() || !authenticationMethod.assigned())
             return false;
 
-        const PropertyObjectPtr templateObj = credentialDescriptor.createEmptySecret();
+        const PropertyObjectPtr templateObj = authenticationMethod.createEmptySecret();
         const auto templateProps = templateObj.getAllProperties();
 
         if (templateProps.getCount() != secret.getAllProperties().getCount())
@@ -873,11 +873,11 @@ private:
         return true;
     }
 
-    static bool supportsCredentialFormat(const CredentialProviderPtr& provider, const CredentialDescriptorPtr& credentialDescriptor)
+    static bool supportsCredentialFormat(const CredentialProviderPtr& provider, const AuthenticationMethodPtr& authenticationMethod)
     {
         for (const auto& format : provider.getSupportedFormats())
         {
-            if (static_cast<CredentialFormat>(static_cast<Int>(format)) == credentialDescriptor.getFormat())
+            if (static_cast<CredentialFormat>(static_cast<Int>(format)) == authenticationMethod.getFormat())
                 return true;
         }
 
