@@ -20,7 +20,7 @@
 #include <coretypes/simple_type_factory.h>
 #include <coreobjects/property_object_factory.h>
 #include <opendaq/component_type_builder_factory.h>
-#include <opendaq/credential_descriptor_factory.h>
+#include <opendaq/authentication_method_factory.h>
 #include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -39,7 +39,7 @@ BEGIN_NAMESPACE_OPENDAQ
  * @param prefix The prefix of the connection string used when adding the device (the part before  the "://" delimiter in the connection string)
  * @param defaultConfig The property object, to be cloned and returned, each time user creates default
  * configuration object. This way each instance of the device has its own configuration object.
- * @param supportedAuthenticationMethods The credential descriptors this device type supports authenticating
+ * @param supportedAuthenticationMethods The authentication methods this device type supports authenticating
  * with, keyed by their own id. Left unset, the device type defaults to supporting only the standard `"Anonymous"` method - no credentials required.
  * @param defaultAuthenticationMethodId The id of the authentication method this device type supports by
  * default. Left unset, defaults to the standard `"Anonymous"` id.
@@ -49,7 +49,7 @@ inline DeviceTypePtr DeviceType(const StringPtr& id,
                                 const StringPtr& description,
                                 const StringPtr& prefix,
                                 const PropertyObjectPtr& defaultConfig = PropertyObject(),
-                                const DictPtr<IString, ICredentialDescriptor>& supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods(),
+                                const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods(),
                                 const StringPtr& defaultAuthenticationMethodId = StandardAnonymousId)
 {
     DeviceTypePtr obj(

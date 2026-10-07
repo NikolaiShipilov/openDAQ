@@ -47,9 +47,9 @@ daqErrCode daqComponentType_getModuleInfo(daqComponentType* self, daqModuleInfo*
     return reinterpret_cast<daq::IComponentType*>(self)->getModuleInfo(reinterpret_cast<daq::IModuleInfo**>(info));
 }
 
-daqErrCode daqComponentType_getSupportedAuthenticationMethods(daqComponentType* self, daqDict** descriptors)
+daqErrCode daqComponentType_getSupportedAuthenticationMethods(daqComponentType* self, daqDict** authenticationMethods)
 {
-    return reinterpret_cast<daq::IComponentType*>(self)->getSupportedAuthenticationMethods(reinterpret_cast<daq::IDict**>(descriptors));
+    return reinterpret_cast<daq::IComponentType*>(self)->getSupportedAuthenticationMethods(reinterpret_cast<daq::IDict**>(authenticationMethods));
 }
 
 daqErrCode daqComponentType_getDefaultAuthenticationMethodId(daqComponentType* self, daqString** defaultAuthenticationMethodId)

@@ -22,14 +22,14 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-struct ICredentialDescriptor;
+struct IAuthenticationMethod;
 
 /*#
  * [templated(defaultAliasName: ComponentTypePtr)]
  * [interfaceSmartPtr(IComponentType, GenericComponentTypePtr)]
  * [interfaceLibrary(IPropertyObject, CoreObjects)]
- * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationMethod, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationMethod, AuthenticationMethodPtr, "<opendaq/authentication_method_ptr.h>")]
  */
 
 /*!
@@ -88,12 +88,12 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getModuleInfo(IModuleInfo** info) = 0;
 
     /*!
-     * @brief Gets the credential descriptors this component type supports authenticating with, keyed by their
+     * @brief Gets the authentication methods this component type supports authenticating with, keyed by their
      * own authentication method id.
-     * @param[out] descriptors The supported authentication credential descriptors, keyed by their own id.
+     * @param[out] authenticationMethods The supported authentication methods, keyed by their own id.
      */
-    // [templateType(descriptors, IString, ICredentialDescriptor)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** descriptors) = 0;
+    // [templateType(authenticationMethods, IString, IAuthenticationMethod)]
+    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) = 0;
 
     /*!
      * @brief Gets the id of the authentication method this component type supports by default.

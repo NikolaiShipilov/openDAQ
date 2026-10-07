@@ -5,7 +5,7 @@
 #include <opendaq/device_type_factory.h>
 #include <opendaq/component_type_builder_factory.h>
 #include <opendaq/credential_request_factory.h>
-#include <opendaq/credential_descriptor_factory.h>
+#include <opendaq/authentication_method_factory.h>
 #include <opendaq/server_capability_config.h>
 #include <opendaq/device_info_internal.h>
 #include <opendaq/streaming_ptr.h>
@@ -77,18 +77,18 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType(const ContextPtr& context)
 {
-    auto userNamePasswordDescriptor = StandardUserNamePasswordCredentialDescriptor(context.getTypeManager());
-    auto pinDescriptor = StandardPinCredentialDescriptor(context.getTypeManager());
-    auto privateKeyDescriptor = StandardPrivateKeyFileCredentialDescriptor(context.getTypeManager());
-    auto anonymousDescriptor = StandardAnonymousCredentialDescriptor();
+    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod(context.getTypeManager());
+    auto pinMethod = StandardPinAuthenticationMethod(context.getTypeManager());
+    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod(context.getTypeManager());
+    auto anonymousMethod = StandardAnonymousAuthenticationMethod();
 
     // Showcases all four authentication methods - UserName/Password, PIN, PrivateKeyFile, Anonymous -
     // defaulting to UserName/Password.
     auto supportedMethods =
-        Dict<IString, ICredentialDescriptor>({{userNamePasswordDescriptor.getAuthenticationMethodId(), userNamePasswordDescriptor},
-                                              {pinDescriptor.getAuthenticationMethodId(), pinDescriptor},
-                                              {privateKeyDescriptor.getAuthenticationMethodId(), privateKeyDescriptor},
-                                              {anonymousDescriptor.getAuthenticationMethodId(), anonymousDescriptor}});
+        Dict<IString, IAuthenticationMethod>({{userNamePasswordMethod.getId(), userNamePasswordMethod},
+                                              {pinMethod.getId(), pinMethod},
+                                              {privateKeyMethod.getId(), privateKeyMethod},
+                                              {anonymousMethod.getId(), anonymousMethod}});
 
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")

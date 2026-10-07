@@ -12,10 +12,10 @@
 
 BEGIN_NAMESPACE_OPENDAQ
 
-AuthenticationConfigImpl::AuthenticationConfigImpl(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors)
+AuthenticationConfigImpl::AuthenticationConfigImpl(const DictPtr<IString, IAuthenticationMethod>& authenticationMethods)
     : Super()
 {
-    initProperties(credentialDescriptors);
+    initProperties(authenticationMethods);
 }
 
 AuthenticationConfigImpl::AuthenticationConfigImpl()
@@ -23,60 +23,60 @@ AuthenticationConfigImpl::AuthenticationConfigImpl()
 {
 }
 
-void AuthenticationConfigImpl::initProperties(const DictPtr<IString, ICredentialDescriptor>& credentialDescriptors)
+void AuthenticationConfigImpl::initProperties(const DictPtr<IString, IAuthenticationMethod>& authenticationMethods)
 {
-    if (!credentialDescriptors.assigned() || credentialDescriptors.getCount() == 0)
-        DAQ_THROW_EXCEPTION(InvalidParameterException, "At least one credential descriptor must be supplied when creating an authentication config");
+    if (!authenticationMethods.assigned() || authenticationMethods.getCount() == 0)
+        DAQ_THROW_EXCEPTION(InvalidParameterException, "At least one authentication method must be supplied when creating an authentication config");
 
-    ListPtr<IStruct> credentialDescriptorOptions = List<IStruct>();
-    for (const auto& [id, descriptor] : credentialDescriptors)
-        credentialDescriptorOptions.pushBack(descriptor);
+    ListPtr<IStruct> authenticationMethodOptions = List<IStruct>();
+    for (const auto& [id, authenticationMethod] : authenticationMethods)
+        authenticationMethodOptions.pushBack(authenticationMethod);
 
-    Super::addProperty(SelectionProperty(AuthenticationMethodPropertyName, credentialDescriptorOptions, 0));
+    Super::addProperty(SelectionProperty(AuthenticationMethodPropertyName, authenticationMethodOptions, 0));
 }
 
-void AuthenticationConfigImpl::clearSuppliedSecretIfIncompatible(const CredentialDescriptorPtr& selectedDescriptor)
+void AuthenticationConfigImpl::clearSuppliedCredentialIfIncompatible(const AuthenticationMethodPtr& selectedMethod)
 {
-    if (!objPtr.hasProperty(SuppliedSecretPropertyName))
+    if (!objPtr.hasProperty(SuppliedCredentialPropertyName))
         return;
 
-    const PropertyObjectPtr secret = objPtr.getPropertyValue(SuppliedSecretPropertyName);
-    if (!IsSuppliedSecretShapeValid(secret, selectedDescriptor))
-        Super::removeProperty(String(SuppliedSecretPropertyName));
+    const PropertyObjectPtr credential = objPtr.getPropertyValue(SuppliedCredentialPropertyName);
+    if (!IsSuppliedCredentialShapeValid(credential, selectedMethod))
+        Super::removeProperty(String(SuppliedCredentialPropertyName));
 }
 
-bool AuthenticationConfigImpl::IsSuppliedSecretShapeValid(const PropertyObjectPtr& secret, const CredentialDescriptorPtr& selectedDescriptor)
+bool AuthenticationConfigImpl::IsSuppliedCredentialShapeValid(const PropertyObjectPtr& credential, const AuthenticationMethodPtr& selectedMethod)
 {
-    if (!secret.assigned() || !selectedDescriptor.assigned())
+    if (!credential.assigned() || !selectedMethod.assigned())
         return false;
 
-    // "None" requires no credentials at all - no secret is ever valid for it, and it has no
-    // `createEmptySecret()` template to compare against in the first place.
-    if (selectedDescriptor.getFormat() == CredentialFormat::None)
+    // "None" requires no credentials at all - no credential is ever valid for it, and it has no
+    // `createEmptyCredential()` template to compare against in the first place.
+    if (selectedMethod.getFormat() == CredentialFormat::None)
         return false;
 
-    const PropertyObjectPtr templateObj = selectedDescriptor.createEmptySecret();
+    const PropertyObjectPtr templateObj = selectedMethod.createEmptyCredential();
     const auto templateProps = templateObj.getAllProperties();
 
-    if (templateProps.getCount() != secret.getAllProperties().getCount())
+    if (templateProps.getCount() != credential.getAllProperties().getCount())
         return false;
 
     for (const auto& prop : templateProps)
     {
-        if (!secret.hasProperty(prop.getName()))
+        if (!credential.hasProperty(prop.getName()))
             return false;
     }
 
     return true;
 }
 
-DictPtr<IString, ICredentialDescriptor> AuthenticationConfigImpl::ToCredentialDescriptorDict(const ListPtr<IStruct>& candidates)
+DictPtr<IString, IAuthenticationMethod> AuthenticationConfigImpl::ToAuthenticationMethodDict(const ListPtr<IStruct>& candidates)
 {
-    DictPtr<IString, ICredentialDescriptor> result = Dict<IString, ICredentialDescriptor>();
+    DictPtr<IString, IAuthenticationMethod> result = Dict<IString, IAuthenticationMethod>();
     for (const auto& candidate : candidates)
     {
-        const auto descriptor = candidate.asPtr<ICredentialDescriptor>();
-        result.set(descriptor.getAuthenticationMethodId(), descriptor);
+        const auto authenticationMethod = candidate.asPtr<IAuthenticationMethod>();
+        result.set(authenticationMethod.getId(), authenticationMethod);
     }
     return result;
 }
@@ -88,7 +88,7 @@ ErrCode AuthenticationConfigImpl::getSelectedAuthenticationMethodId(IString** au
     return daqTry([&]
     {
         const StructPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
-        *authenticationMethodId = selected.asPtr<ICredentialDescriptor>().getAuthenticationMethodId().detach();
+        *authenticationMethodId = selected.asPtr<IAuthenticationMethod>().getId().detach();
         return OPENDAQ_SUCCESS;
     });
 }
@@ -101,39 +101,39 @@ ErrCode AuthenticationConfigImpl::setAuthenticationMethodId(IString* authenticat
     {
         const StringPtr idPtr = StringPtr::Borrow(authenticationMethodId);
         const ListPtr<IStruct> candidates = objPtr.getProperty(AuthenticationMethodPropertyName).getSelectionValues();
-        const auto descriptors = ToCredentialDescriptorDict(candidates);
+        const auto authenticationMethods = ToAuthenticationMethodDict(candidates);
 
-        if (!descriptors.hasKey(idPtr))
+        if (!authenticationMethods.hasKey(idPtr))
             DAQ_THROW_EXCEPTION(
                 NotFoundException, "\"{}\" is not one of this config's supported authentication methods", idPtr);
 
-        checkErrorInfo(this->setPropertySelectionValue(String(AuthenticationMethodPropertyName), descriptors.get(idPtr)));
+        checkErrorInfo(this->setPropertySelectionValue(String(AuthenticationMethodPropertyName), authenticationMethods.get(idPtr)));
         return OPENDAQ_SUCCESS;
     });
 }
 
-ErrCode AuthenticationConfigImpl::getSupportedAuthenticationMethods(IDict** descriptors)
+ErrCode AuthenticationConfigImpl::getSupportedAuthenticationMethods(IDict** authenticationMethods)
 {
-    OPENDAQ_PARAM_NOT_NULL(descriptors);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethods);
 
     return daqTry([&]
     {
         const ListPtr<IStruct> candidates = objPtr.getProperty(AuthenticationMethodPropertyName).getSelectionValues();
-        *descriptors = ToCredentialDescriptorDict(candidates).detach();
+        *authenticationMethods = ToAuthenticationMethodDict(candidates).detach();
         return OPENDAQ_SUCCESS;
     });
 }
 
-ErrCode AuthenticationConfigImpl::getSuppliedSecret(IPropertyObject** secret)
+ErrCode AuthenticationConfigImpl::getSuppliedCredential(IPropertyObject** credential)
 {
-    OPENDAQ_PARAM_NOT_NULL(secret);
+    OPENDAQ_PARAM_NOT_NULL(credential);
 
     return daqTry([&]
     {
         // Present only when the caller actually set one - an Object-type property cannot itself hold
         // `nullptr`, so absence of the property is the only way to represent "none supplied".
-        *secret = objPtr.hasProperty(SuppliedSecretPropertyName)
-                      ? PropertyObjectPtr(objPtr.getPropertyValue(SuppliedSecretPropertyName)).detach()
+        *credential = objPtr.hasProperty(SuppliedCredentialPropertyName)
+                      ? PropertyObjectPtr(objPtr.getPropertyValue(SuppliedCredentialPropertyName)).detach()
                       : nullptr;
         return OPENDAQ_SUCCESS;
     });
@@ -177,8 +177,8 @@ ErrCode AuthenticationConfigImpl::onPropertyValueChanged(const StringPtr& name)
 
     return daqTry([&]
     {
-        const CredentialDescriptorPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
-        clearSuppliedSecretIfIncompatible(selected);
+        const AuthenticationMethodPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
+        clearSuppliedCredentialIfIncompatible(selected);
         return OPENDAQ_SUCCESS;
     });
 }
@@ -187,20 +187,20 @@ ErrCode AuthenticationConfigImpl::setPropertyValue(IString* propertyName, IBaseO
 {
     const StringPtr name = StringPtr::Borrow(propertyName);
 
-    if (name == SuppliedSecretPropertyName)
+    if (name == SuppliedCredentialPropertyName)
     {
         return daqTry([&]
         {
-            const PropertyObjectPtr secret = BaseObjectPtr::Borrow(value).asPtrOrNull<IPropertyObject>();
-            const CredentialDescriptorPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
-            if (!IsSuppliedSecretShapeValid(secret, selected))
+            const PropertyObjectPtr credential = BaseObjectPtr::Borrow(value).asPtrOrNull<IPropertyObject>();
+            const AuthenticationMethodPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
+            if (!IsSuppliedCredentialShapeValid(credential, selected))
                 DAQ_THROW_EXCEPTION(InvalidParameterException,
-                                     "Supplied secret's shape does not match the currently selected credential descriptor \"{}\"",
-                                     selected.assigned() ? selected.getAuthenticationMethodId() : StringPtr(""));
+                                     "Supplied credential's shape does not match the currently selected authentication method \"{}\"",
+                                     selected.assigned() ? selected.getId() : StringPtr(""));
 
-            // "SuppliedSecret" is never declared up front - added here on first write.
-            if (!objPtr.hasProperty(SuppliedSecretPropertyName))
-                return Super::addProperty(ObjectProperty(SuppliedSecretPropertyName, secret));
+            // "SuppliedCredential" is never declared up front - added here on first write.
+            if (!objPtr.hasProperty(SuppliedCredentialPropertyName))
+                return Super::addProperty(ObjectProperty(SuppliedCredentialPropertyName, credential));
 
             return Super::setProtectedPropertyValue(propertyName, value);
         });
@@ -210,18 +210,18 @@ ErrCode AuthenticationConfigImpl::setPropertyValue(IString* propertyName, IBaseO
 }
 
 // Serialization relies on the generic `IPropertyObject` mechanism for `"AuthenticationMethod"` only - every
-// candidate credential descriptor and the selected one round-trip through it like any other property.
-// `"SuppliedSecret"` (a secret) is excluded from it, never persisted at all.
+// candidate authentication method and the selected one round-trip through it like any other property.
+// `"SuppliedCredential"` (a credential) is excluded from it, never persisted at all.
 ErrCode AuthenticationConfigImpl::serializeProperty(const PropertyPtr& property, ISerializer* serializer)
 {
-    if (property.getName() == SuppliedSecretPropertyName)
+    if (property.getName() == SuppliedCredentialPropertyName)
         return OPENDAQ_SUCCESS;
     return Super::serializeProperty(property, serializer);
 }
 
 ErrCode AuthenticationConfigImpl::serializePropertyValue(const StringPtr& name, const ObjectPtr<IBaseObject>& value, ISerializer* serializer, bool forUpdate)
 {
-    if (name == SuppliedSecretPropertyName)
+    if (name == SuppliedCredentialPropertyName)
         return OPENDAQ_SUCCESS;
     return Super::serializePropertyValue(name, value, serializer, forUpdate);
 }
@@ -265,12 +265,12 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
         // deserialization pipeline adds "AuthenticationMethod" back fresh from its own serialized definition
         // (candidates and all) and restores its saved selection override, if one was saved - both through the
         // exact same machinery any other Property goes through, no manual JSON parsing of its own needed here.
-        // "SuppliedSecret" is never among "properties"/"propValues" in the first place (see
+        // "SuppliedCredential" is never among "properties"/"propValues" in the first place (see
         // `serializeProperty`/`serializePropertyValue`), so these calls never touch it.
 
         // The generic pipeline's `context` param isn't the component deserialize context (`contextObj`) - it's
         // forwarded as-is into nested Struct deserialization (e.g. "AuthenticationMethod"'s own
-        // `ICredentialDescriptor`-typed candidates), which resolves a `TypeManager` off of it directly - so it
+        // `IAuthenticationMethod`-typed candidates), which resolves a `TypeManager` off of it directly - so it
         // must actually be one.
         const BaseObjectPtr typeManagerObj = daqContext.getTypeManager();
         PropertyObjectPtr authConfig = createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>();
@@ -289,7 +289,7 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, AuthenticationConfig, IAuthenticationConfig,
-    IDict*, credentialDescriptors
+    IDict*, authenticationMethods
 )
 
 OPENDAQ_REGISTER_DESERIALIZE_FACTORY(AuthenticationConfigImpl)

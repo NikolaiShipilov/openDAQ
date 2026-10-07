@@ -6,7 +6,7 @@
 #include <coretypes/version_info_factory.h>
 #include <coretypes/stringobject_factory.h>
 #include <coretypes/dictobject_factory.h>
-#include <opendaq/credential_descriptor_factory.h>
+#include <opendaq/authentication_method_factory.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 

@@ -40,7 +40,7 @@ extern "C"
     typedef struct daqString daqString;
     typedef struct daqProperty daqProperty;
     typedef struct daqPropertyObject daqPropertyObject;
-    typedef struct daqCredentialDescriptor daqCredentialDescriptor;
+    typedef struct daqAuthenticationMethod daqAuthenticationMethod;
 
     EXPORTED extern const daqIntfID DAQ_CREDENTIAL_REQUEST_BUILDER_INTF_ID;
     void EXPORTED daqCredentialRequestBuilder_getInterfaceId(daqIntfID* intfId);
@@ -56,8 +56,8 @@ extern "C"
     daqErrCode EXPORTED daqCredentialRequestBuilder_getSerialNumber(daqCredentialRequestBuilder* self, daqString** serialNumber);
     daqErrCode EXPORTED daqCredentialRequestBuilder_addMetaDataProperty(daqCredentialRequestBuilder* self, daqProperty* property);
     daqErrCode EXPORTED daqCredentialRequestBuilder_getMetaData(daqCredentialRequestBuilder* self, daqPropertyObject** property);
-    daqErrCode EXPORTED daqCredentialRequestBuilder_setDescriptor(daqCredentialRequestBuilder* self, daqCredentialDescriptor* descriptor);
-    daqErrCode EXPORTED daqCredentialRequestBuilder_getDescriptor(daqCredentialRequestBuilder* self, daqCredentialDescriptor** descriptor);
+    daqErrCode EXPORTED daqCredentialRequestBuilder_setAuthenticationMethod(daqCredentialRequestBuilder* self, daqAuthenticationMethod* authenticationMethod);
+    daqErrCode EXPORTED daqCredentialRequestBuilder_getAuthenticationMethod(daqCredentialRequestBuilder* self, daqAuthenticationMethod** authenticationMethod);
     daqErrCode EXPORTED daqCredentialRequestBuilder_createCredentialRequestBuilder(daqCredentialRequestBuilder** obj);
 
 #ifdef __cplusplus

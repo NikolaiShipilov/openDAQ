@@ -1,7 +1,7 @@
 #include <credential_demo_module/credential_demo_authenticator.h>
 #include <credential_demo_module/common.h>
 
-#include <opendaq/credential_descriptor_factory.h>
+#include <opendaq/authentication_method_factory.h>
 #include <coreobjects/exceptions.h>
 #include <vector>
 #include <memory>

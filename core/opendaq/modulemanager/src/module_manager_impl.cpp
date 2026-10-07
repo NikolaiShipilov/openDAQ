@@ -35,7 +35,7 @@
 #include <opendaq/network_interface_factory.h>
 #include <opendaq/component_private_ptr.h>
 #include <opendaq/component_type_private_ptr.h>
-#include <opendaq/credential_descriptor_ptr.h>
+#include <opendaq/authentication_method_ptr.h>
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/authentication_config_factory.h>
 #include <opendaq/module_impl.h>

@@ -36,14 +36,14 @@ void createJsonConfigFile()
 // "AuthenticationMethod" selection property, defaulting to the first one.
 // This switches that selection to the method named by `authenticationMethodId`, entirely through
 // plain property object calls: the candidates are read generically off the property itself, and the match
-// is found by comparing each candidate Struct's own "AuthenticationMethodId" field - no `ICredentialDescriptor`
-// cast needed for the comparison itself, only to read `getAuthenticationMethodId()` off it.
+// is found by comparing each candidate Struct's own "AuthenticationMethodId" field - no `IAuthenticationMethod`
+// cast needed for the comparison itself, only to read `getId()` off it.
 void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const StringPtr& authenticationMethodId)
 {
     ListPtr<IStruct> candidates = authConfig.getProperty("AuthenticationMethod").getSelectionValues();
     for (const auto& candidate : candidates)
     {
-        if (candidate.asPtr<ICredentialDescriptor>().getAuthenticationMethodId() == authenticationMethodId)
+        if (candidate.asPtr<IAuthenticationMethod>().getId() == authenticationMethodId)
         {
             authConfig.setPropertySelectionValue("AuthenticationMethod", candidate);
             return;
@@ -68,7 +68,7 @@ PropertyObjectPtr WithAuthenticationConfig(const AuthenticationConfigPtr& authCo
 }
 
 // PrivateKeyFile authentication - another String-format credential, but instead of comparing a
-// fixed secret, the module verifies a signed challenge against the public key configured via the
+// fixed value, the module verifies a signed challenge against the public key configured via the
 // "PublicKeyPath" module option (set above to keys/public_key.pem). When prompted, supply the path
 // to the matching private key.
 void demoPrivateKeyFileAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
@@ -112,8 +112,8 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     auto authConfig = AuthenticationConfig(deviceType);
     SelectAuthenticationMethod(authConfig, "Pin");
 
-    StructPtr credentialDescriptor = authConfig.getPropertySelectionValue("AuthenticationMethod");
-    std::cout << "Authentication method id, read as a plain property object selection value: " << credentialDescriptor.get("AuthenticationMethodId") << std::endl;
+    StructPtr authenticationMethod = authConfig.getPropertySelectionValue("AuthenticationMethod");
+    std::cout << "Authentication method id, read as a plain property object selection value: " << authenticationMethod.get("AuthenticationMethodId") << std::endl;
 
     std::cout << "When prompted for the PIN, enter: 1234" << std::endl;
     auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(authConfig));
@@ -125,12 +125,12 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     instance.removeDevice(device);
 }
 
-// CmdLineCredentialProvider caches FilePath secrets in-memory for the active session, keyed by
+// CmdLineCredentialProvider caches FilePath credentials in-memory for the active session, keyed by
 // (manufacturer, serialNumber) - so authenticating a second connection to the very same device via the
 // same FilePath-format method reuses the path already entered instead of prompting again. Demonstrated
 // here across two different connections to the same device - first the device itself, then a streaming
-// connection attached to it. The device's own path is supplied directly via `setSuppliedSecret` rather than
-// typed interactively - the registered provider still caches it (see `ICredentialProvider::cacheCredentials`),
+// connection attached to it. The device's own path is supplied directly via the `"SuppliedCredential"`
+// property rather than typed interactively - the registered provider still caches it (see `ICredentialProvider::cacheCredentials`),
 // so no user prompt is needed anywhere in this demo.
 void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
@@ -141,15 +141,15 @@ void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& ins
     auto deviceAuthConfig = AuthenticationConfig(deviceType);
     SelectAuthenticationMethod(deviceAuthConfig, "PrivateKeyFile");
 
-    // The supplied secret must be shaped like the descriptor's own `createEmptySecret` template - here
+    // The supplied credential must be shaped like the authentication method's own `createEmptyCredential` template - here
     // just a single "PrivateKeyFilePath" property, filled in with the private key's path.
-    auto suppliedSecret = deviceAuthConfig.getSupportedAuthenticationMethods().get(deviceAuthConfig.getSelectedAuthenticationMethodId()).createEmptySecret();
-    suppliedSecret.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
-    deviceAuthConfig.setPropertyValue("SuppliedSecret", suppliedSecret);
+    auto suppliedCredential = deviceAuthConfig.getSupportedAuthenticationMethods().get(deviceAuthConfig.getSelectedAuthenticationMethodId()).createEmptyCredential();
+    suppliedCredential.setPropertyValue("PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem"));
+    deviceAuthConfig.setPropertyValue("SuppliedCredential", suppliedCredential);
 
     auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(deviceAuthConfig));
     std::cout << "Connected to \"" << device.getInfo().getName()
-              << "\" with private-key challenge authentication, using a secret supplied directly - no prompt." << std::endl;
+              << "\" with private-key challenge authentication, using a credential supplied directly - no prompt." << std::endl;
 
     std::cout << "Attaching a streaming connection authenticated the same way - same device, same FilePath-format "
                  "method - so no path prompt should appear this time; the provider serves it from its cache instead."
@@ -197,8 +197,9 @@ void demoPinAuthenticationAndReload(const InstancePtr& instance, const DeviceTyp
     std::cout << "Press \"enter\" to save the configuration and reload it into a new instance..." << std::endl;
     std::cin.get();
 
-    // Saving the instance carries the connected device's credential request along with it - its authentication method id,
-    // descriptor and non-secret metadata - but never the authentication config or the credentials themselves.
+    // Saving the instance carries the connected device's authentication config along with it, but only in
+    // reduced form - every candidate authentication method and the selected one's id - never a supplied or
+    // obtained credential.
     auto savedConfiguration = instance.saveConfiguration();
 
     // A completely separate instance, loading the saved configuration - it needs its own credential provider

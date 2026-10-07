@@ -62,7 +62,7 @@ DECLARE_OPENDAQ_INTERFACE(IStreamingType, IComponentType)
  * @param prefix The prefix of the connection string used to add this streaming connection to a device.
  * @param defaultConfig The property object, to be cloned and returned, each time user creates default
  * configuration object. This way each instance of the Streaming has its own configuration object.
- * @param supportedAuthenticationMethods The credential descriptors this streaming type supports authenticating
+ * @param supportedAuthenticationMethods The authentication methods this streaming type supports authenticating
  * with, keyed by their own id.
  * @param defaultAuthenticationMethodId The id of the authentication method this streaming type supports by
  * default.

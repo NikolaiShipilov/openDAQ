@@ -24,14 +24,14 @@
 #include <coretypes/stringobject.h>
 #include <opendaq/server_capability_config.h>
 #include <opendaq/module_info.h>
-#include <opendaq/credential_descriptor.h>
+#include <opendaq/authentication_method.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceLibrary(ICredentialDescriptor, "opendaq")]
- * [interfaceSmartPtr(ICredentialDescriptor, CredentialDescriptorPtr, "<opendaq/credential_descriptor_ptr.h>")]
+ * [interfaceLibrary(IAuthenticationMethod, "opendaq")]
+ * [interfaceSmartPtr(IAuthenticationMethod, AuthenticationMethodPtr, "<opendaq/authentication_method_ptr.h>")]
  */
 
 /*!

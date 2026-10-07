@@ -45,7 +45,7 @@ extern "C"
 
     daqErrCode EXPORTED daqCredentialProvider_getDescription(daqCredentialProvider* self, daqString** description);
     daqErrCode EXPORTED daqCredentialProvider_requestCredentials(daqCredentialProvider* self, daqCredentialRequest* request, daqPropertyObject** credentials);
-    daqErrCode EXPORTED daqCredentialProvider_cacheCredentials(daqCredentialProvider* self, daqCredentialRequest* request, daqPropertyObject* secret);
+    daqErrCode EXPORTED daqCredentialProvider_cacheCredentials(daqCredentialProvider* self, daqCredentialRequest* request, daqPropertyObject* credential);
     daqErrCode EXPORTED daqCredentialProvider_getSupportedFormats(daqCredentialProvider* self, daqList** formats);
     daqErrCode EXPORTED daqCredentialProvider_createCmdLineCredentialProvider(daqCredentialProvider** obj);
 
