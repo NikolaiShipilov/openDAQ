@@ -33,10 +33,9 @@ BEGIN_NAMESPACE_OPENDAQ
  * `IComponentPrivate::setAuthenticationConfig`), so that reloading it later goes through the same
  * credential-request process again.
  *
- * Is itself a Property object - the authentication method id and the `IAuthenticationMethod` it corresponds to
- * are bound together as one `"AuthenticationMethod"` Selection property (its selection value is the
- * `IAuthenticationMethod` Struct itself, so the two can never be set out of sync - the authentication
- * method id is simply the selected authentication method's own `IAuthenticationMethod::getId()`).
+ * Is itself a Property object - `"AuthenticationMethod"` is a Selection property whose candidates are the
+ * supported methods' own ids, as plain strings (the real `IAuthenticationMethod` objects themselves - format,
+ * parameters, and all - are reachable via `getSupportedAuthenticationMethods()`, keyed by that same id).
  * A directly-supplied credential is carried, when present, as a `"SuppliedCredential"` property, validated on every
  * write against whatever `"AuthenticationMethod"` is currently selected (its property names must match
  * the selected authentication method's `createEmptyCredential()`'s exactly - the blessed workflow is to build from that template, fill
@@ -58,10 +57,8 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 
     /*!
      * @brief Selects the authentication method to use, by its own id - the typed equivalent of
-     * `setPropertySelectionValue("AuthenticationMethod", authenticationMethod)`: looks the matching
-     * authentication method up among `getSupportedAuthenticationMethods()` internally, so the caller only ever needs
-     * to name the id, never the Struct itself. Selecting a new method may clear an incompatible
-     * `"SuppliedCredential"`.
+     * `setPropertySelectionValue("AuthenticationMethod", authenticationMethodId)`. Selecting a new method may
+     * clear an incompatible `"SuppliedCredential"`.
      * @param authenticationMethodId The id of one of `getSupportedAuthenticationMethods()`'s own keys.
      * @throws NotFoundException if `authenticationMethodId` doesn't match any of this config's supported
      * authentication methods.

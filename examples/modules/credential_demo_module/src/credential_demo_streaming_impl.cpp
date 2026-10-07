@@ -19,9 +19,9 @@ CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connec
 
 StreamingTypePtr CredentialDemoStreamingImpl::CreateType(const ContextPtr& context)
 {
-    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod(context.getTypeManager());
-    auto pinMethod = StandardPinAuthenticationMethod(context.getTypeManager());
-    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod(context.getTypeManager());
+    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod();
+    auto pinMethod = StandardPinAuthenticationMethod();
+    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod();
     auto anonymousMethod = StandardAnonymousAuthenticationMethod();
 
     // Showcases the same four authentication methods as the device, defaulting to PIN.

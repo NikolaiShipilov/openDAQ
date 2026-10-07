@@ -18,7 +18,6 @@
 #include <coretypes/baseobject.h>
 #include <coretypes/string_ptr.h>
 #include <coretypes/struct.h>
-#include <coretypes/type_manager.h>
 #include <coreobjects/property_object_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
@@ -36,7 +35,6 @@ enum class CredentialFormat : EnumType
 
 /*#
  * [interfaceLibrary(IStruct, CoreTypes)]
- * [interfaceLibrary(ITypeManager, "coretypes")]
  * [interfaceLibrary(IPropertyObject, "coreobjects")]
  * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object_ptr.h>")]
  */
@@ -48,10 +46,10 @@ enum class CredentialFormat : EnumType
  * An authentication method carries its own id, format, format-specific parameter set (if any), and a
  * human-readable description. The id uniquely identifies the authentication method at least within the module that
  * offers it (e.g. `"UserNamePassword"`, `"Pin"`) - the same id `AuthenticationConfig` keys the resulting
- * config's `"AuthenticationMethod"` candidates by. In practice the id is often unique system-wide, deliberately reused across modules: the `Standard*AuthenticationMethod`
- * factories below key off shared, well-known ids and resolve their Struct/credential class from the one
- * `ITypeManager` shared by the whole `Context`, so any two modules using the same standard id (with the same
- * `Context`) produce identically-shaped authentication methods. Where a format has a parameter set,
+ * config's `"AuthenticationMethod"` candidates by. In practice the id is often unique system-wide, deliberately
+ * reused across modules: the `Standard*AuthenticationMethod` factories below key off shared, well-known ids,
+ * so any two modules using the same standard id produce identically-shaped authentication methods. Not
+ * registered with any `ITypeManager` - a plain object, not a Struct. Where a format has a parameter set,
  * it is itself a Struct: for a `KeyValuePairs` format, a `"Keys"` dict field maps each expected key
  * to its own hidden flag (e.g. `{"UserName": False, "Password": True}`); for a `String` format, a
  * single `"Hidden"` bool field applies to the one value. A `FilePath` format has no format-specific
@@ -91,8 +89,8 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationMethod, IBaseObject)
      * @brief Builds an empty credential matching this authentication method's shape - a property object with
      * one empty (default `""`) String property per value the format expects: for `KeyValuePairs`, one
      * property per key named in `getParameters()`'s `"Keys"` dict (e.g. `"UserName"`, `"Password"`); for
-     * `String` and `FilePath`, a single property, named and described by the authentication method's own
-     * registered credential class.
+     * `String` and `FilePath`, a single property, named per the method's own `valuePropertyName` (e.g.
+     * `"Pin"`, `"PrivateKeyFilePath"`).
      *
      * Meant to be filled in with the actual value(s) and used as the credential itself -
      * either by the caller, to supply one directly (`IAuthenticationConfig`'s `"SuppliedCredential"`
@@ -107,17 +105,17 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationMethod, IBaseObject)
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, KeyValueAuthenticationMethod, IAuthenticationMethod,
-    IString*, id, IDict*, keys, IString*, description, ITypeManager*, typeManager, IString*, credentialClassName
+    IString*, id, IDict*, keys, IString*, description
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, StringAuthenticationMethod, IAuthenticationMethod,
-    IString*, id, IString*, description, Bool, hidden, ITypeManager*, typeManager, IString*, credentialClassName
+    IString*, id, IString*, description, Bool, hidden, IString*, valuePropertyName
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(
     LIBRARY_FACTORY, FilePathAuthenticationMethod, IAuthenticationMethod,
-    IString*, id, IString*, description, ITypeManager*, typeManager, IString*, credentialClassName
+    IString*, id, IString*, description, IString*, valuePropertyName
 )
 
 OPENDAQ_DECLARE_CLASS_FACTORY_WITH_INTERFACE(

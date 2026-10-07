@@ -77,9 +77,9 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType(const ContextPtr& context)
 {
-    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod(context.getTypeManager());
-    auto pinMethod = StandardPinAuthenticationMethod(context.getTypeManager());
-    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod(context.getTypeManager());
+    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod();
+    auto pinMethod = StandardPinAuthenticationMethod();
+    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod();
     auto anonymousMethod = StandardAnonymousAuthenticationMethod();
 
     // Showcases all four authentication methods - UserName/Password, PIN, PrivateKeyFile, Anonymous -

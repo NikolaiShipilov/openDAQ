@@ -47,26 +47,26 @@ daqErrCode daqAuthenticationMethod_createEmptyCredential(daqAuthenticationMethod
     return reinterpret_cast<daq::IAuthenticationMethod*>(self)->createEmptyCredential(reinterpret_cast<daq::IPropertyObject**>(credential));
 }
 
-daqErrCode daqAuthenticationMethod_createKeyValueAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqDict* keys, daqString* description, daqTypeManager* typeManager, daqString* credentialClassName)
+daqErrCode daqAuthenticationMethod_createKeyValueAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqDict* keys, daqString* description)
 {
     daq::IAuthenticationMethod* ptr = nullptr;
-    daqErrCode err = daq::createKeyValueAuthenticationMethod(&ptr, reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IDict*>(keys), reinterpret_cast<daq::IString*>(description), reinterpret_cast<daq::ITypeManager*>(typeManager), reinterpret_cast<daq::IString*>(credentialClassName));
+    daqErrCode err = daq::createKeyValueAuthenticationMethod(&ptr, reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IDict*>(keys), reinterpret_cast<daq::IString*>(description));
     *obj = reinterpret_cast<daqAuthenticationMethod*>(ptr);
     return err;
 }
 
-daqErrCode daqAuthenticationMethod_createStringAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description, daqBool hidden, daqTypeManager* typeManager, daqString* credentialClassName)
+daqErrCode daqAuthenticationMethod_createStringAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description, daqBool hidden, daqString* valuePropertyName)
 {
     daq::IAuthenticationMethod* ptr = nullptr;
-    daqErrCode err = daq::createStringAuthenticationMethod(&ptr, reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IString*>(description), hidden, reinterpret_cast<daq::ITypeManager*>(typeManager), reinterpret_cast<daq::IString*>(credentialClassName));
+    daqErrCode err = daq::createStringAuthenticationMethod(&ptr, reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IString*>(description), hidden, reinterpret_cast<daq::IString*>(valuePropertyName));
     *obj = reinterpret_cast<daqAuthenticationMethod*>(ptr);
     return err;
 }
 
-daqErrCode daqAuthenticationMethod_createFilePathAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description, daqTypeManager* typeManager, daqString* credentialClassName)
+daqErrCode daqAuthenticationMethod_createFilePathAuthenticationMethod(daqAuthenticationMethod** obj, daqString* id, daqString* description, daqString* valuePropertyName)
 {
     daq::IAuthenticationMethod* ptr = nullptr;
-    daqErrCode err = daq::createFilePathAuthenticationMethod(&ptr, reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IString*>(description), reinterpret_cast<daq::ITypeManager*>(typeManager), reinterpret_cast<daq::IString*>(credentialClassName));
+    daqErrCode err = daq::createFilePathAuthenticationMethod(&ptr, reinterpret_cast<daq::IString*>(id), reinterpret_cast<daq::IString*>(description), reinterpret_cast<daq::IString*>(valuePropertyName));
     *obj = reinterpret_cast<daqAuthenticationMethod*>(ptr);
     return err;
 }

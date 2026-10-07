@@ -18,60 +18,17 @@
 #include <opendaq/authentication_method_ptr.h>
 #include <coretypes/dictobject_factory.h>
 #include <coretypes/boolean_factory.h>
-#include <coretypes/type_manager_ptr.h>
 #include <coretypes/struct_type_factory.h>
 #include <coretypes/simple_type_factory.h>
 #include <coretypes/listobject_factory.h>
 #include <coretypes/ctutils.h>
-#include <coreobjects/property_object_class_factory.h>
-#include <coreobjects/property_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief Name of the `IPropertyObjectClass` backing the empty credential `createEmptyCredential()` builds for
- * `StandardUserNamePasswordAuthenticationMethod`.
- */
-inline constexpr const char* UserNamePasswordCredentialClassName = "UserNamePasswordCredential";
-
-inline PropertyObjectClassPtr UserNamePasswordCredentialClass()
-{
-    return PropertyObjectClassBuilder(UserNamePasswordCredentialClassName)
-        .addProperty(StringPropertyBuilder("UserName", "").setDescription("The username.").build())
-        .addProperty(StringPropertyBuilder("Password", "").setDescription("The password.").build())
-        .build();
-}
-
-/*!
- * @brief Name of the `IPropertyObjectClass` backing the empty credential `createEmptyCredential()` builds for
- * `StandardPinAuthenticationMethod`.
- */
-inline constexpr const char* PinCredentialClassName = "PinCredential";
-
-inline PropertyObjectClassPtr PinCredentialClass()
-{
-    return PropertyObjectClassBuilder(PinCredentialClassName)
-        .addProperty(StringPropertyBuilder("Pin", "").setDescription("The PIN code.").build())
-        .build();
-}
-
-/*!
- * @brief Name of the `IPropertyObjectClass` backing the empty credential `createEmptyCredential()` builds for
- * `StandardPrivateKeyFileAuthenticationMethod`.
- */
-inline constexpr const char* PrivateKeyFileCredentialClassName = "PrivateKeyFileCredential";
-
-inline PropertyObjectClassPtr PrivateKeyFileCredentialClass()
-{
-    return PropertyObjectClassBuilder(PrivateKeyFileCredentialClassName)
-        .addProperty(StringPropertyBuilder("PrivateKeyFilePath", "").setDescription("Path to the PEM-encoded private key file.").build())
-        .build();
-}
-
-/*!
- * @brief The `IStructType` backing a `KeyValuePairs`-format authentication method's nested `"Parameters"` field - a
- * single `"Keys"` dict field. The single source of truth for this shape - `AuthenticationMethodImpl`
- * and `Context` (see `RegisterAuthenticationMethodTypes`) both build it from here, never redefine it.
+ * @brief The `IStructType` backing a `KeyValuePairs`-format authentication method's nested `"Parameters"`
+ * field - a single `"Keys"` dict field. Never registered with any `ITypeManager` - built fresh wherever
+ * needed, purely as a local value shape for `AuthenticationMethodImpl`'s own `getParameters()`.
  */
 inline StructTypePtr KeyValueAuthenticationMethodParametersStructType()
 {
@@ -79,8 +36,9 @@ inline StructTypePtr KeyValueAuthenticationMethodParametersStructType()
 }
 
 /*!
- * @brief The `IStructType` backing a `String`-format authentication method's nested `"Parameters"` field - a single
- * `"Hidden"` bool field.
+ * @brief The `IStructType` backing a `String`-format authentication method's nested `"Parameters"` field - a
+ * single `"Hidden"` bool field. Never registered with any `ITypeManager` (see
+ * `KeyValueAuthenticationMethodParametersStructType`).
  */
 inline StructTypePtr StringAuthenticationMethodParametersStructType()
 {
@@ -88,92 +46,16 @@ inline StructTypePtr StringAuthenticationMethodParametersStructType()
 }
 
 /*!
- * @brief The `IStructType` backing a `KeyValuePairs`-format `AuthenticationMethod`.
- */
-inline StructTypePtr KeyValueAuthenticationMethodStructType()
-{
-    return StructType("KeyValueAuthenticationMethod",
-                      List<IString>("AuthenticationMethodId", "Description", "Parameters"),
-                      List<IType>(SimpleType(ctString), SimpleType(ctString), KeyValueAuthenticationMethodParametersStructType()));
-}
-
-/*!
- * @brief The `IStructType` backing a `String`-format `AuthenticationMethod`.
- */
-inline StructTypePtr StringAuthenticationMethodStructType()
-{
-    return StructType("StringAuthenticationMethod",
-                      List<IString>("AuthenticationMethodId", "Description", "Parameters"),
-                      List<IType>(SimpleType(ctString), SimpleType(ctString), StringAuthenticationMethodParametersStructType()));
-}
-
-/*!
- * @brief The `IStructType` backing a `FilePath`-format `AuthenticationMethod` - has no `"Parameters"`
- * field, since the format has no format-specific parameters.
- */
-inline StructTypePtr FilePathAuthenticationMethodStructType()
-{
-    return StructType("FilePathAuthenticationMethod",
-                      List<IString>("AuthenticationMethodId", "Description"),
-                      List<IType>(SimpleType(ctString), SimpleType(ctString)));
-}
-
-/*!
- * @brief The `IStructType` backing a `None`-format `AuthenticationMethod` - has no `"Parameters"`
- * field, since the format has no format-specific parameters.
- */
-inline StructTypePtr NoneAuthenticationMethodStructType()
-{
-    return StructType("NoneAuthenticationMethod",
-                      List<IString>("AuthenticationMethodId", "Description"),
-                      List<IType>(SimpleType(ctString), SimpleType(ctString)));
-}
-
-/*!
- * @brief Registers the `KeyValuePairs`/`String`/`FilePath` formats' backing `IStructType`s, plus the
- * standard authentication methods' own empty-credential `IPropertyObjectClass`es, with `typeManager`. Called once by
- * `Context` up front. The `None` format's `IStructType` is never registered with any type manager - see
- * `NoneAuthenticationMethod`.
- * @param typeManager The type manager to register the authentication method types with.
- */
-inline void RegisterAuthenticationMethodTypes(const TypeManagerPtr& typeManager)
-{
-    for (const auto& type : {KeyValueAuthenticationMethodStructType(),
-                             KeyValueAuthenticationMethodParametersStructType(),
-                             StringAuthenticationMethodStructType(),
-                             StringAuthenticationMethodParametersStructType(),
-                             FilePathAuthenticationMethodStructType()})
-    {
-        checkErrorInfoExcept(typeManager->addType(type), OPENDAQ_ERR_ALREADYEXISTS);
-    }
-
-    for (const auto& credentialClass : {UserNamePasswordCredentialClass(),
-                                        PinCredentialClass(),
-                                        PrivateKeyFileCredentialClass()})
-    {
-        checkErrorInfoExcept(typeManager->addType(credentialClass), OPENDAQ_ERR_ALREADYEXISTS);
-    }
-}
-
-/*!
  * @brief Creates a `AuthenticationMethod` describing a `KeyValuePairs`-format credential.
  * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param keys The expected keys, mapped to whether the corresponding value should be hidden as it is
- * entered (e.g. `{"UserName": False, "Password": True}`).
+ * entered (e.g. `{"UserName": False, "Password": True}`) - also names the properties `createEmptyCredential()`
+ * builds, one per key.
  * @param description A human-readable description of the authentication method, for the user.
- * @param typeManager Must already have a `"KeyValueAuthenticationMethod"` type registered (see
- * `RegisterAuthenticationMethodTypes`) - a real `Context` always registers it up front. Throws
- * otherwise.
- * @param credentialClassName Must be assigned and registered with `typeManager` - `createEmptyCredential()`
- * builds the returned credential from this `IPropertyObjectClass`. Throws otherwise.
  */
-inline AuthenticationMethodPtr KeyValueAuthenticationMethod(const StringPtr& id,
-                                                   const DictPtr<IString, IBoolean>& keys,
-                                                   const StringPtr& description,
-                                                   const TypeManagerPtr& typeManager,
-                                                   const StringPtr& credentialClassName)
+inline AuthenticationMethodPtr KeyValueAuthenticationMethod(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
 {
-    AuthenticationMethodPtr obj(KeyValueAuthenticationMethod_Create(id, keys, description, typeManager, credentialClassName));
+    AuthenticationMethodPtr obj(KeyValueAuthenticationMethod_Create(id, keys, description));
     return obj;
 }
 
@@ -183,19 +65,11 @@ inline AuthenticationMethodPtr KeyValueAuthenticationMethod(const StringPtr& id,
  * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param description A human-readable description of the authentication method, for the user.
  * @param hidden Whether the value should be hidden as it is entered.
- * @param typeManager Must already have a `"StringAuthenticationMethod"` type registered (see
- * `RegisterAuthenticationMethodTypes`) - a real `Context` always registers it up front. Throws
- * otherwise.
- * @param credentialClassName Must be assigned and registered with `typeManager` - `createEmptyCredential()`
- * builds the returned credential from this `IPropertyObjectClass`. Throws otherwise.
+ * @param valuePropertyName The name `createEmptyCredential()` gives the single property it builds (e.g. `"Pin"`).
  */
-inline AuthenticationMethodPtr StringAuthenticationMethod(const StringPtr& id,
-                                                 const StringPtr& description,
-                                                 Bool hidden,
-                                                 const TypeManagerPtr& typeManager,
-                                                 const StringPtr& credentialClassName)
+inline AuthenticationMethodPtr StringAuthenticationMethod(const StringPtr& id, const StringPtr& description, Bool hidden, const StringPtr& valuePropertyName)
 {
-    AuthenticationMethodPtr obj(StringAuthenticationMethod_Create(id, description, hidden, typeManager, credentialClassName));
+    AuthenticationMethodPtr obj(StringAuthenticationMethod_Create(id, description, hidden, valuePropertyName));
     return obj;
 }
 
@@ -204,28 +78,18 @@ inline AuthenticationMethodPtr StringAuthenticationMethod(const StringPtr& id,
  * stating that the credential is a path to a file (e.g. a private key) rather than the value itself.
  * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param description A human-readable description of the authentication method, for the user.
- * @param typeManager Must already have a `"FilePathAuthenticationMethod"` type registered (see
- * `RegisterAuthenticationMethodTypes`) - a real `Context` always registers it up front. Throws
- * otherwise.
- * @param credentialClassName Must be assigned and registered with `typeManager` - `createEmptyCredential()`
- * builds the returned credential from this `IPropertyObjectClass`. Throws otherwise.
+ * @param valuePropertyName The name `createEmptyCredential()` gives the single property it builds (e.g. `"PrivateKeyFilePath"`).
  */
-inline AuthenticationMethodPtr FilePathAuthenticationMethod(const StringPtr& id,
-                                                   const StringPtr& description,
-                                                   const TypeManagerPtr& typeManager,
-                                                   const StringPtr& credentialClassName)
+inline AuthenticationMethodPtr FilePathAuthenticationMethod(const StringPtr& id, const StringPtr& description, const StringPtr& valuePropertyName)
 {
-    AuthenticationMethodPtr obj(FilePathAuthenticationMethod_Create(id, description, typeManager, credentialClassName));
+    AuthenticationMethodPtr obj(FilePathAuthenticationMethod_Create(id, description, valuePropertyName));
     return obj;
 }
 
 /*!
  * @brief Creates a `AuthenticationMethod` describing a `None`-format method - no credential value(s) at all,
- * for an authentication method that requires no credentials, e.g. typically an anonymous access. Unlike the other
- * formats, there is no credential to build, so no credential class is involved - `createEmptyCredential()` is not
- * supported for it, and returns `OPENDAQ_ERR_NOT_SUPPORTED`. Unlike the other formats, its `IStructType` is
- * never registered with any `ITypeManager` - a fixed, well-known shape regardless of which `Context` (if
- * any) is involved - so, unlike the other three factories, this one needs no type manager at all.
+ * for an authentication method that requires no credentials, e.g. typically an anonymous access. There is no
+ * credential to build - `createEmptyCredential()` is not supported for it, and returns `OPENDAQ_ERR_NOT_SUPPORTED`.
  * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param description A human-readable description of the authentication method, for the user.
  */
@@ -248,42 +112,34 @@ inline constexpr const char* StandardAnonymousId = "Anonymous";
 /*!
  * @brief The authentication method for the standard `UserName`/`Password` authentication method - a
  * `KeyValuePairs`-format credential with the password hidden as typed.
- * @param typeManager See `KeyValueAuthenticationMethod`.
  */
-inline AuthenticationMethodPtr StandardUserNamePasswordAuthenticationMethod(const TypeManagerPtr& typeManager)
+inline AuthenticationMethodPtr StandardUserNamePasswordAuthenticationMethod()
 {
-    return KeyValueAuthenticationMethod(StandardUserNamePasswordId,
-                              Dict<IString, IBoolean>({{"UserName", False}, {"Password", True}}),
-                              "Username and password",
-                              typeManager,
-                              UserNamePasswordCredentialClassName);
+    return KeyValueAuthenticationMethod(
+        StandardUserNamePasswordId, Dict<IString, IBoolean>({{"UserName", False}, {"Password", True}}), "Username and password");
 }
 
 /*!
  * @brief The authentication method for the standard PIN authentication method - a `String`-format
  * credential, hidden as typed.
- * @param typeManager See `StringAuthenticationMethod`.
  */
-inline AuthenticationMethodPtr StandardPinAuthenticationMethod(const TypeManagerPtr& typeManager)
+inline AuthenticationMethodPtr StandardPinAuthenticationMethod()
 {
-    return StringAuthenticationMethod(StandardPinId, "PIN code", True, typeManager, PinCredentialClassName);
+    return StringAuthenticationMethod(StandardPinId, "PIN code", True, "Pin");
 }
 
 /*!
  * @brief The authentication method for the standard private-key-file authentication method - a
  * `FilePath`-format credential.
- * @param typeManager See `FilePathAuthenticationMethod`.
  */
-inline AuthenticationMethodPtr StandardPrivateKeyFileAuthenticationMethod(const TypeManagerPtr& typeManager)
+inline AuthenticationMethodPtr StandardPrivateKeyFileAuthenticationMethod()
 {
-    return FilePathAuthenticationMethod(
-        StandardPrivateKeyFileId, "Path to the PEM-encoded private key file", typeManager, PrivateKeyFileCredentialClassName);
+    return FilePathAuthenticationMethod(StandardPrivateKeyFileId, "Path to the PEM-encoded private key file", "PrivateKeyFilePath");
 }
 
 /*!
  * @brief The authentication method for the standard anonymous authentication method - a `None`-format
- * method, requiring no credentials at all. Unlike the other three standard authentication methods, needs no type
- * manager - see `NoneAuthenticationMethod`.
+ * method, requiring no credentials at all.
  */
 inline AuthenticationMethodPtr StandardAnonymousAuthenticationMethod()
 {

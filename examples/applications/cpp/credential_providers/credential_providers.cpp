@@ -35,21 +35,11 @@ void createJsonConfigFile()
 // method the named component type supports (UserNamePassword, Pin, PrivateKeyFile) as a candidate of its
 // "AuthenticationMethod" selection property, defaulting to the first one.
 // This switches that selection to the method named by `authenticationMethodId`, entirely through
-// plain property object calls: the candidates are read generically off the property itself, and the match
-// is found by comparing each candidate Struct's own "AuthenticationMethodId" field - no `IAuthenticationMethod`
-// cast needed for the comparison itself, only to read `getId()` off it.
+// plain property object calls - the candidates are already just ids, so no `IAuthenticationMethod` lookup
+// is needed at all, only a generic selection write.
 void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const StringPtr& authenticationMethodId)
 {
-    ListPtr<IStruct> candidates = authConfig.getProperty("AuthenticationMethod").getSelectionValues();
-    for (const auto& candidate : candidates)
-    {
-        if (candidate.asPtr<IAuthenticationMethod>().getId() == authenticationMethodId)
-        {
-            authConfig.setPropertySelectionValue("AuthenticationMethod", candidate);
-            return;
-        }
-    }
-    throw std::runtime_error("Unknown authentication method id: " + authenticationMethodId.toStdString());
+    authConfig.setPropertySelectionValue("AuthenticationMethod", authenticationMethodId);
 }
 
 // Temporary bridge until `IAuthenticationConfig` becomes a real part of the add-device config schema:
@@ -112,8 +102,8 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     auto authConfig = AuthenticationConfig(deviceType);
     SelectAuthenticationMethod(authConfig, "Pin");
 
-    StructPtr authenticationMethod = authConfig.getPropertySelectionValue("AuthenticationMethod");
-    std::cout << "Authentication method id, read as a plain property object selection value: " << authenticationMethod.get("AuthenticationMethodId") << std::endl;
+    StringPtr authenticationMethodId = authConfig.getPropertySelectionValue("AuthenticationMethod");
+    std::cout << "Authentication method id, read as a plain property object selection value: " << authenticationMethodId << std::endl;
 
     std::cout << "When prompted for the PIN, enter: 1234" << std::endl;
     auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(authConfig));

@@ -46,17 +46,17 @@ void defineIAuthenticationMethod(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
 {
     cls.doc() = "Describes the shape of the credential value(s) required by an authentication method used by the module and produced by a credential provider.";
 
-    m.def("KeyValueAuthenticationMethod", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IDict*, py::dict>& keys, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager, std::variant<daq::IString*, py::str, daq::IEvalValue*>& credentialClassName){
-        return daq::KeyValueAuthenticationMethod_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IDict*>(keys), getVariantValue<daq::IString*>(description), typeManager, getVariantValue<daq::IString*>(credentialClassName));
-    }, py::arg("id"), py::arg("keys"), py::arg("description"), py::arg("type_manager"), py::arg("credential_class_name"));
+    m.def("KeyValueAuthenticationMethod", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IDict*, py::dict>& keys, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
+        return daq::KeyValueAuthenticationMethod_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IDict*>(keys), getVariantValue<daq::IString*>(description));
+    }, py::arg("id"), py::arg("keys"), py::arg("description"));
 
-    m.def("StringAuthenticationMethod", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, const bool hidden, daq::ITypeManager* typeManager, std::variant<daq::IString*, py::str, daq::IEvalValue*>& credentialClassName){
-        return daq::StringAuthenticationMethod_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), hidden, typeManager, getVariantValue<daq::IString*>(credentialClassName));
-    }, py::arg("id"), py::arg("description"), py::arg("hidden"), py::arg("type_manager"), py::arg("credential_class_name"));
+    m.def("StringAuthenticationMethod", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, const bool hidden, std::variant<daq::IString*, py::str, daq::IEvalValue*>& valuePropertyName){
+        return daq::StringAuthenticationMethod_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), hidden, getVariantValue<daq::IString*>(valuePropertyName));
+    }, py::arg("id"), py::arg("description"), py::arg("hidden"), py::arg("value_property_name"));
 
-    m.def("FilePathAuthenticationMethod", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, daq::ITypeManager* typeManager, std::variant<daq::IString*, py::str, daq::IEvalValue*>& credentialClassName){
-        return daq::FilePathAuthenticationMethod_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), typeManager, getVariantValue<daq::IString*>(credentialClassName));
-    }, py::arg("id"), py::arg("description"), py::arg("type_manager"), py::arg("credential_class_name"));
+    m.def("FilePathAuthenticationMethod", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description, std::variant<daq::IString*, py::str, daq::IEvalValue*>& valuePropertyName){
+        return daq::FilePathAuthenticationMethod_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description), getVariantValue<daq::IString*>(valuePropertyName));
+    }, py::arg("id"), py::arg("description"), py::arg("value_property_name"));
 
     m.def("NoneAuthenticationMethod", [](std::variant<daq::IString*, py::str, daq::IEvalValue*>& id, std::variant<daq::IString*, py::str, daq::IEvalValue*>& description){
         return daq::NoneAuthenticationMethod_Create(getVariantValue<daq::IString*>(id), getVariantValue<daq::IString*>(description));
@@ -70,7 +70,7 @@ void defineIAuthenticationMethod(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
             const auto objectPtr = daq::AuthenticationMethodPtr::Borrow(object);
             return objectPtr.getId().toStdString();
         },
-        "Gets the id that uniquely identifies this authentication method, at least within the module that offers it. In practice often unique system-wide instead: the Standard*AuthenticationMethod factories key off shared, well-known ids and (but for the anonymous one, which needs no type manager at all) resolve their Struct/credential class through the one ITypeManager shared by the whole Context, so different modules using the same standard id produce identically-shaped authentication methods.");
+        "Gets the id that uniquely identifies this authentication method, at least within the module that offers it. In practice often unique system-wide instead: the Standard*AuthenticationMethod factories key off shared, well-known ids, so different modules using the same standard id produce identically-shaped authentication methods.");
     cls.def_property_readonly("format",
         [](daq::IAuthenticationMethod *object)
         {
@@ -103,5 +103,5 @@ void defineIAuthenticationMethod(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
             const auto objectPtr = daq::AuthenticationMethodPtr::Borrow(object);
             return objectPtr.createEmptyCredential().detach();
         },
-        "Builds an empty credential matching this authentication method's shape - a property object with one empty (default `\"\"`) String property per value the format expects: for `KeyValuePairs`, one property per key named in `getParameters()`'s `\"Keys\"` dict (e.g. `\"UserName\"`, `\"Password\"`); for `String` and `FilePath`, a single property, named and described by the authentication method's own registered credential class. Not supported for `None` - a `None`-format authentication method requires no credentials at all, so none is ever needed for it in the first place; therefore raises.");
+        "Builds an empty credential matching this authentication method's shape - a property object with one empty (default `\"\"`) String property per value the format expects: for `KeyValuePairs`, one property per key named in `getParameters()`'s `\"Keys\"` dict (e.g. `\"UserName\"`, `\"Password\"`); for `String` and `FilePath`, a single property, named per the method's own `value_property_name` (e.g. `\"Pin\"`, `\"PrivateKeyFilePath\"`). Not supported for `None` - a `None`-format authentication method requires no credentials at all, so none is ever needed for it in the first place; therefore raises.");
 }
