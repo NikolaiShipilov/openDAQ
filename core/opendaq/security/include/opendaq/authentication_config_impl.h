@@ -31,10 +31,10 @@ public:
     // The first entry of `authenticationMethods` (in dict iteration order) starts out selected.
     explicit AuthenticationConfigImpl(const DictPtr<IString, IAuthenticationMethod>& authenticationMethods);
 
-    ErrCode INTERFACE_FUNC getSelectedAuthenticationMethodId(IString** authenticationMethodId) override;
+    ErrCode INTERFACE_FUNC getSelectedAuthenticationMethod(IAuthenticationMethod** authenticationMethod) override;
     ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) override;
     ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) override;
-    ErrCode INTERFACE_FUNC getSuppliedCredential(IPropertyObject** credential) override;
+    ErrCode INTERFACE_FUNC getSuppliedCredential(IDict** credential) override;
 
     // An `IAuthenticationConfig` needs to be nestable as an ordinary Object-type property value, but
     // `GenericPropertyObjectImpl::checkContainerType` only allows a nested value whose own
@@ -71,16 +71,10 @@ private:
     void initProperties(const DictPtr<IString, IAuthenticationMethod>& authenticationMethods);
 
     // Shared tail of `setPropertyValue`/`setPropertySelectionValue`/`setProtectedPropertyValue`, run after the
-    // write itself already succeeded: auto-clears an incompatible "SuppliedCredential" on an "AuthenticationMethod"
+    // write itself already succeeded: resets "SuppliedCredential" on an "AuthenticationMethod"
     // write.
     ErrCode onPropertyValueChanged(const StringPtr& name);
-
-    void clearSuppliedCredentialIfIncompatible(const StringPtr& selectedMethodId);
-
-    // Structural check: does `credential` have exactly the property names `selectedMethod.createEmptyCredential()`
-    // would produce? The blessed workflow is to build from that template and fill it in, but this doesn't
-    // check provenance, only shape.
-    static bool IsSuppliedCredentialShapeValid(const PropertyObjectPtr& credential, const AuthenticationMethodPtr& selectedMethod);
+    AuthenticationMethodPtr onGetSelectedAuthenticationMethod() const;
 
     // The real `IAuthenticationMethod` objects this config was built from/deserialized with, keyed by their
     // own id - "AuthenticationMethod"'s candidates are just these same keys, as plain strings.

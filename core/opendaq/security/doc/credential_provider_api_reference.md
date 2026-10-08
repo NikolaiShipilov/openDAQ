@@ -13,7 +13,7 @@
 > see `examples/applications/cpp/credential_providers/credential_providers.cpp`'s `WithAuthenticationConfig` helper
 > for the current, correct pattern in the meantime.
 
-Credentials are modelled by their **format** (`CredentialFormat`: `None`, `KeyValuePairs`, `String`, or `FilePath`) and a **authentication method** (`IAuthenticationMethod`) carrying format-specific parameters and a human description. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object built with `AuthenticationConfig(componentType)`, listing every method the named component type itself declares supporting (via `IComponentType::getSupportedAuthenticationMethods()`, set once when the module built the type) as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming`.
+Credentials are modelled as a dictionary of named **fields** per authentication method (`IAuthenticationMethod::getFields()`), each one an `ICredentialField` naming how its value should be collected - `Text`, `Secret` (masked), or `FilePath`. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object built with `AuthenticationConfig(componentType)`, listing every method the named component type itself declares supporting (via `IComponentType::getSupportedAuthenticationMethods()`, set once when the module built the type) as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming`.
 
 At most one credential provider can ever be registered for an entire `Instance` - on `IInstanceBuilder`, at build time, before the instance's `Context` even exists (see [§2](#2-extensions-to-existing-interfaces)) - so there is no per-config provider selection at all: `IAuthenticationConfig` doesn't carry a provider id, and a module always uses whichever single provider (if any) `IContext::getCredentialProvider()` returns.
 
@@ -23,29 +23,40 @@ At most one credential provider can ever be registered for an entire `Instance` 
 
 ### `IAuthenticationMethod`
 
-Describes the shape and presentation of the credential value(s) an authentication method expects.
+Describes one way to authenticate - its id, a human-readable description, and the named credential fields it needs (if any). A plain object, not a Struct - not registered with any `ITypeManager`.
 
 | Member | Description |
 |---|---|
 | `getId(IString**)` | The id that uniquely identifies this authentication method at least within the module that offers it - the same id the module declares as its default, and that a caller matches against when selecting this method out of an `IAuthenticationConfig`'s `"AuthenticationMethod"` candidates (see below). In practice often unique system-wide instead: the `Standard*AuthenticationMethod` factories key off shared, well-known ids, so different modules using the same standard id produce identically-shaped authentication methods, reusing the id deliberately rather than colliding by accident. |
-| `getFormat(CredentialFormat*)` | The described credential value(s)' format — `None`, `KeyValuePairs`, `String`, or `FilePath`. |
-| `getParameters(IStruct**)` | The format's standard parameter set, as a Struct whose own Struct type is pinned to the format - for `KeyValuePairs`, a `"Keys"` dict field mapping each expected key to a hidden flag (e.g. `{"UserName": False, "Password": True}`); for `String`, a single `"Hidden"` bool field. A `FilePath`-format authentication method has no format-specific parameters - `getParameters()` returns an unassigned `IStruct`. A `None`-format authentication method likewise has no parameters, there being nothing to describe. |
+| `getFields(IDict**)` | The named credential fields this method expects, keyed by name, in declaration order - empty for a method that needs no credentials at all, e.g. anonymous access. Each value is an `ICredentialField`. |
 | `getDescription(IString**)` | Human-readable description of the authentication method, e.g. *"PIN-code"*, *"username and password"*, *"Path to the SSH private key file"*. |
-| `createEmptyCredential(IPropertyObject**)` | Builds an empty credential matching this format: a property object with one empty (default `""`) String property per value expected - one per key named in `getParameters()`'s `"Keys"` dict for `KeyValuePairs` (e.g. `"UserName"`, `"Password"`), or a single property for `String`/`FilePath`, named per the method's own `valuePropertyName` (e.g. `"Pin"`, `"PrivateKeyFilePath"`). Meant to be filled in with the actual value(s) and used as the credential itself - see [§5](#5-credential-provider-selection--supplied-credentials). Not supported for `None` - a `None`-format authentication method requires no credentials at all, so none is ever needed for it in the first place; therefore returns `OPENDAQ_ERR_NOT_SUPPORTED`. |
 
-**Factories:** `KeyValueAuthenticationMethod(id, keys, description)`, `StringAuthenticationMethod(id, description, hidden, valuePropertyName)`, `FilePathAuthenticationMethod(id, description, valuePropertyName)`, `NoneAuthenticationMethod(id, description)` - no `ITypeManager` involved anywhere; `IAuthenticationMethod` is a plain object, not a Struct, so there's no type to register. `valuePropertyName` names the single property `createEmptyCredential()` builds for `String`/`FilePath` (`KeyValuePairs` already gets its property names from `keys`).
+**`ICredentialField`** - describes a single credential field:
 
-**Standard authentication methods:** `StandardUserNamePasswordAuthenticationMethod()`, `StandardPinAuthenticationMethod()`, `StandardPrivateKeyFileAuthenticationMethod()`, and `StandardAnonymousAuthenticationMethod()` build ready-made authentication methods for four well-known methods, each keyed by its own well-known id (`StandardUserNamePasswordId` = `"UserNamePassword"`, `StandardPinId` = `"Pin"`, `StandardPrivateKeyFileId` = `"PrivateKeyFile"`, `StandardAnonymousId` = `"Anonymous"`) - so every module offering one of these methods produces the exact same authentication method and credential shape, rather than each inventing its own.
+| Member | Description |
+|---|---|
+| `getId(IString**)` | The key this field is stored under in the credential and in `getFields()` - e.g. `"Username"`, `"Password"`, `"PrivateKeyFilePath"`. |
+| `getKind(CredentialFieldKind*)` | How this field's value should be collected/presented. |
+| `getName(IString**)` | A human-readable name for this field, for the user - e.g. *"User name"*, *"Private key file"*. |
+| `getMetadata(IDict**)` | Hints for whoever collects this field's value, as a `Dict<IString, IString>`. Well-known key `"Extensions"` for a `FilePath` field: comma-separated, without the dot (e.g. `"pem,key"`); absent or empty means any file. |
+| `isRequired(Bool*)` | Whether this field cannot be left unset or empty - e.g. a password might be optional but not the username within the same authentication method. |
 
 ```cpp
-enum class CredentialFormat : EnumType
+enum class CredentialFieldKind : EnumType
 {
-    None = 0,       // no credential value(s) at all — typically anonymous access, nothing to supply or verify
-    KeyValuePairs,  // N string pairs — e.g. UserName / Password
-    String,         // one string — token, API key, PIN
-    FilePath        // one string — path to a file containing the credential value, e.g. a private key
+    Text = 0, // shown as typed - e.g. a username
+    Secret,   // masked as typed - e.g. a password or PIN
+    FilePath  // a path to a file - e.g. a private key file
 };
 ```
+
+**Factory:** `CredentialField(id, kind, name, metadata = {}, required = True)`.
+
+**`CredentialSatisfiesMethod(authenticationMethod, credential)`** - a free function (not a method on the interface) that checks whether `credential` - a dictionary of field value(s), keyed by their own field id (see [Credentials](#credentials) below) - is usable as-is for `authenticationMethod`: every field it marks required (`ICredentialField::isRequired`) must be present among `credential`'s keys with a non-empty value. A field that isn't required is never checked, whether present or not. `false` if `authenticationMethod` itself is unassigned.
+
+**Factories:** `AuthenticationMethod(id, fields, description)` - the one general factory, `fields` a dict of name → `ICredentialField`; `NoneAuthenticationMethod(id, description)` - a convenience wrapper with an empty fields dict, for a method that needs no credentials at all. No `ITypeManager` involved anywhere; `IAuthenticationMethod`/`ICredentialField` are plain objects, not Structs, so there's no type to register.
+
+**Standard authentication methods:** `StandardUserNamePasswordAuthenticationMethod()`, `StandardPinAuthenticationMethod()`, `StandardPrivateKeyFileAuthenticationMethod()`, and `StandardAnonymousAuthenticationMethod()` build ready-made authentication methods for four well-known methods, each keyed by its own well-known id (`StandardUserNamePasswordId` = `"UserNamePassword"`, `StandardPinId` = `"Pin"`, `StandardPrivateKeyFileId` = `"PrivateKeyFile"`, `StandardAnonymousId` = `"Anonymous"`) - so every module offering one of these methods produces the exact same authentication method and credential shape, rather than each inventing its own. `StandardUserNamePasswordAuthenticationMethod` has two fields (`"UserName"`: `Text`, `"Password"`: `Secret`); `StandardPinAuthenticationMethod` has one (`"Pin"`: `Secret`); `StandardPrivateKeyFileAuthenticationMethod` has one (`"PrivateKeyFilePath"`: `FilePath`); `StandardAnonymousAuthenticationMethod` has none.
 
 ---
 
@@ -57,13 +68,13 @@ Carries the authentication settings for a single connection attempt. Lives along
 
 | Property | Description |
 |---|---|
-| `"AuthenticationMethod"` (Selection) | Candidates are the supported methods' own ids, as plain strings - the selection value *is* the currently selected id (`getSelectedAuthenticationMethodId()`'s typed equivalent). The real `IAuthenticationMethod` objects (format, parameters, and all) are reached separately, via `getSupportedAuthenticationMethods()`, keyed by that same id. A config returned by `AuthenticationConfig(componentType)` (see [§2](#2-extensions-to-existing-interfaces)) is self-contained - every authentication method the component type supports is a selection candidate here, not just one - so the caller switches methods by changing this property's selection, without fetching a different config object. Changing this property may clear an incompatible `"SuppliedCredential"`. |
-| `"SuppliedCredential"` (Object, optional) | A credential supplied directly by the caller, to be used instead of the registered credential provider obtaining it. Present only when one was actually supplied — check with `hasProperty("SuppliedCredential")`, or via `getSuppliedCredential()` below — since an Object-type property cannot itself hold `nullptr`. Every write is validated against the *currently selected* `"AuthenticationMethod"`: the object's property names must match `authentication method.createEmptyCredential()`'s exactly (build from that template, fill it in, submit it - the blessed workflow), or the write is rejected. An `"AuthenticationMethod"` change that leaves an already-set `"SuppliedCredential"` incompatible with the new selection silently clears it. See [§5](#5-credential-provider-selection--supplied-credentials). |
+| `"AuthenticationMethod"` (Selection) | Candidates are the supported methods' own ids, as plain strings - the selection value is the currently selected id (`getSelectedAuthenticationMethod()`'s typed equivalent returns the full method object, looked up by this id). The real `IAuthenticationMethod` objects (fields and all) are reached separately, via `getSupportedAuthenticationMethods()`, keyed by that same id. A config returned by `AuthenticationConfig(componentType)` (see [§2](#2-extensions-to-existing-interfaces)) is self-contained - every authentication method the component type supports is a selection candidate here, not just one - so the caller switches methods by changing this property's selection, without fetching a different config object. Changing this property unconditionally resets `"SuppliedCredential"` back to empty, whatever it held before. |
+| `"SuppliedCredential"` (Dict) | A credential supplied directly by the caller, to be used instead of the registered credential provider obtaining it - a dictionary of field value(s), keyed by their own field id (see [Credentials](#credentials) below). Its default value is an empty dictionary, which means "none supplied" (the registered provider is asked instead). A non-empty value counts as supplied, and is validated against the *currently selected* `"AuthenticationMethod"` on every write: it must carry a non-empty value for every field the method marks required (see `CredentialSatisfiesMethod`), or the write is rejected. Changing `"AuthenticationMethod"` always resets this property back to empty first, whatever it held before - a credential supplied for the previous method is never meaningful for the new one, compatible-looking or not. See [§5](#5-credential-provider-selection--supplied-credentials). |
 
 | Member | Description |
 |---|---|
-| `getSelectedAuthenticationMethodId(IString**)` | Convenience getter for the selected `"AuthenticationMethod"` value's own id. The corresponding authentication method itself is obtained by looking this id up in `getSupportedAuthenticationMethods()` - there is no separate getter for it. |
-| `getSuppliedCredential(IPropertyObject**)` | Convenience getter for the `"SuppliedCredential"` property's value, or `nullptr` if the property is absent entirely. |
+| `getSelectedAuthenticationMethod(IAuthenticationMethod**)` | Convenience getter for the full authentication method matching the selected `"AuthenticationMethod"` value's id - looked up in `getSupportedAuthenticationMethods()` internally, so the caller doesn't have to. |
+| `getSuppliedCredential(IDict**)` | Convenience getter for the `"SuppliedCredential"` property's value. Always assigned - empty means none was supplied. |
 
 There is no "additional config" on `IAuthenticationConfig` itself - settings like whether to hide credential input as it's typed travel via the component's own, generic config object instead (the same one `addDevice`/`addStreaming` always take), read by the module from its own `config` parameter alongside the authentication config. Nor is there any credential-provider selection on it at all - see [§5](#5-credential-provider-selection--supplied-credentials).
 
@@ -73,7 +84,7 @@ There is no "additional config" on `IAuthenticationConfig` itself - settings lik
 
 `"SuppliedCredential"` is never set by either factory - set it afterward via that property directly, the same way regardless of which one built the config.
 
-**Serialization:** relies on the generic `IPropertyObject` mechanism for `"AuthenticationMethod"` only - every candidate authentication method and the selected one round-trip through it like any other property. `"SuppliedCredential"` is excluded from it, never persisted at all. Deserializing can't use the generic property-object reconstruction pipeline as a black box (this class has no default constructor that adds `"AuthenticationMethod"` up front the way its real constructor does), so it builds a bare stub first, then runs that same generic pipeline on it to add `"AuthenticationMethod"` back from its own serialized definition and restore its saved selection, if one was saved.
+**Serialization:** entirely custom - replaces the inherited generic `IPropertyObject` mechanism (mirrors `DeviceTypeImpl`'s own pattern). Writes exactly two things: the full `supportedAuthenticationMethods` dict (every candidate `IAuthenticationMethod`, self-serializing via its own `ISerializable`) and the currently selected id. `"SuppliedCredential"` is never written. Deserializing rebuilds the config directly from those two pieces, via the real constructor plus `setAuthenticationMethodId()` to restore the saved selection - fully self-contained, no module/type registry re-consultation needed.
 
 ---
 
@@ -117,25 +128,24 @@ Builds `ICredentialRequest` objects.
 
 ### Credentials
 
-There is no dedicated credential interface - a credential is simply an `IPropertyObject`, built from the authentication method's `createEmptyCredential()` template and filled in with the actual value(s). For a `KeyValuePairs`-format method it has one String property per key (e.g. `"UserName"`, `"Password"`); for `String`/`FilePath` it has a single String property, named and described by the authentication method's own registered credential class (e.g. `"Pin"`, `"PrivateKeyFilePath"`). Both a credential provider's `requestCredentials` and a caller directly supplying a credential (`IAuthenticationConfig`'s `"SuppliedCredential"` property) produce/consume this exact same shape - see [§5](#5-credential-provider-selection--supplied-credentials).
+There is no dedicated credential interface - a credential is simply a `Dict<IString, IString>`, one entry per field, keyed by each field's own id (see `ICredentialField::getId`). An entry for a field that isn't required may be left out entirely, or supplied empty; `CredentialSatisfiesMethod(authenticationMethod, credential)` is what checks a given credential actually carries a non-empty value for every field the method marks required. Both a credential provider's `requestCredentials` and a caller directly supplying a credential (`IAuthenticationConfig`'s `"SuppliedCredential"` property) produce/consume this exact same shape - see [§5](#5-credential-provider-selection--supplied-credentials).
 
-A `None`-format method needs no credentials at all - no `createEmptyCredential()` template, no `"SuppliedCredential"`, and no credential provider ever consulted for it (see [§8](#8-module-level-implementation)); selecting `"AuthenticationMethod"` to a `None`-format authentication method is the entire authentication step.
+A method with no fields needs no credentials at all - an empty dictionary always satisfies it trivially, `"SuppliedCredential"` stays at its empty default, and no credential provider is ever consulted for it (see [§8](#8-module-level-implementation)); selecting `"AuthenticationMethod"` to such a method is the entire authentication step.
 
 ---
 
 ### `ICredentialProvider`
 
-Supplies the credentials requested via an `ICredentialRequest` — by prompting the user, reading a file, or fetching from a credential store.
+Supplies the credentials requested via an `ICredentialRequest` — by prompting the user, reading a file, or fetching from a credential store. Declares no supported field kinds up front - if a request needs a field kind an implementation can't handle, `requestCredentials`/`cacheCredentials` is expected to fail on its own (an ordinary failed call, propagated like any other failure from them, all the way back to the original `addDevice`/`addStreaming` caller), rather than being pre-checked by `Module`.
 
 | Member | Description |
 |---|---|
 | `getDescription(IString**)` | A human-readable description of the provider - e.g. for identifying it in a log message or an error. Not an id - not expected to be unique, or stable across implementations. |
-| `requestCredentials(ICredentialRequest*, IPropertyObject**)` | Requests credentials for the given request, in the format described by its authentication method — obtaining them interactively (prompting, reading a file, etc.) unless a cached value from an earlier `cacheCredentials`/`requestCredentials` call for the same context already covers it. Returns a property object built from the authentication method's `createEmptyCredential` template, filled in with the obtained value(s). |
-| `cacheCredentials(ICredentialRequest*, IPropertyObject* credential)` | Accepts a credential already known in advance (see `IAuthenticationConfig`'s `"SuppliedCredential"` property), shaped like the request's authentication method's `createEmptyCredential` template, so an implementation that would otherwise cache a value obtained interactively caches this one the same way — a later `requestCredentials` call for the same context then reuses it instead of prompting. Produces nothing itself; the caller already has it and uses it directly. Implementations for which caching doesn't apply (or doesn't apply to the request's format) may treat this as a no-op. |
-| `getSupportedFormats(IList**)` | The list of `CredentialFormat` values this provider can supply — used for format-matching against a device type's supported formats. Should never include `None` - there is nothing for a provider to supply for it; `Module` resolves a `None`-format request entirely on its own, without ever consulting a provider (see [§8](#8-module-level-implementation)). |
+| `requestCredentials(ICredentialRequest*, IDict**)` | Requests credentials for the given request, in the shape described by its authentication method — obtaining them interactively (prompting, reading a file, etc.) unless a cached value from an earlier `cacheCredentials`/`requestCredentials` call for the same context already covers it. Returns a dictionary of field value(s), keyed by their own field id. Fails if this implementation can't actually collect one of the request's field kinds. |
+| `cacheCredentials(ICredentialRequest*, IDict* credential)` | Accepts a credential already known in advance (see `IAuthenticationConfig`'s `"SuppliedCredential"` property) - a dictionary of field value(s), keyed by their own field id - so an implementation that would otherwise cache a value obtained interactively caches this one the same way — a later `requestCredentials` call for the same context then reuses it instead of prompting. Produces nothing itself; the caller already has it and uses it directly. Implementations for which caching doesn't apply may treat this as a no-op. |
 
 **Factory:**
-- `CmdLineCredentialProvider()` — the only credential provider implementation the SDK ships. Prompts the user for credentials via the command line, supporting every `CredentialFormat`: `KeyValuePairs`/`String` are read as plain (or hidden, per the authentication method's own `"Hidden"` parameter) input; `FilePath` is validated locally - retried up to 3 times if the entered path isn't accessible, then fails authentication - and cached in-memory for its own lifetime (i.e. for the active session), keyed by `(manufacturer, serialNumber)`, so a second interactive request for the same device reuses the path already entered (or supplied via `cacheCredentials`) instead of prompting again. `String`/`KeyValuePairs` credentials are never cached.
+- `CmdLineCredentialProvider()` — the only credential provider implementation the SDK ships. Prompts the user for credentials via the command line, supporting every `CredentialFieldKind`: `Text`/`Secret` fields are read as plain (or masked) input; `FilePath` is read exactly the same way as `Text` - no local validation or retry of its own on a cache hit - but is validated locally (must name an existing, accessible file) right after being freshly read. Every field, whatever its kind, is cached in-memory for its own lifetime (i.e. for the active session), as one entry per `(manufacturer, serialNumber, authentication method id)` carrying every field value cached so far for that method - not one independent entry per field - so a second interactive request for the same device via the same method reuses every value already entered (or supplied via `cacheCredentials`) instead of prompting again, `Secret` fields included.
 
 ---
 
@@ -232,14 +242,14 @@ There is no provider *selection* at all - at most one credential provider can ev
 
 ### Supplying the credential directly
 
-Setting `"SuppliedCredential"` hands the module a credential it already has — a property object built from the config's authentication method's `createEmptyCredential()` template and filled in with the actual value(s) — instead of having the registered provider obtain one interactively. The write is validated against the *currently selected* `"AuthenticationMethod"` (see [§1](#1-core-interfaces)), so select the method first:
+Setting `"SuppliedCredential"` hands the module a credential it already has — a dictionary of field value(s), keyed by their own field id — instead of having the registered provider obtain one interactively. A non-empty write is validated against the *currently selected* `"AuthenticationMethod"` (see [§1](#1-core-interfaces)): it must carry a non-empty value for every field the method marks required, so select the method first:
 
 ```cpp
 auto config = AuthenticationConfig(deviceType); // UserNamePassword is the default method
 
-auto credential = config.getSupportedAuthenticationMethods().get(config.getSelectedAuthenticationMethodId()).createEmptyCredential();
-credential.setPropertyValue("UserName", "user");
-credential.setPropertyValue("Password", "pass");
+auto credential = Dict<IString, IString>();
+credential.set("UserName", "user");
+credential.set("Password", "pass");
 config.setPropertyValue("SuppliedCredential", credential);
 
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, config);
@@ -248,19 +258,19 @@ auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, con
 - **No credential provider registered:** the module uses the supplied credential directly and authenticates with it, with no prompt of any kind.
 - **A provider is registered:** the module still uses the supplied credential directly for this connection, but first hands both it and the credential request to that provider via `ICredentialProvider::cacheCredentials`, so the provider can remember it the same way it would one obtained interactively.
 
-The second case is what makes it possible for a *later*, ordinary `requestCredentials` call — e.g. authenticating a streaming connection attached to the same device — to be served from the provider's cache instead of prompting, provided the provider actually caches for that format (see `CmdLineCredentialProvider`'s `FilePath` caching) and the two requests share the same `(manufacturer, serialNumber)`:
+The second case is what makes it possible for a *later*, ordinary `requestCredentials` call — e.g. authenticating a streaming connection attached to the same device — to be served from the provider's cache instead of prompting, provided the provider actually caches for that field kind (see `CmdLineCredentialProvider`'s `FilePath` caching) and the two requests share the same `(manufacturer, serialNumber)`:
 
 ```cpp
 auto deviceConfig = AuthenticationConfig(deviceType);
 SelectAuthenticationMethod(deviceConfig, "PrivateKeyFile");
 
-auto deviceCredential = deviceConfig.getSupportedAuthenticationMethods().get(deviceConfig.getSelectedAuthenticationMethodId()).createEmptyCredential();
-deviceCredential.setPropertyValue("PrivateKeyFilePath", "/path/to/private_key.pem");
+auto deviceCredential = Dict<IString, IString>();
+deviceCredential.set("PrivateKeyFilePath", "/path/to/private_key.pem");
 deviceConfig.setPropertyValue("SuppliedCredential", deviceCredential);
 
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, deviceConfig);
 
-// Same device, same FilePath-format method - no path prompt this time; the registered provider serves
+// Same device, same FilePath field - no path prompt this time; the registered provider serves
 // it from the cache `cacheCredentials` populated above.
 auto streamingConfig = AuthenticationConfig(streamingType);
 SelectAuthenticationMethod(streamingConfig, "PrivateKeyFile");
@@ -381,15 +391,15 @@ This section describes what happens internally when `Module::createAuthenticated
 
 Steps 1–3 and 5 below are handled entirely by the base `Module` class itself (`module_impl.h`), *before and after* the module's own overridable hook (`onCreateAuthenticatedDevice`/`onCreateStreaming`) is even invoked - the raw `IAuthenticationConfig` never reaches a module's own implementation at all. The hook receives only the already-resolved authentication method id and credentials (both left unassigned for an unauthenticated streaming connection); its own job is reduced to step 4 - constructing the component and verifying the credentials it was handed.
 
-A `None`-format method skips steps 2–3 entirely: `Module::requestCredentials` resolves it directly, forming no `ICredentialRequest` and consulting no credential provider, since there is nothing to request. Step 4 still runs, with `credentials` left unassigned - the same shape as an unauthenticated streaming connection.
+A method with no fields (e.g. `"Anonymous"`) skips steps 2–3 entirely: `Module::requestCredentials` resolves it directly, forming no `ICredentialRequest` and consulting no credential provider, since there is nothing to request. Step 4 still runs, with `credentials` left unassigned - the same shape as an unauthenticated streaming connection.
 
-1. **Resolve the authentication method to use.** `Module::createAuthenticatedDevice`/`createStreaming` reads the authentication method id off the supplied `IAuthenticationConfig` (`getSelectedAuthenticationMethodId`) and looks its corresponding authentication method up in `getSupportedAuthenticationMethods()` - for streaming, only after first substituting the resolved streaming type's own default config (`resolveDefaultAuthenticationConfig`) if none was explicitly given and the type supports authentication.
+1. **Resolve the authentication method to use.** `Module::createAuthenticatedDevice`/`createStreaming` reads the authentication method directly off the supplied `IAuthenticationConfig` (`getSelectedAuthenticationMethod`) - for streaming, only after first substituting the resolved streaming type's own default config (`resolveDefaultAuthenticationConfig`) if none was explicitly given and the type supports authentication.
 
 2. **Build the credential request.** `Module::requestCredentials` builds a new `ICredentialRequest` via `ICredentialRequestBuilder`, populating connection string (canonicalized via the module's own `onGetCanonicalConnectionString` override), manufacturer/serial number (if resolved), the authentication method, and component type - the same way whether this is a fresh connection or a reload, since the request is always built fresh from whichever `IAuthenticationConfig` is in hand (a freshly-built one, or one reconstructed from its reduced saved form - see step 5 and [Serialization](#serialization) in [§1](#1-core-interfaces)). `addMetaDataProperty` (see [§1](#1-core-interfaces)) is left untouched here - the request's own `getComponentType()`/`getConnectionString()` already cover what a module building through `Module` would otherwise duplicate into it; a module bypassing `requestCredentials` to build its own request is still free to attach extra metadata.
 
-3. **Resolve the credentials.** `Module::obtainCredentials` reads `context.getCredentialProvider()` and the authentication config's `getSuppliedCredential()`, and branches on whether the latter returned one:
-   - **A credential is supplied:** no provider obtains anything — the supplied property object (already shaped like the authentication method's `createEmptyCredential` template) is used directly as the credential. If a provider is registered, it is handed the credential via `provider.cacheCredentials(request, credential)`, so it can remember it the same way it would one obtained interactively — but the credential used for *this* connection is always the one the caller supplied, regardless of whether caching succeeds.
-   - **No credential supplied:** the registered provider (failing immediately, with a message identifying the problem, if none is registered at all or the registered one doesn't support the required format) is asked via `provider.requestCredentials(request)`, obtaining credentials - a property object built from the authentication method's `createEmptyCredential` template - interactively, or served from that provider's own cache if a matching entry exists (e.g. from an earlier `cacheCredentials` call, or an earlier interactive request for the same context).
+3. **Resolve the credentials.** `Module::obtainCredentials` reads `context.getCredentialProvider()` and the authentication config's `getSuppliedCredential()`, and branches on whether the latter is non-empty (supplied) or empty (not supplied):
+   - **A credential is supplied (non-empty):** no provider obtains anything — the supplied dictionary (already carrying a non-empty value for every required field, per `CredentialSatisfiesMethod`) is used directly as the credential. If a provider is registered, it is handed the credential via `provider.cacheCredentials(request, credential)`, so it can remember it the same way it would one obtained interactively — but the credential used for *this* connection is always the one the caller supplied, regardless of whether caching succeeds.
+   - **No credential supplied (empty):** failing immediately if no provider is registered at all; otherwise the registered provider is asked via `provider.requestCredentials(request)`, obtaining credentials - a dictionary of field value(s), keyed by their own field id - interactively, or served from that provider's own cache if a matching entry exists (e.g. from an earlier `cacheCredentials` call, or an earlier interactive request for the same context). No field-kind compatibility is pre-checked - if the provider can't actually handle one of the request's fields, whatever it fails `requestCredentials` with propagates up unmodified.
 
 > **Note:** retry/fallback behavior on failure is `Module`'s own policy, not prescribed by the core interfaces themselves - `requestCredentials`/`obtainCredentials`/`resolveDefaultAuthenticationConfig` are ordinary (non-virtual) `Module` methods a subclass can call directly for finer control, though `onCreateAuthenticatedDevice`/`onCreateStreaming` don't need to. Which provider gets used, however, is never `Module`'s own policy at all - there is only ever the one registered on `Context` (see [§5](#5-credential-provider-selection--supplied-credentials)), if any.
 

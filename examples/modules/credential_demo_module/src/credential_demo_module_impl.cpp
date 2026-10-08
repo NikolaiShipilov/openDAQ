@@ -66,7 +66,7 @@ DevicePtr CredentialDemoModule::onCreateAuthenticatedDevice(const StringPtr& con
                                                             const ComponentPtr& parent,
                                                             const PropertyObjectPtr& config,
                                                             const StringPtr& authenticationMethodId,
-                                                            const PropertyObjectPtr& credentials)
+                                                            const DictPtr<IString, IString>& credentials)
 {
     const auto options = populateDefaultModuleOptions(this->context.getModuleOptions(CREDENTIAL_DEMO_MODULE_ID));
     auto info = CredentialDemoDeviceImpl::CreateDeviceInfo(options, context);
@@ -94,7 +94,7 @@ StreamingPtr CredentialDemoModule::onCreateStreaming(const StringPtr& connection
 StreamingPtr CredentialDemoModule::onCreateAuthenticatedStreaming(const StringPtr& connectionString,
                                                                    const PropertyObjectPtr& /*config*/,
                                                                    const StringPtr& authenticationMethodId,
-                                                                   const PropertyObjectPtr& credentials)
+                                                                   const DictPtr<IString, IString>& credentials)
 {
     return createWithImplementation<IStreaming, CredentialDemoStreamingImpl>(connectionString, context, authenticationMethodId, credentials);
 }

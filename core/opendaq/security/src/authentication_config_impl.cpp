@@ -8,6 +8,7 @@
 #include <coretypes/function_ptr.h>
 #include <coretypes/ctutils.h>
 #include <opendaq/authentication_config_ptr.h>
+#include <opendaq/authentication_method_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -27,54 +28,23 @@ void AuthenticationConfigImpl::initProperties(const DictPtr<IString, IAuthentica
         authenticationMethodIds.pushBack(id);
 
     Super::addProperty(SelectionProperty(AuthenticationMethodPropertyName, authenticationMethodIds, 0));
+    Super::addProperty(DictProperty(SuppliedCredentialPropertyName, Dict<IString, IString>()));
     this->supportedAuthenticationMethods = authenticationMethods;
 }
 
-void AuthenticationConfigImpl::clearSuppliedCredentialIfIncompatible(const StringPtr& selectedMethodId)
+AuthenticationMethodPtr AuthenticationConfigImpl::onGetSelectedAuthenticationMethod() const
 {
-    if (!objPtr.hasProperty(SuppliedCredentialPropertyName))
-        return;
-
-    const PropertyObjectPtr credential = objPtr.getPropertyValue(SuppliedCredentialPropertyName);
-    const AuthenticationMethodPtr selectedMethod =
-        selectedMethodId.assigned() ? supportedAuthenticationMethods.getOrDefault(selectedMethodId) : nullptr;
-    if (!IsSuppliedCredentialShapeValid(credential, selectedMethod))
-        Super::removeProperty(String(SuppliedCredentialPropertyName));
+    const StringPtr selectedId = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
+    return supportedAuthenticationMethods.get(selectedId);
 }
 
-bool AuthenticationConfigImpl::IsSuppliedCredentialShapeValid(const PropertyObjectPtr& credential, const AuthenticationMethodPtr& selectedMethod)
+ErrCode AuthenticationConfigImpl::getSelectedAuthenticationMethod(IAuthenticationMethod** authenticationMethod)
 {
-    if (!credential.assigned() || !selectedMethod.assigned())
-        return false;
-
-    // "None" requires no credentials at all - no credential is ever valid for it, and it has no
-    // `createEmptyCredential()` template to compare against in the first place.
-    if (selectedMethod.getFormat() == CredentialFormat::None)
-        return false;
-
-    const PropertyObjectPtr templateObj = selectedMethod.createEmptyCredential();
-    const auto templateProps = templateObj.getAllProperties();
-
-    if (templateProps.getCount() != credential.getAllProperties().getCount())
-        return false;
-
-    for (const auto& prop : templateProps)
-    {
-        if (!credential.hasProperty(prop.getName()))
-            return false;
-    }
-
-    return true;
-}
-
-ErrCode AuthenticationConfigImpl::getSelectedAuthenticationMethodId(IString** authenticationMethodId)
-{
-    OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
+    OPENDAQ_PARAM_NOT_NULL(authenticationMethod);
 
     return daqTry([&]
     {
-        StringPtr selected = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
-        *authenticationMethodId = selected.detach();
+        *authenticationMethod = onGetSelectedAuthenticationMethod().addRefAndReturn();
         return OPENDAQ_SUCCESS;
     });
 }
@@ -83,17 +53,13 @@ ErrCode AuthenticationConfigImpl::setAuthenticationMethodId(IString* authenticat
 {
     OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
 
-    return daqTry([&]
+    const StringPtr idPtr = StringPtr::Borrow(authenticationMethodId);
+
+    if (!supportedAuthenticationMethods.hasKey(idPtr))
     {
-        const StringPtr idPtr = StringPtr::Borrow(authenticationMethodId);
-
-        if (!supportedAuthenticationMethods.hasKey(idPtr))
-            DAQ_THROW_EXCEPTION(
-                NotFoundException, "\"{}\" is not one of this config's supported authentication methods", idPtr);
-
-        checkErrorInfo(this->setPropertySelectionValue(String(AuthenticationMethodPropertyName), idPtr));
-        return OPENDAQ_SUCCESS;
-    });
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND, "\"{}\" is not one of this config's supported authentication methods", idPtr);
+    }
+    return this->setPropertySelectionValue(String(AuthenticationMethodPropertyName), authenticationMethodId);
 }
 
 ErrCode AuthenticationConfigImpl::getSupportedAuthenticationMethods(IDict** authenticationMethods)
@@ -104,17 +70,14 @@ ErrCode AuthenticationConfigImpl::getSupportedAuthenticationMethods(IDict** auth
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode AuthenticationConfigImpl::getSuppliedCredential(IPropertyObject** credential)
+ErrCode AuthenticationConfigImpl::getSuppliedCredential(IDict** credential)
 {
     OPENDAQ_PARAM_NOT_NULL(credential);
 
     return daqTry([&]
     {
-        // Present only when the caller actually set one - an Object-type property cannot itself hold
-        // `nullptr`, so absence of the property is the only way to represent "none supplied".
-        *credential = objPtr.hasProperty(SuppliedCredentialPropertyName)
-                      ? PropertyObjectPtr(objPtr.getPropertyValue(SuppliedCredentialPropertyName)).detach()
-                      : nullptr;
+        DictPtr<IString, IString> value = objPtr.getPropertyValue(SuppliedCredentialPropertyName);
+        *credential = value.detach();
         return OPENDAQ_SUCCESS;
     });
 }
@@ -155,12 +118,7 @@ ErrCode AuthenticationConfigImpl::onPropertyValueChanged(const StringPtr& name)
     if (name != AuthenticationMethodPropertyName)
         return OPENDAQ_SUCCESS;
 
-    return daqTry([&]
-    {
-        const StringPtr selectedId = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
-        clearSuppliedCredentialIfIncompatible(selectedId);
-        return OPENDAQ_SUCCESS;
-    });
+    return Super::setProtectedPropertyValue(String(SuppliedCredentialPropertyName), Dict<IString, IString>());
 }
 
 ErrCode AuthenticationConfigImpl::setPropertyValue(IString* propertyName, IBaseObject* value)
@@ -171,19 +129,21 @@ ErrCode AuthenticationConfigImpl::setPropertyValue(IString* propertyName, IBaseO
     {
         return daqTry([&]
         {
-            const PropertyObjectPtr credential = BaseObjectPtr::Borrow(value).asPtrOrNull<IPropertyObject>();
-            const StringPtr selectedId = objPtr.getPropertySelectionValue(AuthenticationMethodPropertyName);
-            const AuthenticationMethodPtr selected = selectedId.assigned() ? supportedAuthenticationMethods.getOrDefault(selectedId) : nullptr;
-            if (!IsSuppliedCredentialShapeValid(credential, selected))
-                DAQ_THROW_EXCEPTION(InvalidParameterException,
-                                     "Supplied credential's shape does not match the currently selected authentication method \"{}\"",
-                                     selectedId.assigned() ? selectedId : StringPtr(""));
+            const BaseObjectPtr valuePtr = BaseObjectPtr::Borrow(value);
+            const DictPtr<IString, IString> credential = valuePtr.asPtr<IDict>();
+            if (credential.getCount() > 0)
+            {
+                const AuthenticationMethodPtr selected = onGetSelectedAuthenticationMethod();
+                if (!CredentialSatisfiesMethod(selected, credential))
+                {
+                    DAQ_THROW_EXCEPTION(InvalidParameterException,
+                                         "Supplied credential is missing one or more fields required by the currently selected "
+                                         "authentication method \"{}\"",
+                                         selected.assigned() ? selected.getId() : StringPtr(""));
+                }
+            }
 
-            // "SuppliedCredential" is never declared up front - added here on first write.
-            if (!objPtr.hasProperty(SuppliedCredentialPropertyName))
-                return Super::addProperty(ObjectProperty(SuppliedCredentialPropertyName, credential));
-
-            return Super::setProtectedPropertyValue(propertyName, value);
+            return Super::setPropertyValue(propertyName, value);
         });
     }
 

@@ -11,7 +11,7 @@ static const std::string CredentialDemoStreamingTypeId = "CredentialDemoStreamin
 CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connectionString,
                                                           const ContextPtr& ctx,
                                                           const StringPtr& authenticationMethodId,
-                                                          const PropertyObjectPtr& credentials)
+                                                          const DictPtr<IString, IString>& credentials)
     : Streaming(connectionString, ctx, /*skipDomainSignalSubscribe*/ true)
 {
     authentication::Authenticate(ctx, credentials, authenticationMethodId);

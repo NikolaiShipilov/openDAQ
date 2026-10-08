@@ -55,7 +55,7 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getSelectedAuthenticationMethodId().toStdString();
+            return objectPtr.getSelectedAuthenticationMethod().getId().toStdString();
         },
         [](daq::IAuthenticationConfig *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& authenticationMethodId)
         {
@@ -64,6 +64,15 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
             objectPtr.setAuthenticationMethodId(getVariantValue<daq::IString*>(authenticationMethodId));
         },
         "Gets or selects the authentication method currently used, by its own id - the selected `\"AuthenticationMethod\"` property value's own `IAuthenticationMethod::getId()`. Setting it looks the matching authentication method up among `supported_authentication_methods` internally.");
+    cls.def_property_readonly("selected_authentication_method",
+        [](daq::IAuthenticationConfig *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            return objectPtr.getSelectedAuthenticationMethod().detach();
+        },
+        py::return_value_policy::take_ownership,
+        "Gets the authentication method currently selected - the one of `supported_authentication_methods` whose own id matches the selected `\"AuthenticationMethod\"` property value.");
     cls.def_property_readonly("supported_authentication_methods",
         [](daq::IAuthenticationConfig *object)
         {
@@ -81,5 +90,5 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
             return objectPtr.getSuppliedCredential().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the credential supplied directly by the caller - the value of the `\"SuppliedCredential\"` property.");
+        "Gets the credential supplied directly by the caller - the value of the `\"SuppliedCredential\"` property, a dictionary of field value(s) keyed by their own field id. Always assigned - empty means none was supplied.");
 }

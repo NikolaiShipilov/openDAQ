@@ -174,6 +174,7 @@ extern "C"
 
 #include <copendaq/security/authentication_config.h>
 #include <copendaq/security/authentication_method.h>
+#include <copendaq/security/credential_field.h>
 #include <copendaq/security/credential_provider.h>
 #include <copendaq/security/credential_request.h>
 #include <copendaq/security/credential_request_builder.h>

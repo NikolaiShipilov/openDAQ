@@ -58,9 +58,10 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
             return objectPtr.requestCredentials(request).detach();
         },
         py::arg("request"),
-        "Requests credentials for the given request, in the format described by its authentication method.");
+        py::return_value_policy::take_ownership,
+        "Requests credentials for the given request, in the shape described by its authentication method - a dictionary of field value(s), keyed by their own field id.");
     cls.def("cache_credentials",
-        [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, daq::IPropertyObject* credential)
+        [](daq::ICredentialProvider *object, daq::ICredentialRequest* request, daq::IDict* credential)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
@@ -68,13 +69,4 @@ void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialPr
         },
         py::arg("request"), py::arg("credential"),
         "Accepts a credential already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s `\"SuppliedCredential\"` property - so an implementation that caches values it obtains interactively caches this one the same way. A later interactive `requestCredentials` call for the same context then reuses it instead of prompting again. Does not itself produce a credential - the caller already has it and uses it directly. Implementations for which caching doesn't apply may treat this as a no-op.");
-    cls.def_property_readonly("supported_formats",
-        [](daq::ICredentialProvider *object)
-        {
-            py::gil_scoped_release release;
-            const auto objectPtr = daq::CredentialProviderPtr::Borrow(object);
-            return objectPtr.getSupportedFormats().detach();
-        },
-        py::return_value_policy::take_ownership,
-        "Gets a list of the credential formats this provider can provide. Used for format-matching against a device type's supported formats.");
 }

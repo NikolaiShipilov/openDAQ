@@ -16,87 +16,69 @@
 
 #pragma once
 #include <opendaq/authentication_method_ptr.h>
+#include <opendaq/credential_field_factory.h>
 #include <coretypes/dictobject_factory.h>
-#include <coretypes/boolean_factory.h>
-#include <coretypes/struct_type_factory.h>
-#include <coretypes/simple_type_factory.h>
-#include <coretypes/listobject_factory.h>
-#include <coretypes/ctutils.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*!
- * @brief The `IStructType` backing a `KeyValuePairs`-format authentication method's nested `"Parameters"`
- * field - a single `"Keys"` dict field. Never registered with any `ITypeManager` - built fresh wherever
- * needed, purely as a local value shape for `AuthenticationMethodImpl`'s own `getParameters()`.
- */
-inline StructTypePtr KeyValueAuthenticationMethodParametersStructType()
-{
-    return StructType("KeyValueAuthenticationMethodParameters", List<IString>("Keys"), List<IType>(SimpleType(ctDict)));
-}
-
-/*!
- * @brief The `IStructType` backing a `String`-format authentication method's nested `"Parameters"` field - a
- * single `"Hidden"` bool field. Never registered with any `ITypeManager` (see
- * `KeyValueAuthenticationMethodParametersStructType`).
- */
-inline StructTypePtr StringAuthenticationMethodParametersStructType()
-{
-    return StructType("StringAuthenticationMethodParameters", List<IString>("Hidden"), List<IType>(SimpleType(ctBool)));
-}
-
-/*!
- * @brief Creates a `AuthenticationMethod` describing a `KeyValuePairs`-format credential.
+ * @brief Creates a `AuthenticationMethod` - `fields` names every credential field it expects (empty for a
+ * method that needs no credentials, e.g. anonymous access).
  * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
- * @param keys The expected keys, mapped to whether the corresponding value should be hidden as it is
- * entered (e.g. `{"UserName": False, "Password": True}`) - also names the properties `createEmptyCredential()`
- * builds, one per key.
+ * @param fields The credential fields this method expects, keyed by their own name, in declaration order.
  * @param description A human-readable description of the authentication method, for the user.
  */
-inline AuthenticationMethodPtr KeyValueAuthenticationMethod(const StringPtr& id, const DictPtr<IString, IBoolean>& keys, const StringPtr& description)
+inline AuthenticationMethodPtr AuthenticationMethod(const StringPtr& id, const DictPtr<IString, ICredentialField>& fields, const StringPtr& description)
 {
-    AuthenticationMethodPtr obj(KeyValueAuthenticationMethod_Create(id, keys, description));
+    AuthenticationMethodPtr obj(AuthenticationMethod_Create(id, fields, description));
     return obj;
 }
 
 /*!
- * @brief Creates a `AuthenticationMethod` describing a `String`-format credential - a single value,
- * e.g. a PIN, token, or API key.
- * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
- * @param description A human-readable description of the authentication method, for the user.
- * @param hidden Whether the value should be hidden as it is entered.
- * @param valuePropertyName The name `createEmptyCredential()` gives the single property it builds (e.g. `"Pin"`).
- */
-inline AuthenticationMethodPtr StringAuthenticationMethod(const StringPtr& id, const StringPtr& description, Bool hidden, const StringPtr& valuePropertyName)
-{
-    AuthenticationMethodPtr obj(StringAuthenticationMethod_Create(id, description, hidden, valuePropertyName));
-    return obj;
-}
-
-/*!
- * @brief Creates a `AuthenticationMethod` describing a `FilePath`-format credential - a single value
- * stating that the credential is a path to a file (e.g. a private key) rather than the value itself.
- * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
- * @param description A human-readable description of the authentication method, for the user.
- * @param valuePropertyName The name `createEmptyCredential()` gives the single property it builds (e.g. `"PrivateKeyFilePath"`).
- */
-inline AuthenticationMethodPtr FilePathAuthenticationMethod(const StringPtr& id, const StringPtr& description, const StringPtr& valuePropertyName)
-{
-    AuthenticationMethodPtr obj(FilePathAuthenticationMethod_Create(id, description, valuePropertyName));
-    return obj;
-}
-
-/*!
- * @brief Creates a `AuthenticationMethod` describing a `None`-format method - no credential value(s) at all,
- * for an authentication method that requires no credentials, e.g. typically an anonymous access. There is no
- * credential to build - `createEmptyCredential()` is not supported for it, and returns `OPENDAQ_ERR_NOT_SUPPORTED`.
+ * @brief Creates a `AuthenticationMethod` with no credential fields at all - for an authentication method that
+ * requires no credentials, e.g. typically anonymous access.
  * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
  * @param description A human-readable description of the authentication method, for the user.
  */
 inline AuthenticationMethodPtr NoneAuthenticationMethod(const StringPtr& id, const StringPtr& description)
 {
-    AuthenticationMethodPtr obj(NoneAuthenticationMethod_Create(id, description));
-    return obj;
+    return AuthenticationMethod(id, Dict<IString, ICredentialField>(), description);
+}
+
+/*!
+ * @brief Checks whether `credential` is usable as-is for `authenticationMethod` - every field the method marks
+ * required (`ICredentialField::isRequired`) is present among `credential`'s keys with a non-empty value. A
+ * field that isn't required is never checked, whether present or not. `false` if `authenticationMethod` itself
+ * is unassigned, or if it has no fields at all (a method with no fields needs no credential, so none - empty
+ * or not - is ever considered to satisfy it; callers that reach here with an actual, non-empty `credential`
+ * only ever do so for a method that does have fields - a field-less one never gets this far via the normal
+ * resolution path, see `Module::obtainCredentials`).
+ * @param authenticationMethod The authentication method to check `credential` against.
+ * @param credential A credential - a dictionary of field value(s), keyed by their own field id.
+ */
+inline bool CredentialSatisfiesMethod(const AuthenticationMethodPtr& authenticationMethod, const DictPtr<IString, IString>& credential)
+{
+    if (!authenticationMethod.assigned())
+        return false;
+
+    const auto fields = authenticationMethod.getFields();
+    if (fields.getCount() == 0)
+        return false;
+
+    for (const auto& [fieldId, field] : fields)
+    {
+        if (!field.isRequired())
+            continue;
+
+        if (!credential.assigned() || !credential.hasKey(fieldId))
+            return false;
+
+        const StringPtr value = credential.get(fieldId);
+        if (!value.assigned() || value.getLength() == 0)
+            return false;
+    }
+
+    return true;
 }
 
 /*!
@@ -110,36 +92,42 @@ inline constexpr const char* StandardPrivateKeyFileId = "PrivateKeyFile";
 inline constexpr const char* StandardAnonymousId = "Anonymous";
 
 /*!
- * @brief The authentication method for the standard `UserName`/`Password` authentication method - a
- * `KeyValuePairs`-format credential with the password hidden as typed.
+ * @brief The authentication method for the standard `UserName`/`Password` authentication method.
  */
 inline AuthenticationMethodPtr StandardUserNamePasswordAuthenticationMethod()
 {
-    return KeyValueAuthenticationMethod(
-        StandardUserNamePasswordId, Dict<IString, IBoolean>({{"UserName", False}, {"Password", True}}), "Username and password");
+    return AuthenticationMethod(StandardUserNamePasswordId,
+                                 Dict<IString, ICredentialField>({{"UserName", CredentialField("UserName", CredentialFieldKind::Text, "User name")},
+                                                                   {"Password", CredentialField("Password", CredentialFieldKind::Secret, "Password")}}),
+                                 "Username and password");
 }
 
 /*!
- * @brief The authentication method for the standard PIN authentication method - a `String`-format
- * credential, hidden as typed.
+ * @brief The authentication method for the standard PIN authentication method.
  */
 inline AuthenticationMethodPtr StandardPinAuthenticationMethod()
 {
-    return StringAuthenticationMethod(StandardPinId, "PIN code", True, "Pin");
+    return AuthenticationMethod(StandardPinId,
+                                 Dict<IString, ICredentialField>({{"Pin", CredentialField("Pin", CredentialFieldKind::Secret, "PIN code")}}),
+                                 "PIN code");
 }
 
 /*!
- * @brief The authentication method for the standard private-key-file authentication method - a
- * `FilePath`-format credential.
+ * @brief The authentication method for the standard private-key-file authentication method.
  */
 inline AuthenticationMethodPtr StandardPrivateKeyFileAuthenticationMethod()
 {
-    return FilePathAuthenticationMethod(StandardPrivateKeyFileId, "Path to the PEM-encoded private key file", "PrivateKeyFilePath");
+    return AuthenticationMethod(
+        StandardPrivateKeyFileId,
+        Dict<IString, ICredentialField>(
+            {{"PrivateKeyFilePath",
+              CredentialField("PrivateKeyFilePath", CredentialFieldKind::FilePath, "Private key file", Dict<IString, IString>({{"Extensions", "pem,key"}}))}}),
+        "Path to the PEM-encoded private key file");
 }
 
 /*!
- * @brief The authentication method for the standard anonymous authentication method - a `None`-format
- * method, requiring no credentials at all.
+ * @brief The authentication method for the standard anonymous authentication method - requires no credentials
+ * at all.
  */
 inline AuthenticationMethodPtr StandardAnonymousAuthenticationMethod()
 {

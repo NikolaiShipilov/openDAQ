@@ -112,6 +112,7 @@ set(SRC_Cpp
     generated/component/py_component_type.cpp
     generated/utility/py_device_update_options.cpp
     generated/security/py_authentication_method.cpp
+    generated/security/py_credential_field.cpp
     generated/security/py_authentication_config.cpp
     generated/security/py_credential_provider.cpp
     generated/security/py_credential_request.cpp

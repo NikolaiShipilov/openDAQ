@@ -15,22 +15,24 @@
  */
 
 #pragma once
-#include <opendaq/authentication_method.h>
-#include <opendaq/credential_field_ptr.h>
+#include <opendaq/credential_field.h>
 #include <coretypes/impl.h>
-#include <coretypes/dict_ptr.h>
 #include <coretypes/serializable.h>
+#include <coretypes/string_ptr.h>
+#include <coretypes/dict_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
-class AuthenticationMethodImpl final : public ImplementationOf<IAuthenticationMethod, ISerializable>
+class CredentialFieldImpl final : public ImplementationOf<ICredentialField, ISerializable>
 {
 public:
-    AuthenticationMethodImpl(const StringPtr& id, const DictPtr<IString, ICredentialField>& fields, const StringPtr& description);
+    CredentialFieldImpl(IString* id, CredentialFieldKind kind, IString* name, IDict* metadata, Bool required);
 
     ErrCode INTERFACE_FUNC getId(IString** id) override;
-    ErrCode INTERFACE_FUNC getFields(IDict** fields) override;
-    ErrCode INTERFACE_FUNC getDescription(IString** description) override;
+    ErrCode INTERFACE_FUNC getKind(CredentialFieldKind* kind) override;
+    ErrCode INTERFACE_FUNC getName(IString** name) override;
+    ErrCode INTERFACE_FUNC getMetadata(IDict** metadata) override;
+    ErrCode INTERFACE_FUNC isRequired(Bool* required) override;
 
     ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
     ErrCode INTERFACE_FUNC getSerializeId(ConstCharPtr* id) const override;
@@ -39,8 +41,10 @@ public:
 
 private:
     StringPtr id;
-    DictPtr<IString, ICredentialField> fields;
-    StringPtr description;
+    CredentialFieldKind kind;
+    StringPtr name;
+    DictPtr<IString, IString> metadata;
+    Bool required;
 };
 
 END_NAMESPACE_OPENDAQ

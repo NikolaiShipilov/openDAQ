@@ -6,6 +6,7 @@ function(rtgen_component_${BASE_NAME})
     rtgen(SRC_CredentialRequestBuilder credential_request_builder.h)
     rtgen(SRC_AuthenticationConfig authentication_config.h)
     rtgen(SRC_AuthenticationMethod authentication_method.h)
+    rtgen(SRC_CredentialField credential_field.h)
 
     set(SRC_PublicHeaders_Component_Generated
         ${SRC_CredentialProvider_PublicHeaders}
@@ -13,6 +14,7 @@ function(rtgen_component_${BASE_NAME})
         ${SRC_CredentialRequestBuilder_PublicHeaders}
         ${SRC_AuthenticationConfig_PublicHeaders}
         ${SRC_AuthenticationMethod_PublicHeaders}
+        ${SRC_CredentialField_PublicHeaders}
         PARENT_SCOPE
     )
 
@@ -22,6 +24,7 @@ function(rtgen_component_${BASE_NAME})
         ${SRC_CredentialRequestBuilder_PrivateHeaders}
         ${SRC_AuthenticationConfig_PrivateHeaders}
         ${SRC_AuthenticationMethod_PrivateHeaders}
+        ${SRC_CredentialField_PrivateHeaders}
         PARENT_SCOPE
     )
 
@@ -31,6 +34,7 @@ function(rtgen_component_${BASE_NAME})
         ${SRC_CredentialRequestBuilder_Cpp}
         ${SRC_AuthenticationConfig_Cpp}
         ${SRC_AuthenticationMethod_Cpp}
+        ${SRC_CredentialField_Cpp}
         PARENT_SCOPE
     )
 endfunction()
@@ -54,11 +58,15 @@ function(create_component_source_groups_${BASE_NAME})
         ${SDK_HEADERS_DIR}/authentication_method.h
         ${SDK_HEADERS_DIR}/authentication_method_factory.h
         ${SDK_HEADERS_DIR}/authentication_method_impl.h
+        ${SDK_HEADERS_DIR}/credential_field.h
+        ${SDK_HEADERS_DIR}/credential_field_factory.h
+        ${SDK_HEADERS_DIR}/credential_field_impl.h
         ${SDK_SRC_DIR}/credential_request_impl.cpp
         ${SDK_SRC_DIR}/cmd_line_credential_provider_impl.cpp
         ${SDK_SRC_DIR}/credential_request_builder_impl.cpp
         ${SDK_SRC_DIR}/authentication_method_impl.cpp
         ${SDK_SRC_DIR}/authentication_config_impl.cpp
+        ${SDK_SRC_DIR}/credential_field_impl.cpp
     )
 endfunction()
 
@@ -72,6 +80,8 @@ set(SRC_PublicHeaders_Component
     authentication_config_factory.h
     authentication_method.h
     authentication_method_factory.h
+    credential_field.h
+    credential_field_factory.h
     PARENT_SCOPE
 )
 
@@ -81,6 +91,7 @@ set(SRC_PrivateHeaders_Component
     cmd_line_credential_provider_impl.h
     authentication_method_impl.h
     authentication_config_impl.h
+    credential_field_impl.h
     PARENT_SCOPE
 )
 
@@ -90,5 +101,6 @@ set(SRC_Cpp_Component
     credential_request_builder_impl.cpp
     authentication_method_impl.cpp
     authentication_config_impl.cpp
+    credential_field_impl.cpp
     PARENT_SCOPE
 )
