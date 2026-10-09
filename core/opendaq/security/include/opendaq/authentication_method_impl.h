@@ -18,8 +18,9 @@
 #include <opendaq/authentication_method.h>
 #include <opendaq/credential_field_ptr.h>
 #include <coretypes/impl.h>
-#include <coretypes/dict_ptr.h>
+#include <coretypes/dictobject_factory.h>
 #include <coretypes/serializable.h>
+#include <coretypes/serialized_object.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 

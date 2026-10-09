@@ -19,6 +19,7 @@
 #include <coreobjects/property_object_impl.h>
 #include <coretypes/dictobject_factory.h>
 #include <coretypes/listobject_factory.h>
+#include <coretypes/serialized_object.h>
 #include <opendaq/authentication_method_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
