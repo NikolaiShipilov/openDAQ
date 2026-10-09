@@ -60,8 +60,7 @@ public:
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                            IString* connectionString,
                                            IPropertyObject* config = nullptr,
-                                           IString* manufacturer = nullptr,
-                                           IString* serialNumber = nullptr) override;
+                                           IDevice* owner = nullptr) override;
     ErrCode INTERFACE_FUNC getAvailableStreamingTypes(IDict** streamingTypes) override;
     ErrCode INTERFACE_FUNC createDefaultAddDeviceConfig(IPropertyObject** defaultConfig) override;
     ErrCode INTERFACE_FUNC createServer(IServer** server, IString* serverTypeId, IDevice* rootDevice, IPropertyObject* serverConfig = nullptr) override;
@@ -115,8 +114,7 @@ private:
     StreamingPtr onCreateStreaming(const StringPtr& connectionString,
                                    const PropertyObjectPtr& config,
                                    const AuthenticationConfigPtr& authenticationConfig,
-                                   const StringPtr& manufacturer,
-                                   const StringPtr& serialNumber) const;
+                                   const DevicePtr& owner) const;
 
     static PropertyObjectPtr CreateGeneralConfig(Bool scanOnAdd);
     static void OverrideConfigProperties(PropertyObjectPtr& targetConfig, const PropertyObjectPtr& sourceConfig);

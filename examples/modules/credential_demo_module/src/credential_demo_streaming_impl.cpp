@@ -11,7 +11,7 @@ static const std::string CredentialDemoStreamingTypeId = "CredentialDemoStreamin
 CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connectionString,
                                                           const ContextPtr& ctx,
                                                           const StringPtr& authenticationMethodId,
-                                                          const PropertyObjectPtr& credentials)
+                                                          const DictPtr<IString, IString>& credentials)
     : Streaming(connectionString, ctx, /*skipDomainSignalSubscribe*/ true)
 {
     authentication::Authenticate(ctx, credentials, authenticationMethodId);
@@ -19,9 +19,9 @@ CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connec
 
 StreamingTypePtr CredentialDemoStreamingImpl::CreateType(const ContextPtr& context)
 {
-    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod(context.getTypeManager());
-    auto pinMethod = StandardPinAuthenticationMethod(context.getTypeManager());
-    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod(context.getTypeManager());
+    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod();
+    auto pinMethod = StandardPinAuthenticationMethod();
+    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod();
     auto anonymousMethod = StandardAnonymousAuthenticationMethod();
 
     // Showcases the same four authentication methods as the device, defaulting to PIN.

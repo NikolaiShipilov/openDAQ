@@ -1235,8 +1235,7 @@ ErrCode ModuleManagerImpl::createFunctionBlock(IFunctionBlock** functionBlock, I
 ErrCode ModuleManagerImpl::createStreaming(IStreaming** streaming,
                                            IString* connectionString,
                                            IPropertyObject* config,
-                                           IString* manufacturer,
-                                           IString* serialNumber)
+                                           IDevice* owner)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
     OPENDAQ_PARAM_NOT_NULL(streaming);
@@ -1248,7 +1247,7 @@ ErrCode ModuleManagerImpl::createStreaming(IStreaming** streaming,
 
     StreamingPtr streamingPtr;
     const ErrCode errCode = wrapHandlerReturn(
-        this, &ModuleManagerImpl::onCreateStreaming, streamingPtr, connectionString, config, authenticationConfig, manufacturer, serialNumber);
+        this, &ModuleManagerImpl::onCreateStreaming, streamingPtr, connectionString, config, authenticationConfig, DevicePtr::Borrow(owner));
     OPENDAQ_RETURN_IF_FAILED(errCode);
 
     *streaming = streamingPtr.detach();
@@ -1610,8 +1609,7 @@ PropertyObjectPtr ModuleManagerImpl::PopulateGeneralConfig(PropertyObjectPtr& ad
 StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionString,
                                                   const PropertyObjectPtr& config,
                                                   const AuthenticationConfigPtr& authenticationConfig,
-                                                  const StringPtr& manufacturer,
-                                                  const StringPtr& serialNumber) const
+                                                  const DevicePtr& owner) const
 {
     StreamingPtr streaming = nullptr;
     PropertyObjectPtr inputConfig;
@@ -1670,7 +1668,7 @@ StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionStr
 
         try
         {
-            streaming = module.createStreaming(connectionString, streamingTypeConfig, manufacturer, serialNumber);
+            streaming = module.createStreaming(connectionString, streamingTypeConfig, owner);
         }
         catch ([[maybe_unused]] const std::exception& e)
         {

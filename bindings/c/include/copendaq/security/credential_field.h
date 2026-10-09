@@ -34,19 +34,19 @@ extern "C"
 
 #include <ccommon.h>
 
-    typedef struct daqAuthenticationConfig daqAuthenticationConfig;
+    typedef struct daqCredentialField daqCredentialField;
     typedef struct daqString daqString;
     typedef struct daqDict daqDict;
-    typedef struct daqAuthenticationMethod daqAuthenticationMethod;
 
-    EXPORTED extern const daqIntfID DAQ_AUTHENTICATION_CONFIG_INTF_ID;
-    void EXPORTED daqAuthenticationConfig_getInterfaceId(daqIntfID* intfId);
+    EXPORTED extern const daqIntfID DAQ_CREDENTIAL_FIELD_INTF_ID;
+    void EXPORTED daqCredentialField_getInterfaceId(daqIntfID* intfId);
 
-    daqErrCode EXPORTED daqAuthenticationConfig_getSelectedAuthenticationMethod(daqAuthenticationConfig* self, daqAuthenticationMethod** authenticationMethod);
-    daqErrCode EXPORTED daqAuthenticationConfig_setAuthenticationMethodId(daqAuthenticationConfig* self, daqString* authenticationMethodId);
-    daqErrCode EXPORTED daqAuthenticationConfig_getSupportedAuthenticationMethods(daqAuthenticationConfig* self, daqDict** authenticationMethods);
-    daqErrCode EXPORTED daqAuthenticationConfig_getSuppliedCredential(daqAuthenticationConfig* self, daqDict** credential);
-    daqErrCode EXPORTED daqAuthenticationConfig_createAuthenticationConfig(daqAuthenticationConfig** obj, daqDict* authenticationMethods);
+    daqErrCode EXPORTED daqCredentialField_getId(daqCredentialField* self, daqString** id);
+    daqErrCode EXPORTED daqCredentialField_getKind(daqCredentialField* self, daqCredentialFieldKind* kind);
+    daqErrCode EXPORTED daqCredentialField_getName(daqCredentialField* self, daqString** name);
+    daqErrCode EXPORTED daqCredentialField_getMetadata(daqCredentialField* self, daqDict** metadata);
+    daqErrCode EXPORTED daqCredentialField_isRequired(daqCredentialField* self, daqBool* required);
+    daqErrCode EXPORTED daqCredentialField_createCredentialField(daqCredentialField** obj, daqString* id, daqCredentialFieldKind kind, daqString* name, daqDict* metadata, daqBool required);
 
 #ifdef __cplusplus
 }

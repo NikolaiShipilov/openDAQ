@@ -41,14 +41,14 @@ public:
                                           const ComponentPtr& parent,
                                           const PropertyObjectPtr& config,
                                           const StringPtr& authenticationMethodId,
-                                          const PropertyObjectPtr& credentials) override;
+                                          const DictPtr<IString, IString>& credentials) override;
 
     DictPtr<IString, IStreamingType> onGetAvailableStreamingTypes() override;
     StreamingPtr onCreateStreaming(const StringPtr& connectionString, const PropertyObjectPtr& config) override;
     StreamingPtr onCreateAuthenticatedStreaming(const StringPtr& connectionString,
                                                 const PropertyObjectPtr& config,
                                                 const StringPtr& authenticationMethodId,
-                                                const PropertyObjectPtr& credentials) override;
+                                                const DictPtr<IString, IString>& credentials) override;
 
 private:
     static DictPtr<IString, IBaseObject> populateDefaultModuleOptions(const DictPtr<IString, IBaseObject>& inputOptions);

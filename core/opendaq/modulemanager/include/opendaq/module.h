@@ -120,15 +120,15 @@ DECLARE_OPENDAQ_INTERFACE(IModule, IBaseObject)
      * @param connectionString Typically a connection string usually has a well known prefix, such as `daq.lt//`.
      * @param config A config object that contains parameters used to configure a streaming connection.
      * In case of a null value, implementation should use default configuration.
-     * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
-     * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
+     * @param owner The device the streaming connection is being attached to, its own `IDeviceInfo`
+     * (manufacturer, serial number, model) identifies the connection endpoint, the same way
+     * `createDevice` identifies one from the device it just created.
      * @param[out] streaming The created streaming object.
      */
     virtual ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                                    IString* connectionString,
                                                    IPropertyObject* config = nullptr,
-                                                   IString* manufacturer = nullptr,
-                                                   IString* serialNumber = nullptr) = 0;
+                                                   IDevice* owner = nullptr) = 0;
 
     virtual ErrCode INTERFACE_FUNC completeServerCapability(Bool* succeeded, IServerCapability* source, IServerCapabilityConfig* target) = 0;
 

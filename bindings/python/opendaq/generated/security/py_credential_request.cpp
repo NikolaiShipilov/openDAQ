@@ -57,15 +57,14 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             return objectPtr.getConnectionString().toStdString();
         },
         "Gets the canonical connection string of the connection attempt this request was formed for - already resolved via the owning module's own `onGetCanonicalConnectionString` (routing prefix trimmed, every parameter made explicit), not necessarily the raw string the caller originally supplied.");
-    cls.def_property_readonly("meta_data",
+    cls.def_property_readonly("display_name",
         [](daq::ICredentialRequest *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
-            return objectPtr.getMetaData().detach();
+            return objectPtr.getDisplayName().toStdString();
         },
-        py::return_value_policy::take_ownership,
-        "Gets additional metadata describing the request, primarily for the credential provider to show to the user. Optional - empty (no properties) if the caller added none via add_meta_data_property.");
+        "Gets the device's name (e.g. obtained from its info or the add config), is a context for the provider, to show the user. Optional - unassigned when unknown.");
     cls.def_property_readonly("manufacturer",
         [](daq::ICredentialRequest *object)
         {
@@ -82,6 +81,14 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             return objectPtr.getSerialNumber().toStdString();
         },
         "Gets the serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection.");
+    cls.def_property_readonly("model",
+        [](daq::ICredentialRequest *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
+            return objectPtr.getModel().toStdString();
+        },
+        "Gets the model of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection.");
     cls.def_property_readonly("authentication_method",
         [](daq::ICredentialRequest *object)
         {

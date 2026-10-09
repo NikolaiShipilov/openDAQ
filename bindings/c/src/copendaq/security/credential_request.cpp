@@ -32,9 +32,9 @@ daqErrCode daqCredentialRequest_getConnectionString(daqCredentialRequest* self, 
     return reinterpret_cast<daq::ICredentialRequest*>(self)->getConnectionString(reinterpret_cast<daq::IString**>(connectionString));
 }
 
-daqErrCode daqCredentialRequest_getMetaData(daqCredentialRequest* self, daqPropertyObject** metaData)
+daqErrCode daqCredentialRequest_getDisplayName(daqCredentialRequest* self, daqString** displayName)
 {
-    return reinterpret_cast<daq::ICredentialRequest*>(self)->getMetaData(reinterpret_cast<daq::IPropertyObject**>(metaData));
+    return reinterpret_cast<daq::ICredentialRequest*>(self)->getDisplayName(reinterpret_cast<daq::IString**>(displayName));
 }
 
 daqErrCode daqCredentialRequest_getManufacturer(daqCredentialRequest* self, daqString** manufacturer)
@@ -45,6 +45,11 @@ daqErrCode daqCredentialRequest_getManufacturer(daqCredentialRequest* self, daqS
 daqErrCode daqCredentialRequest_getSerialNumber(daqCredentialRequest* self, daqString** serialNumber)
 {
     return reinterpret_cast<daq::ICredentialRequest*>(self)->getSerialNumber(reinterpret_cast<daq::IString**>(serialNumber));
+}
+
+daqErrCode daqCredentialRequest_getModel(daqCredentialRequest* self, daqString** model)
+{
+    return reinterpret_cast<daq::ICredentialRequest*>(self)->getModel(reinterpret_cast<daq::IString**>(model));
 }
 
 daqErrCode daqCredentialRequest_getAuthenticationMethod(daqCredentialRequest* self, daqAuthenticationMethod** authenticationMethod)

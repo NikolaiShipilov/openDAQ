@@ -124,6 +124,7 @@ PyDaqIntf<daq::IModuleInfo, daq::IBaseObject> declareIModuleInfo(pybind11::modul
 PyDaqIntf<daq::IComponentType, daq::IBaseObject> declareIComponentType(pybind11::module_ m);
 PyDaqIntf<daq::IDeviceUpdateOptions, daq::IBaseObject> declareIDeviceUpdateOptions(pybind11::module_ m);
 PyDaqIntf<daq::IAuthenticationMethod, daq::IBaseObject> declareIAuthenticationMethod(pybind11::module_ m);
+PyDaqIntf<daq::ICredentialField, daq::IBaseObject> declareICredentialField(pybind11::module_ m);
 PyDaqIntf<daq::IAuthenticationConfig, daq::IPropertyObject> declareIAuthenticationConfig(pybind11::module_ m);
 PyDaqIntf<daq::ICredentialProvider, daq::IBaseObject> declareICredentialProvider(pybind11::module_ m);
 PyDaqIntf<daq::ICredentialRequest, daq::IBaseObject> declareICredentialRequest(pybind11::module_ m);
@@ -242,6 +243,7 @@ void defineIModuleInfo(pybind11::module_ m, PyDaqIntf<daq::IModuleInfo, daq::IBa
 void defineIComponentType(pybind11::module_ m, PyDaqIntf<daq::IComponentType, daq::IBaseObject> cls);
 void defineIDeviceUpdateOptions(pybind11::module_ m, PyDaqIntf<daq::IDeviceUpdateOptions, daq::IBaseObject> cls);
 void defineIAuthenticationMethod(pybind11::module_ m, PyDaqIntf<daq::IAuthenticationMethod, daq::IBaseObject> cls);
+void defineICredentialField(pybind11::module_ m, PyDaqIntf<daq::ICredentialField, daq::IBaseObject> cls);
 void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthenticationConfig, daq::IPropertyObject> cls);
 void defineICredentialProvider(pybind11::module_ m, PyDaqIntf<daq::ICredentialProvider, daq::IBaseObject> cls);
 void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialRequest, daq::IBaseObject> cls);

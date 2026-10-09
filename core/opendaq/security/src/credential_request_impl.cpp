@@ -1,7 +1,6 @@
 #include <opendaq/credential_request_impl.h>
 #include <opendaq/credential_request_builder_ptr.h>
 #include <opendaq/credential_request_factory.h>
-#include <coreobjects/property_object_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -10,9 +9,10 @@ CredentialRequestImpl::CredentialRequestImpl(ICredentialRequestBuilder* credenti
     const auto builderPtr = CredentialRequestBuilderPtr::Borrow(credentialRequestBuilder);
     componentType = builderPtr.getComponentType();
     connectionString = builderPtr.getConnectionString();
-    metaData = builderPtr.getMetaData();
+    displayName = builderPtr.getDisplayName();
     manufacturer = builderPtr.getManufacturer();
     serialNumber = builderPtr.getSerialNumber();
+    model = builderPtr.getModel();
     authenticationMethod = builderPtr.getAuthenticationMethod();
 
     if (!componentType.assigned())
@@ -41,11 +41,11 @@ ErrCode CredentialRequestImpl::getConnectionString(IString** connectionString)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CredentialRequestImpl::getMetaData(IPropertyObject** metaData)
+ErrCode CredentialRequestImpl::getDisplayName(IString** displayName)
 {
-    OPENDAQ_PARAM_NOT_NULL(metaData);
+    OPENDAQ_PARAM_NOT_NULL(displayName);
 
-    *metaData = this->metaData.addRefAndReturn();
+    *displayName = this->displayName.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 
@@ -62,6 +62,14 @@ ErrCode CredentialRequestImpl::getSerialNumber(IString** serialNumber)
     OPENDAQ_PARAM_NOT_NULL(serialNumber);
 
     *serialNumber = this->serialNumber.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestImpl::getModel(IString** model)
+{
+    OPENDAQ_PARAM_NOT_NULL(model);
+
+    *model = this->model.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

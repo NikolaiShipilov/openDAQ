@@ -134,6 +134,7 @@ void wrapDaqComponentOpenDaq(pybind11::module_ m)
     auto classILogFileInfoBuilder = declareILogFileInfoBuilder(m);
     auto classIDeviceUpdateOptions = declareIDeviceUpdateOptions(m);
     auto classIAuthenticationMethod = declareIAuthenticationMethod(m);
+    auto classICredentialField = declareICredentialField(m);
     auto classIAuthenticationConfig = declareIAuthenticationConfig(m);
     auto classICredentialProvider = declareICredentialProvider(m);
     auto classICredentialRequest = declareICredentialRequest(m);
@@ -245,6 +246,7 @@ void wrapDaqComponentOpenDaq(pybind11::module_ m)
     defineILogFileInfoBuilder(m, classILogFileInfoBuilder);
     defineIDeviceUpdateOptions(m, classIDeviceUpdateOptions);
     defineIAuthenticationMethod(m, classIAuthenticationMethod);
+    defineICredentialField(m, classICredentialField);
     defineIAuthenticationConfig(m, classIAuthenticationConfig);
     defineICredentialProvider(m, classICredentialProvider);
     defineICredentialRequest(m, classICredentialRequest);
