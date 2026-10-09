@@ -153,11 +153,8 @@ void CmdLineCredentialProviderImpl::printRequestDetails(const CredentialRequestP
     std::cout << "Component type : " << request.getComponentType().getName() << '\n';
     std::cout << "Connection string : " << request.getConnectionString() << '\n';
 
-    if (const auto metaData = request.getMetaData(); metaData.assigned())
-    {
-        for (const auto& property : metaData.getAllProperties())
-            std::cout << property.getDescription() << " (" << property.getName() << ") : " << metaData.getPropertyValue(property.getName()) << '\n';
-    }
+    if (const StringPtr displayName = request.getDisplayName(); displayName.assigned() && displayName.getLength() > 0)
+        std::cout << "Device : " << displayName << '\n';
 
     std::cout << '\n';
 }

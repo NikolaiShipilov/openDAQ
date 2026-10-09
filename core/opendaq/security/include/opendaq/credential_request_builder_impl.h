@@ -42,8 +42,8 @@ public:
     ErrCode INTERFACE_FUNC setModel(IString* model) override;
     ErrCode INTERFACE_FUNC getModel(IString** model) override;
 
-    ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) override;
-    ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) override;
+    ErrCode INTERFACE_FUNC setDisplayName(IString* displayName) override;
+    ErrCode INTERFACE_FUNC getDisplayName(IString** displayName) override;
 
     ErrCode INTERFACE_FUNC setAuthenticationMethod(IAuthenticationMethod* authenticationMethod) override;
     ErrCode INTERFACE_FUNC getAuthenticationMethod(IAuthenticationMethod** authenticationMethod) override;
@@ -51,7 +51,7 @@ public:
 private:
     ComponentTypePtr componentType;
     StringPtr connectionString;
-    PropertyObjectPtr metaData;
+    StringPtr displayName;
     StringPtr manufacturer;
     StringPtr serialNumber;
     StringPtr model;

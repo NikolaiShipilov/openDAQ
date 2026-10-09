@@ -16,16 +16,12 @@
 
 #pragma once
 #include <coretypes/baseobject.h>
-#include <coreobjects/property.h>
+#include <coretypes/string_ptr.h>
 #include <opendaq/credential_request.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
 /*#
- * [interfaceLibrary(IPropertyObject, "coreobjects")]
- * [interfaceSmartPtr(IPropertyObject, PropertyObjectPtr, "<coreobjects/property_object.h>")]
- * [interfaceLibrary(IProperty, "coreobjects")]
- * [interfaceSmartPtr(IProperty, PropertyPtr, "<coreobjects/property_ptr.h>")]
  * [interfaceLibrary(IAuthenticationMethod, "opendaq")]
  * [interfaceSmartPtr(IAuthenticationMethod, AuthenticationMethodPtr, "<opendaq/authentication_method_ptr.h>")]
  * [interfaceLibrary(IComponentType, "opendaq")]
@@ -123,19 +119,17 @@ virtual ErrCode INTERFACE_FUNC setModel(IString* model) = 0;
 virtual ErrCode INTERFACE_FUNC getModel(IString** model) = 0;
 
 /*!
- * @brief Adds a property to the request's metadata, describing additional, request-specific information
- * primarily for the credential provider to show to the user. Optional - never called at all if there's
- * nothing extra to describe, leaving the built request's metadata empty.
- * @param property The metadata property to add.
+ * @brief Sets the device's name to show the user. Optional - leave unset when unknown.
+ * @param displayName The device's display name.
  */
 // [returnSelf]
-virtual ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) = 0;
+virtual ErrCode INTERFACE_FUNC setDisplayName(IString* displayName) = 0;
 
 /*!
- * @brief Gets the metadata property object accumulated via `addMetaDataProperty`.
- * @param[out] property The metadata property object.
+ * @brief Gets the display name currently set on the builder.
+ * @param[out] displayName The device's display name.
  */
-virtual ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) = 0;
+virtual ErrCode INTERFACE_FUNC getDisplayName(IString** displayName) = 0;
 
 /*!
  * @brief Sets the authentication method the provider must provide a credential for - typically read from

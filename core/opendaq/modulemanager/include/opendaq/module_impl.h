@@ -202,8 +202,16 @@ public:
         {
             DictPtr<IString, IString> credentials;
 
-            errCode = wrapHandlerReturn(
-                this, &Module::obtainCredentials, credentials, resolvedAuthConfig, connectionString, nullptr, nullptr, nullptr, deviceType);
+            errCode = wrapHandlerReturn(this,
+                                        &Module::obtainCredentials,
+                                        credentials,
+                                        resolvedAuthConfig,
+                                        connectionString,
+                                        nullptr,
+                                        nullptr,
+                                        nullptr,
+                                        nullptr,
+                                        deviceType);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
             const StringPtr authenticationMethodId = resolvedAuthConfig.getSelectedAuthenticationMethod().getId();
@@ -235,8 +243,13 @@ public:
                     {
                         try
                         {
-                            const auto enrichedRequest = buildCredentialRequest(
-                                resolvedAuthConfig, connectionString, info.getManufacturer(), info.getSerialNumber(), info.getModel(), deviceType);
+                            const auto enrichedRequest = buildCredentialRequest(resolvedAuthConfig,
+                                                                                connectionString,
+                                                                                info.getManufacturer(),
+                                                                                info.getSerialNumber(),
+                                                                                info.getModel(),
+                                                                                info.getName(),
+                                                                                deviceType);
                             provider.cacheCredentials(enrichedRequest, credentials);
                         }
                         catch (const DaqException& e)
@@ -440,15 +453,17 @@ public:
         StreamingPtr createdStreaming;
         if (authenticated)
         {
-            StringPtr manufacturer, serialNumber, model;
+            StringPtr manufacturer, serialNumber, model, displayName;
+            DeviceInfoPtr ownerInfo;
             if (const auto ownerPtr = DevicePtr::Borrow(owner); ownerPtr.assigned())
             {
-                const DeviceInfoPtr info = ownerPtr.getInfo();
-                if (info.assigned())
+                ownerInfo = ownerPtr.getInfo();
+                if (ownerInfo.assigned())
                 {
-                    manufacturer = info.getManufacturer();
-                    serialNumber = info.getSerialNumber();
-                    model = info.getModel();
+                    manufacturer = ownerInfo.getManufacturer();
+                    serialNumber = ownerInfo.getSerialNumber();
+                    model = ownerInfo.getModel();
+                    displayName = ownerInfo.getName();
                 }
             }
 
@@ -461,6 +476,7 @@ public:
                                         manufacturer,
                                         serialNumber,
                                         model,
+                                        displayName,
                                         streamingType);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
@@ -778,6 +794,7 @@ private:
                                         const StringPtr& manufacturer,
                                         const StringPtr& serialNumber,
                                         const StringPtr& model,
+                                        const StringPtr& displayName,
                                         const ComponentTypePtr& componentType)
     {
         if (!authenticationConfig.assigned())
@@ -786,20 +803,22 @@ private:
         if (authenticationConfig.getSelectedAuthenticationMethod().getFields().getCount() == 0)
             return nullptr;
 
-        const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, model, componentType);
+        const auto credentialRequest =
+            buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, model, displayName, componentType);
         return resolveCredentials(authenticationConfig, credentialRequest);
     }
 
     // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected authentication method,
     // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`/
-    // `model`, and `componentType`. Split out of `requestCredentials` so `createDevice` can call it a second
-    // time, with manufacturer/serial number/model resolved from the created device's own info, to re-cache
-    // credentials that were originally obtained without them.
+    // `model`/`displayName`, and `componentType`. Split out of `requestCredentials` so `createDevice` can call
+    // it a second time, with manufacturer/serial number/model/display name resolved from the created device's
+    // own info, to re-cache credentials that were originally obtained without them.
     CredentialRequestPtr buildCredentialRequest(const AuthenticationConfigPtr& authenticationConfig,
                                                 const StringPtr& connectionString,
                                                 const StringPtr& manufacturer,
                                                 const StringPtr& serialNumber,
                                                 const StringPtr& model,
+                                                const StringPtr& displayName,
                                                 const ComponentTypePtr& componentType)
     {
         auto requestBuilder = CredentialRequestBuilder();
@@ -807,6 +826,7 @@ private:
         requestBuilder.setManufacturer(manufacturer);
         requestBuilder.setSerialNumber(serialNumber);
         requestBuilder.setModel(model);
+        requestBuilder.setDisplayName(displayName);
         requestBuilder.setAuthenticationMethod(authenticationConfig.getSelectedAuthenticationMethod());
         requestBuilder.setComponentType(componentType);
 
