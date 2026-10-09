@@ -82,6 +82,14 @@ void defineICredentialRequest(pybind11::module_ m, PyDaqIntf<daq::ICredentialReq
             return objectPtr.getSerialNumber().toStdString();
         },
         "Gets the serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection.");
+    cls.def_property_readonly("model",
+        [](daq::ICredentialRequest *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestPtr::Borrow(object);
+            return objectPtr.getModel().toStdString();
+        },
+        "Gets the model of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - unassigned if not known for this connection.");
     cls.def_property_readonly("authentication_method",
         [](daq::ICredentialRequest *object)
         {

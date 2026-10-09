@@ -36,8 +36,8 @@ public:
     ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IDict* credential) override;
 
 private:
-    // manufacturer, serialNumber, authentication method id
-    using CacheKey = std::tuple<std::string, std::string, std::string>;
+    // manufacturer, serialNumber, model, authentication method id
+    using CacheKey = std::tuple<std::string, std::string, std::string, std::string>;
 
     static void printRequestDetails(const CredentialRequestPtr& request);
     static std::string readLine(const std::string& prompt, bool hide);
@@ -49,8 +49,9 @@ private:
     // field's own kind (masked for `Secret`, plain otherwise). `FilePath` is still validated locally right after
     // being freshly read (not on a cache hit): the entered path must exist and be readable. A method's fields -
     // every kind - are cached together, in-memory for the lifetime of this provider (i.e. for the active session),
-    // as one entry keyed by `(manufacturer, serialNumber, authentication method id)` - so re-authenticating a second connection
-    // to the same device via the same method reuses every value already entered instead of prompting again.
+    // as one entry keyed by `(manufacturer, serialNumber, model, authentication method id)` - so re-authenticating
+    // a second connection to the same device via the same method reuses every value already entered instead of
+    // prompting again.
     DictPtr<IString, IString> readCredential(const CredentialRequestPtr& request, const DictPtr<IString, ICredentialField>& fields);
 
     std::map<CacheKey, DictPtr<IString, IString>> credentialCache;

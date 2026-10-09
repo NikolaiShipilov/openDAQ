@@ -13,6 +13,7 @@ CredentialRequestImpl::CredentialRequestImpl(ICredentialRequestBuilder* credenti
     metaData = builderPtr.getMetaData();
     manufacturer = builderPtr.getManufacturer();
     serialNumber = builderPtr.getSerialNumber();
+    model = builderPtr.getModel();
     authenticationMethod = builderPtr.getAuthenticationMethod();
 
     if (!componentType.assigned())
@@ -62,6 +63,14 @@ ErrCode CredentialRequestImpl::getSerialNumber(IString** serialNumber)
     OPENDAQ_PARAM_NOT_NULL(serialNumber);
 
     *serialNumber = this->serialNumber.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestImpl::getModel(IString** model)
+{
+    OPENDAQ_PARAM_NOT_NULL(model);
+
+    *model = this->model.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

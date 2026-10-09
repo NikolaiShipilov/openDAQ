@@ -82,6 +82,14 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialRequest, IBaseObject)
     virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
     /*!
+     * @brief Gets the model of the device the connection is being established to or for - a request can be
+     * for a direct connection to that device, or for a streaming connection attached to it. Optional -
+     * unassigned if the model isn't known for this connection.
+     * @param[out] model The device model.
+     */
+    virtual ErrCode INTERFACE_FUNC getModel(IString** model) = 0;
+
+    /*!
      * @brief Gets the authentication method the provider must provide a credential for, read from
      * `IAuthenticationConfig` when the request was built.
      * @param[out] authenticationMethod The authentication method.

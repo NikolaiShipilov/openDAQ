@@ -108,6 +108,21 @@ virtual ErrCode INTERFACE_FUNC setSerialNumber(IString* serialNumber) = 0;
 virtual ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) = 0;
 
 /*!
+ * @brief Sets the model of the device the connection is being established to or for - a request can be
+ * for a direct connection to that device, or for a streaming connection attached to it. Optional - leave
+ * unset if the model isn't known for this connection.
+ * @param model The device model.
+ */
+// [returnSelf]
+virtual ErrCode INTERFACE_FUNC setModel(IString* model) = 0;
+
+/*!
+ * @brief Gets the model currently set on the builder.
+ * @param[out] model The device model.
+ */
+virtual ErrCode INTERFACE_FUNC getModel(IString** model) = 0;
+
+/*!
  * @brief Adds a property to the request's metadata, describing additional, request-specific information
  * primarily for the credential provider to show to the user. Optional - never called at all if there's
  * nothing extra to describe, leaving the built request's metadata empty.

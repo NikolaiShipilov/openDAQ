@@ -113,14 +113,14 @@ void defineIModule(pybind11::module_ m, PyDaqIntf<daq::IModule, daq::IBaseObject
         py::arg("server_type_id"), py::arg("root_device"), py::arg("config") = nullptr,
         "Creates and returns a server with the specified server type.");
     cls.def("create_streaming",
-        [](daq::IModule *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config, std::variant<daq::IString*, py::str, daq::IEvalValue*>& manufacturer, std::variant<daq::IString*, py::str, daq::IEvalValue*>& serialNumber)
+        [](daq::IModule *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& connectionString, daq::IPropertyObject* config, daq::IDevice* owner)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::ModulePtr::Borrow(object);
-            return objectPtr.createStreaming(getVariantValue<daq::IString*>(connectionString), config, getVariantValue<daq::IString*>(manufacturer), getVariantValue<daq::IString*>(serialNumber)).detach();
+            return objectPtr.createStreaming(getVariantValue<daq::IString*>(connectionString), config, owner).detach();
         },
-        py::arg("connection_string"), py::arg("config") = nullptr, py::arg("manufacturer") = nullptr, py::arg("serial_number") = nullptr,
-        "Creates and returns a streaming object using the specified connection string and config object, optionally authenticating the connection by obtaining credentials - as specified by an authentication configuration smuggled in through config.");
+        py::arg("connection_string"), py::arg("config") = nullptr, py::arg("owner") = nullptr,
+        "Creates and returns a streaming object using the specified connection string and config object, optionally authenticating the connection by obtaining credentials - as specified by an authentication configuration smuggled in through config. `owner` is the device the streaming connection is being attached to, its own manufacturer/serial number/model identifies the connection endpoint.");
     cls.def("complete_server_capability",
         [](daq::IModule *object, daq::IServerCapability* source, daq::IServerCapabilityConfig* target)
         {

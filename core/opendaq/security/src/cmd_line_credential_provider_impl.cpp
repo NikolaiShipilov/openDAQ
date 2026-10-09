@@ -111,8 +111,10 @@ CmdLineCredentialProviderImpl::CacheKey CmdLineCredentialProviderImpl::MakeCache
 {
     const StringPtr manufacturer = request.getManufacturer();
     const StringPtr serialNumber = request.getSerialNumber();
+    const StringPtr model = request.getModel();
     const bool hasManufacturer = manufacturer.assigned() && manufacturer.getLength() > 0;
     const bool hasSerialNumber = serialNumber.assigned() && serialNumber.getLength() > 0;
+    const bool hasModel = model.assigned() && model.getLength() > 0;
     const StringPtr methodId = request.getAuthenticationMethod().getId();
 
     if (!hasManufacturer && !hasSerialNumber)
@@ -124,12 +126,15 @@ CmdLineCredentialProviderImpl::CacheKey CmdLineCredentialProviderImpl::MakeCache
         // see `Module::onGetCanonicalConnectionString`), so it stays a stable identifier regardless of how
         // much of it the caller originally left implicit.
         const StringPtr connectionString = request.getConnectionString();
-        return std::make_tuple(
-            connectionString.assigned() ? connectionString.toStdString() : std::string(), std::string(), methodId.toStdString());
+        return std::make_tuple(connectionString.assigned() ? connectionString.toStdString() : std::string(),
+                               std::string(),
+                               hasModel ? model.toStdString() : std::string(),
+                               methodId.toStdString());
     }
 
     return std::make_tuple(hasManufacturer ? manufacturer.toStdString() : std::string(),
                            hasSerialNumber ? serialNumber.toStdString() : std::string(),
+                           hasModel ? model.toStdString() : std::string(),
                            methodId.toStdString());
 }
 

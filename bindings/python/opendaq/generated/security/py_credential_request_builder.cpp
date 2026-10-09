@@ -107,6 +107,20 @@ void defineICredentialRequestBuilder(pybind11::module_ m, PyDaqIntf<daq::ICreden
             objectPtr.setSerialNumber(getVariantValue<daq::IString*>(serialNumber));
         },
         "Gets the serial number currently set on the builder. / Sets the serial number of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - leave unset if not known.");
+    cls.def_property("model",
+        [](daq::ICredentialRequestBuilder *object)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            return objectPtr.getModel().toStdString();
+        },
+        [](daq::ICredentialRequestBuilder *object, std::variant<daq::IString*, py::str, daq::IEvalValue*>& model)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::CredentialRequestBuilderPtr::Borrow(object);
+            objectPtr.setModel(getVariantValue<daq::IString*>(model));
+        },
+        "Gets the model currently set on the builder. / Sets the model of the device the connection is being established to or for - a request can be for a direct connection to that device, or for a streaming connection attached to it. Optional - leave unset if not known.");
     cls.def("add_meta_data_property",
         [](daq::ICredentialRequestBuilder *object, daq::IProperty* property)
         {

@@ -62,9 +62,9 @@ daqErrCode daqModule_createServer(daqModule* self, daqServer** server, daqString
     return reinterpret_cast<daq::IModule*>(self)->createServer(reinterpret_cast<daq::IServer**>(server), reinterpret_cast<daq::IString*>(serverTypeId), reinterpret_cast<daq::IDevice*>(rootDevice), reinterpret_cast<daq::IPropertyObject*>(config));
 }
 
-daqErrCode daqModule_createStreaming(daqModule* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqString* manufacturer, daqString* serialNumber)
+daqErrCode daqModule_createStreaming(daqModule* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqDevice* owner)
 {
-    return reinterpret_cast<daq::IModule*>(self)->createStreaming(reinterpret_cast<daq::IStreaming**>(streaming), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IString*>(manufacturer), reinterpret_cast<daq::IString*>(serialNumber));
+    return reinterpret_cast<daq::IModule*>(self)->createStreaming(reinterpret_cast<daq::IStreaming**>(streaming), reinterpret_cast<daq::IString*>(connectionString), reinterpret_cast<daq::IPropertyObject*>(config), reinterpret_cast<daq::IDevice*>(owner));
 }
 
 daqErrCode daqModule_completeServerCapability(daqModule* self, daqBool* succeeded, daqServerCapability* source, daqServerCapabilityConfig* target)

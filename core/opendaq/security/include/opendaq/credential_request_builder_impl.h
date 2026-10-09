@@ -39,6 +39,8 @@ public:
     ErrCode INTERFACE_FUNC getManufacturer(IString** manufacturer) override;
     ErrCode INTERFACE_FUNC setSerialNumber(IString* serialNumber) override;
     ErrCode INTERFACE_FUNC getSerialNumber(IString** serialNumber) override;
+    ErrCode INTERFACE_FUNC setModel(IString* model) override;
+    ErrCode INTERFACE_FUNC getModel(IString** model) override;
 
     ErrCode INTERFACE_FUNC addMetaDataProperty(IProperty* property) override;
     ErrCode INTERFACE_FUNC getMetaData(IPropertyObject** property) override;
@@ -52,6 +54,7 @@ private:
     PropertyObjectPtr metaData;
     StringPtr manufacturer;
     StringPtr serialNumber;
+    StringPtr model;
     AuthenticationMethodPtr authenticationMethod;
 };
 

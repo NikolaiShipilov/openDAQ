@@ -155,9 +155,9 @@ public:
      * is called (`onCreateDevice` is called instead when not). On success, the authentication config used is
      * persisted on the created device (`IComponentPrivate::setAuthenticationConfig`) so a reload can re-request
      * credentials for it - this, too, is handled here rather than by the module implementation. The manufacturer/
-     * serial number identifying the device are never known upfront here (`config` carries no such metadata) - if
-     * the created device's own info supplies them afterward, the already-obtained credentials are handed again
-     * (`cacheCredentials`) to the registered provider, against a request rebuilt with them.
+     * serial number/model identifying the device might be known upfront here (from discovered IDeviceInfo) -
+     * and the created device's own info supplies them afterward as well, the already-obtained credentials
+     * are handed again (`cacheCredentials`) to the registered provider, against a request rebuilt with them.
      */
     ErrCode INTERFACE_FUNC createDevice(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config) override
     {
@@ -203,7 +203,7 @@ public:
             DictPtr<IString, IString> credentials;
 
             errCode = wrapHandlerReturn(
-                this, &Module::obtainCredentials, credentials, resolvedAuthConfig, connectionString, nullptr, nullptr, deviceType);
+                this, &Module::obtainCredentials, credentials, resolvedAuthConfig, connectionString, nullptr, nullptr, nullptr, deviceType);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
             const StringPtr authenticationMethodId = resolvedAuthConfig.getSelectedAuthenticationMethod().getId();
@@ -227,16 +227,16 @@ public:
 
                     const DeviceInfoPtr info = createdDevice.getInfo();
 
-                    // Manufacturer/serial number are never known upfront here (see above) - if the created
-                    // device's own info now supplies them, hand the already-obtained credentials to the
-                    // registered provider again, keyed by them too.
+                    // Manufacturer/serial number (and model, if available) are sometimes known upfront here (see
+                    // above) - if the created device's own info now supplies them, hand the already-obtained
+                    // credentials to the registered provider again, keyed by them too.
                     const CredentialProviderPtr provider = context.getCredentialProvider();
                     if (provider.assigned() && info.assigned() && info.getManufacturer().assigned() && info.getSerialNumber().assigned())
                     {
                         try
                         {
                             const auto enrichedRequest = buildCredentialRequest(
-                                resolvedAuthConfig, connectionString, info.getManufacturer(), info.getSerialNumber(), deviceType);
+                                resolvedAuthConfig, connectionString, info.getManufacturer(), info.getSerialNumber(), info.getModel(), deviceType);
                             provider.cacheCredentials(enrichedRequest, credentials);
                         }
                         catch (const DaqException& e)
@@ -383,8 +383,8 @@ public:
      * In case of a null value, implementation should use default configuration. If `ExtractAuthenticationConfig(config)`
      * returns unassigned and the resolved streaming type supports authentication, its own default config is used
      * instead - the streaming is connected to without authentication only if the type doesn't support it at all.
-     * @param manufacturer The manufacturer of the device the streaming connection belongs to, if known.
-     * @param serialNumber The serial number of the device the streaming connection belongs to, if known.
+     * @param owner The device the streaming connection is being attached to, its own `IDeviceInfo`
+     * (manufacturer, serial number, model) identifies the connection endpoint.
      * @param[out] streaming The created streaming object.
      *
      * The credentials are resolved (`requestCredentials`) before `onCreateAuthenticatedStreaming` is called.
@@ -398,8 +398,7 @@ public:
     ErrCode INTERFACE_FUNC createStreaming(IStreaming** streaming,
                                            IString* connectionString,
                                            IPropertyObject* config = nullptr,
-                                           IString* manufacturer = nullptr,
-                                           IString* serialNumber = nullptr) override
+                                           IDevice* owner = nullptr) override
     {
         OPENDAQ_PARAM_NOT_NULL(streaming);
         OPENDAQ_PARAM_NOT_NULL(connectionString);
@@ -441,6 +440,18 @@ public:
         StreamingPtr createdStreaming;
         if (authenticated)
         {
+            StringPtr manufacturer, serialNumber, model;
+            if (const auto ownerPtr = DevicePtr::Borrow(owner); ownerPtr.assigned())
+            {
+                const DeviceInfoPtr info = ownerPtr.getInfo();
+                if (info.assigned())
+                {
+                    manufacturer = info.getManufacturer();
+                    serialNumber = info.getSerialNumber();
+                    model = info.getModel();
+                }
+            }
+
             DictPtr<IString, IString> credentials;
             errCode = wrapHandlerReturn(this,
                                         &Module::obtainCredentials,
@@ -449,6 +460,7 @@ public:
                                         connectionString,
                                         manufacturer,
                                         serialNumber,
+                                        model,
                                         streamingType);
             OPENDAQ_RETURN_IF_FAILED(errCode);
 
@@ -765,6 +777,7 @@ private:
                                         const StringPtr& connectionString,
                                         const StringPtr& manufacturer,
                                         const StringPtr& serialNumber,
+                                        const StringPtr& model,
                                         const ComponentTypePtr& componentType)
     {
         if (!authenticationConfig.assigned())
@@ -773,25 +786,27 @@ private:
         if (authenticationConfig.getSelectedAuthenticationMethod().getFields().getCount() == 0)
             return nullptr;
 
-        const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, componentType);
+        const auto credentialRequest = buildCredentialRequest(authenticationConfig, connectionString, manufacturer, serialNumber, model, componentType);
         return resolveCredentials(authenticationConfig, credentialRequest);
     }
 
     // Builds an `ICredentialRequest` for `authenticationConfig`'s currently selected authentication method,
-    // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`,
-    // and `componentType`. Split out of `requestCredentials` so `createDevice` can call it a second time, with
-    // manufacturer/serial number resolved from the created device's own info, to re-cache credentials that
-    // were originally obtained without them.
+    // `connectionString` (canonicalized via `onGetCanonicalConnectionString`), `manufacturer`/`serialNumber`/
+    // `model`, and `componentType`. Split out of `requestCredentials` so `createDevice` can call it a second
+    // time, with manufacturer/serial number/model resolved from the created device's own info, to re-cache
+    // credentials that were originally obtained without them.
     CredentialRequestPtr buildCredentialRequest(const AuthenticationConfigPtr& authenticationConfig,
                                                 const StringPtr& connectionString,
                                                 const StringPtr& manufacturer,
                                                 const StringPtr& serialNumber,
+                                                const StringPtr& model,
                                                 const ComponentTypePtr& componentType)
     {
         auto requestBuilder = CredentialRequestBuilder();
         requestBuilder.setConnectionString(onGetCanonicalConnectionString(connectionString));
         requestBuilder.setManufacturer(manufacturer);
         requestBuilder.setSerialNumber(serialNumber);
+        requestBuilder.setModel(model);
         requestBuilder.setAuthenticationMethod(authenticationConfig.getSelectedAuthenticationMethod());
         requestBuilder.setComponentType(componentType);
 

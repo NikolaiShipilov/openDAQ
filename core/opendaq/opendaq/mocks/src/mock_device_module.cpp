@@ -151,8 +151,7 @@ ErrCode MockDeviceModuleImpl::getModuleInfo(daq::IModuleInfo** info)
 ErrCode MockDeviceModuleImpl::createStreaming(IStreaming** /*streaming*/,
                                               IString* /*connectionString*/,
                                               IPropertyObject* /*config*/,
-                                              IString* /*manufacturer*/,
-                                              IString* /*serialNumber*/)
+                                              IDevice* /*owner*/)
 {
     return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTIMPLEMENTED);
 }

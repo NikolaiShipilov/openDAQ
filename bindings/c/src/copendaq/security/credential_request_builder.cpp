@@ -67,6 +67,16 @@ daqErrCode daqCredentialRequestBuilder_getSerialNumber(daqCredentialRequestBuild
     return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->getSerialNumber(reinterpret_cast<daq::IString**>(serialNumber));
 }
 
+daqErrCode daqCredentialRequestBuilder_setModel(daqCredentialRequestBuilder* self, daqString* model)
+{
+    return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->setModel(reinterpret_cast<daq::IString*>(model));
+}
+
+daqErrCode daqCredentialRequestBuilder_getModel(daqCredentialRequestBuilder* self, daqString** model)
+{
+    return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->getModel(reinterpret_cast<daq::IString**>(model));
+}
+
 daqErrCode daqCredentialRequestBuilder_addMetaDataProperty(daqCredentialRequestBuilder* self, daqProperty* property)
 {
     return reinterpret_cast<daq::ICredentialRequestBuilder*>(self)->addMetaDataProperty(reinterpret_cast<daq::IProperty*>(property));

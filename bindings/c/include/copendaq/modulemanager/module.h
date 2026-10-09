@@ -59,7 +59,7 @@ extern "C"
     daqErrCode EXPORTED daqModule_createFunctionBlock(daqModule* self, daqFunctionBlock** functionBlock, daqString* id, daqComponent* parent, daqString* localId, daqPropertyObject* config);
     daqErrCode EXPORTED daqModule_getAvailableServerTypes(daqModule* self, daqDict** serverTypes);
     daqErrCode EXPORTED daqModule_createServer(daqModule* self, daqServer** server, daqString* serverTypeId, daqDevice* rootDevice, daqPropertyObject* config);
-    daqErrCode EXPORTED daqModule_createStreaming(daqModule* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqString* manufacturer, daqString* serialNumber);
+    daqErrCode EXPORTED daqModule_createStreaming(daqModule* self, daqStreaming** streaming, daqString* connectionString, daqPropertyObject* config, daqDevice* owner);
     daqErrCode EXPORTED daqModule_completeServerCapability(daqModule* self, daqBool* succeeded, daqServerCapability* source, daqServerCapabilityConfig* target);
     daqErrCode EXPORTED daqModule_getAvailableStreamingTypes(daqModule* self, daqDict** streamingTypes);
     daqErrCode EXPORTED daqModule_loadLicense(daqModule* self, daqBool* succeeded, daqDict* licenseConfig);

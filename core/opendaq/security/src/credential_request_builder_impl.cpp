@@ -85,6 +85,20 @@ ErrCode CredentialRequestBuilderImpl::getSerialNumber(IString** serialNumber)
     return OPENDAQ_SUCCESS;
 }
 
+ErrCode CredentialRequestBuilderImpl::setModel(IString* model)
+{
+    this->model = model;
+    return OPENDAQ_SUCCESS;
+}
+
+ErrCode CredentialRequestBuilderImpl::getModel(IString** model)
+{
+    OPENDAQ_PARAM_NOT_NULL(model);
+
+    *model = this->model.addRefAndReturn();
+    return OPENDAQ_SUCCESS;
+}
+
 ErrCode CredentialRequestBuilderImpl::getMetaData(IPropertyObject** metaData)
 {
     OPENDAQ_PARAM_NOT_NULL(metaData);

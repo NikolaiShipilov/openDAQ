@@ -47,6 +47,11 @@ daqErrCode daqCredentialRequest_getSerialNumber(daqCredentialRequest* self, daqS
     return reinterpret_cast<daq::ICredentialRequest*>(self)->getSerialNumber(reinterpret_cast<daq::IString**>(serialNumber));
 }
 
+daqErrCode daqCredentialRequest_getModel(daqCredentialRequest* self, daqString** model)
+{
+    return reinterpret_cast<daq::ICredentialRequest*>(self)->getModel(reinterpret_cast<daq::IString**>(model));
+}
+
 daqErrCode daqCredentialRequest_getAuthenticationMethod(daqCredentialRequest* self, daqAuthenticationMethod** authenticationMethod)
 {
     return reinterpret_cast<daq::ICredentialRequest*>(self)->getAuthenticationMethod(reinterpret_cast<daq::IAuthenticationMethod**>(authenticationMethod));

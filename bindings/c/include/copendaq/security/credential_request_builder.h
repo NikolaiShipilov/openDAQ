@@ -54,6 +54,8 @@ extern "C"
     daqErrCode EXPORTED daqCredentialRequestBuilder_getManufacturer(daqCredentialRequestBuilder* self, daqString** manufacturer);
     daqErrCode EXPORTED daqCredentialRequestBuilder_setSerialNumber(daqCredentialRequestBuilder* self, daqString* serialNumber);
     daqErrCode EXPORTED daqCredentialRequestBuilder_getSerialNumber(daqCredentialRequestBuilder* self, daqString** serialNumber);
+    daqErrCode EXPORTED daqCredentialRequestBuilder_setModel(daqCredentialRequestBuilder* self, daqString* model);
+    daqErrCode EXPORTED daqCredentialRequestBuilder_getModel(daqCredentialRequestBuilder* self, daqString** model);
     daqErrCode EXPORTED daqCredentialRequestBuilder_addMetaDataProperty(daqCredentialRequestBuilder* self, daqProperty* property);
     daqErrCode EXPORTED daqCredentialRequestBuilder_getMetaData(daqCredentialRequestBuilder* self, daqPropertyObject** property);
     daqErrCode EXPORTED daqCredentialRequestBuilder_setAuthenticationMethod(daqCredentialRequestBuilder* self, daqAuthenticationMethod* authenticationMethod);
