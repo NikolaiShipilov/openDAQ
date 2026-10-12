@@ -49,7 +49,7 @@ ErrCode AuthenticationConfigImpl::getSelectedAuthenticationMethod(IAuthenticatio
     });
 }
 
-ErrCode AuthenticationConfigImpl::setAuthenticationMethodId(IString* authenticationMethodId)
+ErrCode AuthenticationConfigImpl::setAuthenticationMethod(IString* authenticationMethodId)
 {
     OPENDAQ_PARAM_NOT_NULL(authenticationMethodId);
 
@@ -62,12 +62,19 @@ ErrCode AuthenticationConfigImpl::setAuthenticationMethodId(IString* authenticat
     return this->setPropertySelectionValue(String(AuthenticationMethodPropertyName), authenticationMethodId);
 }
 
-ErrCode AuthenticationConfigImpl::getSupportedAuthenticationMethods(IDict** authenticationMethods)
+ErrCode AuthenticationConfigImpl::getAuthenticationMethods(IDict** authenticationMethods)
 {
     OPENDAQ_PARAM_NOT_NULL(authenticationMethods);
 
     *authenticationMethods = this->supportedAuthenticationMethods.addRefAndReturn();
     return OPENDAQ_SUCCESS;
+}
+
+ErrCode AuthenticationConfigImpl::setSuppliedCredential(IDict* credential)
+{
+    OPENDAQ_PARAM_NOT_NULL(credential);
+
+    return setPropertyValue(String(SuppliedCredentialPropertyName), credential);
 }
 
 ErrCode AuthenticationConfigImpl::getSuppliedCredential(IDict** credential)
@@ -200,7 +207,7 @@ ErrCode AuthenticationConfigImpl::Deserialize(ISerializedObject* serialized, IBa
         const StringPtr selectedId = serializedObj.readString("selectedAuthenticationMethodId");
 
         AuthenticationConfigPtr authConfig = createWithImplementation<IAuthenticationConfig, AuthenticationConfigImpl>(supportedAuthenticationMethods);
-        authConfig.setAuthenticationMethodId(selectedId);
+        authConfig.setAuthenticationMethod(selectedId);
 
         *obj = authConfig.detach();
         return OPENDAQ_SUCCESS;

@@ -56,9 +56,9 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            objectPtr.setAuthenticationMethodId(getVariantValue<daq::IString*>(authenticationMethodId));
+            objectPtr.setAuthenticationMethod(getVariantValue<daq::IString*>(authenticationMethodId));
         },
-        "Gets or selects the authentication method currently used, by its own id - the selected `\"AuthenticationMethod\"` property value itself. Setting it looks the matching authentication method up among `supported_authentication_methods` internally.");
+        "Gets or selects the authentication method currently used, by its own id - the selected `\"AuthenticationMethod\"` property value itself. Setting it looks the matching authentication method up among `authentication_methods` internally.");
     cls.def_property_readonly("selected_authentication_method",
         [](daq::IAuthenticationConfig *object)
         {
@@ -67,23 +67,29 @@ void defineIAuthenticationConfig(pybind11::module_ m, PyDaqIntf<daq::IAuthentica
             return objectPtr.getSelectedAuthenticationMethod().detach();
         },
         py::return_value_policy::take_ownership,
-        "Gets the authentication method currently selected - the one of `supported_authentication_methods` whose own id matches the selected `\"AuthenticationMethod\"` property value.");
-    cls.def_property_readonly("supported_authentication_methods",
+        "Gets the authentication method currently selected - the one of `authentication_methods` whose own id matches the selected `\"AuthenticationMethod\"` property value.");
+    cls.def_property_readonly("authentication_methods",
         [](daq::IAuthenticationConfig *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
-            return objectPtr.getSupportedAuthenticationMethods().detach();
+            return objectPtr.getAuthenticationMethods().detach();
         },
         py::return_value_policy::take_ownership,
         "Gets every authentication method this config supports, keyed by their own id - the full set of `\"AuthenticationMethod\"` selection candidates, i.e. the same shape `IComponentTypePrivate::getSupportedAuthenticationMethods()` has, since this config was built from exactly that set. An equal, typed alternative to reading the candidates generically off the `\"AuthenticationMethod\"` property.");
-    cls.def_property_readonly("supplied_credential",
+    cls.def_property("supplied_credential",
         [](daq::IAuthenticationConfig *object)
         {
             py::gil_scoped_release release;
             const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
             return objectPtr.getSuppliedCredential().detach();
         },
+        [](daq::IAuthenticationConfig *object, daq::IDict* credential)
+        {
+            py::gil_scoped_release release;
+            const auto objectPtr = daq::AuthenticationConfigPtr::Borrow(object);
+            objectPtr.setSuppliedCredential(credential);
+        },
         py::return_value_policy::take_ownership,
-        "Gets the credential supplied directly by the caller - the value of the `\"SuppliedCredential\"` property, a dictionary of field value(s) keyed by their own field id. Always assigned - empty means none was supplied.");
+        "Gets or sets the credential supplied directly by the caller - the value of the `\"SuppliedCredential\"` property, a dictionary of field value(s) keyed by their own field id. Always assigned - empty means none was supplied. Setting it must carry a non-empty value for every field the currently selected `\"AuthenticationMethod\"` marks required, unless the given credential itself is empty, which clears it back to the default \"none supplied\" state.");
 }

@@ -27,14 +27,19 @@ daqErrCode daqAuthenticationConfig_getSelectedAuthenticationMethod(daqAuthentica
     return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSelectedAuthenticationMethod(reinterpret_cast<daq::IAuthenticationMethod**>(authenticationMethod));
 }
 
-daqErrCode daqAuthenticationConfig_setAuthenticationMethodId(daqAuthenticationConfig* self, daqString* authenticationMethodId)
+daqErrCode daqAuthenticationConfig_setAuthenticationMethod(daqAuthenticationConfig* self, daqString* authenticationMethodId)
 {
-    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->setAuthenticationMethodId(reinterpret_cast<daq::IString*>(authenticationMethodId));
+    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->setAuthenticationMethod(reinterpret_cast<daq::IString*>(authenticationMethodId));
 }
 
-daqErrCode daqAuthenticationConfig_getSupportedAuthenticationMethods(daqAuthenticationConfig* self, daqDict** authenticationMethods)
+daqErrCode daqAuthenticationConfig_getAuthenticationMethods(daqAuthenticationConfig* self, daqDict** authenticationMethods)
 {
-    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getSupportedAuthenticationMethods(reinterpret_cast<daq::IDict**>(authenticationMethods));
+    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->getAuthenticationMethods(reinterpret_cast<daq::IDict**>(authenticationMethods));
+}
+
+daqErrCode daqAuthenticationConfig_setSuppliedCredential(daqAuthenticationConfig* self, daqDict* credential)
+{
+    return reinterpret_cast<daq::IAuthenticationConfig*>(self)->setSuppliedCredential(reinterpret_cast<daq::IDict*>(credential));
 }
 
 daqErrCode daqAuthenticationConfig_getSuppliedCredential(daqAuthenticationConfig* self, daqDict** credential)

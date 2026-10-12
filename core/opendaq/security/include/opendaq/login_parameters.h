@@ -49,6 +49,8 @@ DECLARE_OPENDAQ_INTERFACE(ILoginParameters, IBaseObject)
      * @param[out] credentials The resolved credentials.
      */
     virtual ErrCode INTERFACE_FUNC getCredentials(IDict** credentials) = 0;
+
+    // TODO add identity fingerprint
 };
 
 /*!

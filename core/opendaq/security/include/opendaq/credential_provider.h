@@ -49,7 +49,8 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
      */
     virtual ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IDict** credentials) = 0;
 
-    // [templateType(credential, IString, IString)]
+    // TODO to be moved to vault
+    // [templateType(credentials, IString, IString)]
     /*!
      * @brief Accepts a credential already known in advance - e.g. supplied directly via `IAuthenticationConfig`'s
      * `"SuppliedCredential"` property - so an implementation that caches values it obtains interactively caches
@@ -58,9 +59,9 @@ DECLARE_OPENDAQ_INTERFACE(ICredentialProvider, IBaseObject)
      * it and uses it directly. Implementations for which caching doesn't apply may treat this as a
      * no-op.
      * @param request The credential request the credential is being supplied for.
-     * @param credential The credential - a dictionary of field value(s), keyed by their own field id.
+     * @param credentials The credential - a dictionary of field value(s), keyed by their own field id.
      */
-    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IDict* credential) = 0;
+    virtual ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IDict* credentials) = 0;
 };
 
 /*!

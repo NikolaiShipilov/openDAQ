@@ -33,8 +33,9 @@ public:
     explicit AuthenticationConfigImpl(const DictPtr<IString, IAuthenticationMethod>& authenticationMethods);
 
     ErrCode INTERFACE_FUNC getSelectedAuthenticationMethod(IAuthenticationMethod** authenticationMethod) override;
-    ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) override;
-    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) override;
+    ErrCode INTERFACE_FUNC setAuthenticationMethod(IString* authenticationMethodId) override;
+    ErrCode INTERFACE_FUNC getAuthenticationMethods(IDict** authenticationMethods) override;
+    ErrCode INTERFACE_FUNC setSuppliedCredential(IDict* credential) override;
     ErrCode INTERFACE_FUNC getSuppliedCredential(IDict** credential) override;
 
     // An `IAuthenticationConfig` needs to be nestable as an ordinary Object-type property value, but

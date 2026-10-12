@@ -33,7 +33,7 @@ public:
 
     ErrCode INTERFACE_FUNC getDescription(IString** description) override;
     ErrCode INTERFACE_FUNC requestCredentials(ICredentialRequest* request, IDict** credentials) override;
-    ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IDict* credential) override;
+    ErrCode INTERFACE_FUNC cacheCredentials(ICredentialRequest* request, IDict* credentials) override;
 
 private:
     // manufacturer, serialNumber, model, authentication method id

@@ -38,7 +38,7 @@ BEGIN_NAMESPACE_OPENDAQ
  *
  * Is itself a Property object - `"AuthenticationMethod"` is a Selection property whose candidates are the
  * supported methods' own ids, as plain strings (the real `IAuthenticationMethod` objects themselves - fields
- * and all - are reachable via `getSupportedAuthenticationMethods()`, keyed by that same id).
+ * and all - are reachable via `getAuthenticationMethods()`, keyed by that same id).
  * A directly-supplied credential is carried as a `"SuppliedCredential"` property - a dictionary of field
  * value(s), keyed by their own field id (see `ICredentialField::getId`); its default value is an empty
  * dictionary, which means "none supplied" (the module asks the registered credential provider instead). A
@@ -54,7 +54,7 @@ BEGIN_NAMESPACE_OPENDAQ
 DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
 {
     /*!
-     * @brief Gets the authentication method currently selected - the one of `getSupportedAuthenticationMethods()`
+     * @brief Gets the authentication method currently selected - the one of `getAuthenticationMethods()`
      * whose own id matches the selected `"AuthenticationMethod"` property value.
      * @param[out] authenticationMethod The currently selected authentication method.
      */
@@ -64,11 +64,11 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
      * @brief Selects the authentication method to use, by its own id - the typed equivalent of
      * `setPropertySelectionValue("AuthenticationMethod", authenticationMethodId)`. Selecting a new method always
      * resets `"SuppliedCredential"` back to empty.
-     * @param authenticationMethodId The id of one of `getSupportedAuthenticationMethods()`'s own keys.
+     * @param authenticationMethodId The id of one of `getAuthenticationMethods()`'s own keys.
      * @throws NotFoundException if `authenticationMethodId` doesn't match any of this config's supported
      * authentication methods.
      */
-    virtual ErrCode INTERFACE_FUNC setAuthenticationMethodId(IString* authenticationMethodId) = 0;
+    virtual ErrCode INTERFACE_FUNC setAuthenticationMethod(IString* authenticationMethodId) = 0;
 
     /*!
      * @brief Gets every authentication method this config supports, keyed by their own id - the full set of
@@ -78,7 +78,19 @@ DECLARE_OPENDAQ_INTERFACE(IAuthenticationConfig, IPropertyObject)
      * @param[out] authenticationMethods The supported authentication methods, keyed by their own id.
      */
     // [templateType(authenticationMethods, IString, IAuthenticationMethod)]
-    virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) = 0;
+    virtual ErrCode INTERFACE_FUNC getAuthenticationMethods(IDict** authenticationMethods) = 0;
+
+    // [templateType(credential, IString, IString)]
+    /*!
+     * @brief Sets the credential supplied directly by the caller - the typed equivalent of
+     * `setPropertyValue("SuppliedCredential", credential)`. Must carry a non-empty value for every field the
+     * currently selected `"AuthenticationMethod"` marks required (see `ICredentialField::isRequired`), unless
+     * `credential` itself is empty, which clears it back to the default "none supplied" state.
+     * @param credential The supplied credential - pass empty to clear it back to "none supplied".
+     * @throws InvalidParameterException if `credential` is missing one or more fields required by the
+     * currently selected authentication method.
+     */
+    virtual ErrCode INTERFACE_FUNC setSuppliedCredential(IDict* credential) = 0;
 
     // [templateType(credential, IString, IString)]
     /*!

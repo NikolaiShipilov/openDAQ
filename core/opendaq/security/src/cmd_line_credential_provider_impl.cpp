@@ -43,18 +43,18 @@ ErrCode CmdLineCredentialProviderImpl::requestCredentials(ICredentialRequest* re
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IDict* credential)
+ErrCode CmdLineCredentialProviderImpl::cacheCredentials(ICredentialRequest* request, IDict* credentials)
 {
     OPENDAQ_PARAM_NOT_NULL(request);
-    OPENDAQ_PARAM_NOT_NULL(credential);
+    OPENDAQ_PARAM_NOT_NULL(credentials);
 
     const auto requestPtr = CredentialRequestPtr::Borrow(request);
     const auto authenticationMethod = requestPtr.getAuthenticationMethod();
     if (!authenticationMethod.assigned())
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALIDPARAMETER, "Credential request has no authentication method set");
 
-    // Every field of `credential` is cached, whatever its kind - folded into the same per-(device, method) cache entry.
-    const DictPtr<IString, IString> credentialObj = credential;
+    // Every field of `credentials` is cached, whatever its kind - folded into the same per-(device, method) cache entry.
+    const DictPtr<IString, IString> credentialObj = credentials;
     auto& cached = credentialCache[MakeCacheKey(requestPtr)];
     if (!cached.assigned())
         cached = Dict<IString, IString>();
