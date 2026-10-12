@@ -36,6 +36,7 @@
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/component_type_ptr.h>
 #include <opendaq/credential_request_ptr.h>
+#include <opendaq/credential_provider_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 struct ModuleLibrary;
@@ -43,7 +44,7 @@ struct ModuleLibrary;
 class ModuleManagerImpl : public ImplementationOfWeak<IModuleManager, IModuleManagerUtils>
 {
 public:
-    explicit ModuleManagerImpl(const BaseObjectPtr& path);
+    explicit ModuleManagerImpl(const BaseObjectPtr& path, const CredentialProviderPtr& credentialProvider = nullptr);
     ~ModuleManagerImpl() override;
 
     ErrCode INTERFACE_FUNC getModules(IList** availableModules) override;
@@ -147,7 +148,7 @@ private:
                                                 const ComponentTypePtr& componentType) const;
 
     // Resolves the credentials for `credentialRequest` - for auth method with at least one field. Consumes
-    // whichever single credential provider `context.getCredentialProvider()` currently returns. If
+    // whichever single credential provider this manager was constructed with. If
     // `authenticationConfig.getSuppliedCredential()` returns one, it is used directly instead of asking the
     // provider to obtain one - though the provider, if registered, is still handed the credential via
     // `cacheCredentials`, so a later request for the same context can be served from its cache.
@@ -177,6 +178,7 @@ private:
     bool authenticatedModulesOnly;
     ModuleAuthenticatorPtr moduleAuthenticator;
     DictPtr<IString, IString> moduleKeys;
+    const CredentialProviderPtr credentialProvider;
 
     bool modulesLoaded;
     std::vector<std::string> paths;

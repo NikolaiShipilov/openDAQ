@@ -86,10 +86,11 @@ inline bool ComponentTypeSupportsAuthentication(const ComponentTypePtr& componen
     return supportedMethods.assigned() && supportedMethods.getCount() > 0;
 }
 
-ModuleManagerImpl::ModuleManagerImpl(const BaseObjectPtr& path)
+ModuleManagerImpl::ModuleManagerImpl(const BaseObjectPtr& path, const CredentialProviderPtr& credentialProvider)
     : authenticatedModulesOnly(false)
     , moduleAuthenticator(nullptr)
     , moduleKeys(Dict<IString, IString>())
+    , credentialProvider(credentialProvider)
     , modulesLoaded(false)
     , work(ioContext.get_executor())
     , rescanTimer(DefaultrescanTimer)
@@ -859,7 +860,6 @@ CredentialRequestPtr ModuleManagerImpl::buildCredentialRequest(const Authenticat
 
 DictPtr<IString, IString> ModuleManagerImpl::resolveCredentials(const AuthenticationConfigPtr& authenticationConfig, const CredentialRequestPtr& credentialRequest) const
 {
-    const CredentialProviderPtr provider = context.getCredentialProvider();
     const DictPtr<IString, IString> suppliedCredential = authenticationConfig.getSuppliedCredential();
 
     if (suppliedCredential.assigned() && suppliedCredential.getCount() > 0)
@@ -871,16 +871,16 @@ DictPtr<IString, IString> ModuleManagerImpl::resolveCredentials(const Authentica
         // it is used directly as the credential, no provider asked to obtain anything. If one is registered
         // too, it still gets a chance to cache the credential, so a later interactive request for the same
         // context reuses it.
-        if (provider.assigned())
-            provider.cacheCredentials(credentialRequest, suppliedCredential);
+        if (credentialProvider.assigned())
+            credentialProvider.cacheCredentials(credentialRequest, suppliedCredential);
 
         return suppliedCredential;
     }
 
-    if (!provider.assigned())
+    if (!credentialProvider.assigned())
         DAQ_THROW_EXCEPTION(CredentialsRequiredException, "Authentication is required but no credential provider is registered");
 
-    const DictPtr<IString, IString> credentials = provider.requestCredentials(credentialRequest);
+    const DictPtr<IString, IString> credentials = credentialProvider.requestCredentials(credentialRequest);
     if (!CredentialSatisfiesMethod(credentialRequest.getAuthenticationMethod(), credentials))
         DAQ_THROW_EXCEPTION(CredentialsRequiredException, "Credential provider returned credentials missing one or more required fields");
 
@@ -894,8 +894,7 @@ void ModuleManagerImpl::recacheCredentialsWithDeviceInfo(const DevicePtr& device
                                                          const DictPtr<IString, IString>& credentials) const
 {
     const DeviceInfoPtr deviceInfo = device.getInfo();
-    const CredentialProviderPtr provider = context.getCredentialProvider();
-    if (!provider.assigned() || !deviceInfo.assigned() || !deviceInfo.getManufacturer().assigned() || !deviceInfo.getSerialNumber().assigned())
+    if (!credentialProvider.assigned() || !deviceInfo.assigned() || !deviceInfo.getManufacturer().assigned() || !deviceInfo.getSerialNumber().assigned())
         return;
 
     try
@@ -907,7 +906,7 @@ void ModuleManagerImpl::recacheCredentialsWithDeviceInfo(const DevicePtr& device
                                                             deviceInfo.getModel(),
                                                             deviceInfo.getName(),
                                                             componentType);
-        provider.cacheCredentials(enrichedRequest, credentials);
+        credentialProvider.cacheCredentials(enrichedRequest, credentials);
     }
     catch (const DaqException& e)
     {
@@ -2469,11 +2468,11 @@ ModuleLibrary loadModuleInternal(const LoggerComponentPtr& loggerComponent, cons
 }
 
 OPENDAQ_DEFINE_CLASS_FACTORY(LIBRARY_FACTORY, ModuleManager,
-    IString*, path)
+    IString*, path, ICredentialProvider*, credentialProvider)
 
 OPENDAQ_DEFINE_CLASS_FACTORY_WITH_INTERFACE_AND_CREATEFUNC(
     LIBRARY_FACTORY, ModuleManager,
     IModuleManager, createModuleManagerMultiplePaths,
-    IList*, paths)
+    IList*, paths, ICredentialProvider*, credentialProvider)
 
 END_NAMESPACE_OPENDAQ

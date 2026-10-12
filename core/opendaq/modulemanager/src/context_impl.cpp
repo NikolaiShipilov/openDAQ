@@ -19,8 +19,7 @@ ContextImpl::ContextImpl(SchedulerPtr scheduler,
                          ModuleManagerPtr moduleManager,
                          AuthenticationProviderPtr authenticationProvider,
                          DictPtr<IString, IBaseObject> options,
-                         DictPtr<IString, IDiscoveryServer> discoveryServices,
-                         CredentialProviderPtr credentialProvider)
+                         DictPtr<IString, IDiscoveryServer> discoveryServices)
     : logger(std::move(logger))
     , scheduler(std::move(scheduler))
     , moduleManager(std::move(moduleManager))
@@ -28,7 +27,6 @@ ContextImpl::ContextImpl(SchedulerPtr scheduler,
     , authenticationProvider(std::move(authenticationProvider))
     , options(std::move(options))
     , discoveryServers(std::move(discoveryServices))
-    , credentialProvider(std::move(credentialProvider))
 {
     if (!this->logger.assigned())
         DAQ_THROW_EXCEPTION(ArgumentNullException, "Logger must not be null");
@@ -250,13 +248,6 @@ ErrCode ContextImpl::setRootDevice(IBaseObject* device)
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ContextImpl::getCredentialProvider(ICredentialProvider** provider)
-{
-    OPENDAQ_PARAM_NOT_NULL(provider);
-    *provider = this->credentialProvider.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
 void ContextImpl::registerOpenDaqTypes()
 {
     if (typeManager == nullptr)
@@ -345,8 +336,7 @@ OPENDAQ_DEFINE_CLASS_FACTORY(
     IModuleManager*, moduleManager,
     IAuthenticationProvider*, authenticationProvider,
     IDict*, options,
-    IDict*, discoveryServices,
-    ICredentialProvider*, credentialProvider
+    IDict*, discoveryServices
 )
 
 END_NAMESPACE_OPENDAQ
