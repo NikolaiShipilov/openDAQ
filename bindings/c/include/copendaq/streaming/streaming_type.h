@@ -43,7 +43,7 @@ extern "C"
     void EXPORTED daqStreamingType_getInterfaceId(daqIntfID* intfId);
 
     daqErrCode EXPORTED daqStreamingType_getConnectionStringPrefix(daqStreamingType* self, daqString** prefix);
-    daqErrCode EXPORTED daqStreamingType_createStreamingType(daqStreamingType** obj, daqString* id, daqString* name, daqString* description, daqString* prefix, daqPropertyObject* defaultConfig, daqDict* supportedAuthenticationMethods, daqString* defaultAuthenticationMethodId);
+    daqErrCode EXPORTED daqStreamingType_createStreamingType(daqStreamingType** obj, daqString* id, daqString* name, daqString* description, daqString* prefix, daqPropertyObject* defaultConfig, daqDict* supportedAuthenticationMethods);
 
 #ifdef __cplusplus
 }

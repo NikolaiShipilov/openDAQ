@@ -117,6 +117,8 @@ set(SRC_Cpp
     generated/security/py_credential_provider.cpp
     generated/security/py_credential_request.cpp
     generated/security/py_credential_request_builder.cpp
+    generated/security/py_login_parameters.cpp
+    generated/security/py_login_parameters_builder.cpp
 )
 
 add_library(${LIB_NAME} STATIC ${SRC_Headers} ${SRC_Cpp})

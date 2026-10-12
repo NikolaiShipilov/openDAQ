@@ -51,10 +51,10 @@ enum class ComponentTypeSort
  *
  * Depending on the set "Type" builder parameter, a different Component type is created - eg. Streaming type,
  * Device type, Function block type, or Server type.
- * `setSupportedAuthenticationMethods`/`setDefaultAuthenticationMethodId` only take effect for a "Device" or
- * "Streaming" sort. For a Device or Streaming type, if these setters were never called
- * (or were called with an unassigned input parameter), the built type defaults to supporting only
- * the standard `"Anonymous"` method.
+ * `addAuthenticationMethod` only applies to a "Device" or "Streaming" sort - fails with
+ * `OPENDAQ_ERR_NOT_SUPPORTED` for any other sort. If never called, the built type ends up with no supported
+ * authentication methods - so the core treats it as not supporting authentication, going through the plain
+ * `createDevice`/`createStreaming` module path instead of `createAuthenticatedDevice`/`createAuthenticatedStreaming`.
  */
 DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
 {
@@ -175,37 +175,23 @@ DECLARE_OPENDAQ_INTERFACE(IComponentTypeBuilder, IBaseObject)
 
     // [returnSelf]
     /*!
-     * @brief Sets the authentication methods the built Component type will support authenticating with, keyed
-     * by their own authentication method id. Only takes effect when the "Type" builder parameter is "Device"
-     * or "Streaming" - ignored when building a Server or Function block type.
-     * @param authenticationMethods The supported authentication methods, keyed by their own id.
+     * @brief Adds an authentication method the built Component type will support authenticating with,
+     * appended after any already added. Kept in the order added, which a default selection follows -
+     * selecting the first one added. Only valid when the "Type" builder parameter is "Device" or
+     * "Streaming".
+     * @param method The authentication method to add.
+     * @retval OPENDAQ_ERR_ALREADYEXISTS for a second method with the same id.
+     * @retval OPENDAQ_ERR_NOT_SUPPORTED for a Server or Function block sort.
      */
-    // [templateType(authenticationMethods, IString, IAuthenticationMethod)]
-    virtual ErrCode INTERFACE_FUNC setSupportedAuthenticationMethods(IDict* authenticationMethods) = 0;
+    virtual ErrCode INTERFACE_FUNC addAuthenticationMethod(IAuthenticationMethod* method) = 0;
 
     /*!
-     * @brief Gets the authentication methods currently set on the builder - see `setSupportedAuthenticationMethods`
+     * @brief Gets the authentication methods currently added to the builder - see `addAuthenticationMethod`
      * for when they take effect on the built Component type.
      * @param[out] authenticationMethods The supported authentication methods, keyed by their own id.
      */
     // [templateType(authenticationMethods, IString, IAuthenticationMethod)]
     virtual ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) = 0;
-
-    // [returnSelf]
-    /*!
-     * @brief Sets the id of the authentication method the built Component type will support by default. Only
-     * takes effect when the "Type" builder parameter is "Device" or "Streaming" - ignored when building a
-     * Server or Function block type.
-     * @param defaultAuthenticationMethodId The default authentication method id.
-     */
-    virtual ErrCode INTERFACE_FUNC setDefaultAuthenticationMethodId(IString* defaultAuthenticationMethodId) = 0;
-
-    /*!
-     * @brief Gets the default authentication method id currently set on the builder - see
-     * `setDefaultAuthenticationMethodId` for when it takes effect on the built Component type.
-     * @param[out] defaultAuthenticationMethodId The default authentication method id.
-     */
-    virtual ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString** defaultAuthenticationMethodId) = 0;
 };
 /*!@}*/
 

@@ -1,19 +1,26 @@
 # Credential Provider Framework — API Reference & Authentication Flow
 
-> **Stale pending a doc pass:** `addAuthenticatedDevice`/`createAuthenticatedDevice` and `addStreaming`/`createStreaming`'s
-> `authenticationConfig` parameter, referenced throughout this document, have been removed - only the plain,
-> config-only overloads (`addDevice`/`createDevice`, `addStreaming`/`createStreaming` with no such parameter)
-> remain. As a temporary, hacky bridge until `IAuthenticationConfig` becomes a real part of the add-device config
-> schema, a caller instead stashes the config onto the plain `config` property object under the
-> `"__AuthenticationConfig"` property name (see `AuthenticationConfigConfigKey`/`InjectAuthenticationConfig`/
-> `ExtractAuthenticationConfig` in `core/opendaq/modulemanager/include/opendaq/module_impl.h`, reused by
+> **Stale pending a doc pass:** `addAuthenticatedDevice`/`addStreaming`'s `authenticationConfig` parameter,
+> referenced throughout this document, has been removed - only the plain, config-only overloads (`addDevice`/
+> `addStreaming` with no such parameter) remain. As a temporary, hacky bridge until `IAuthenticationConfig`
+> becomes a real part of the add-device config schema, a caller instead stashes the config onto the plain
+> `config` property object under the `"__AuthenticationConfig"` property name (see `AuthenticationConfigConfigKey`/
+> `ExtractAuthenticationConfig` in `core/opendaq/modulemanager/include/opendaq/module_impl.h`, used by
 > `ModuleManagerImpl`; `GenericDevice`'s reload path and application code each keep their own small local copy of
 > the same key, since sharing it across components isn't worth a public header for what's meant to be temporary).
-> Every code snippet below using `addAuthenticatedDevice`/`createAuthenticatedDevice` needs updating accordingly -
-> see `examples/applications/cpp/credential_providers/credential_providers.cpp`'s `WithAuthenticationConfig` helper
+> Every code snippet below using `addAuthenticatedDevice` needs updating accordingly - see
+> `examples/applications/cpp/credential_providers/credential_providers.cpp`'s `WithAuthenticationConfig` helper
 > for the current, correct pattern in the meantime.
+>
+> `IModule::createAuthenticatedDevice`/`createAuthenticatedStreaming` exist again, but in a different shape than
+> what [§2](#2-extensions-to-existing-interfaces)/[§8](#8-module-level-implementation) below describe: they take
+> an already-resolved `ILoginParameters*` (authentication method + credentials) instead of the raw
+> `IAuthenticationConfig`, and the resolution steps §8 attributes to `Module` (building the credential request,
+> consulting the provider, persisting the config for reload) now happen in `ModuleManagerImpl` instead, before
+> it calls one of these two methods - `Module`'s own implementation just dispatches to `onCreateAuthenticatedDevice`/
+> `onCreateAuthenticatedStreaming`, unchanged. §8 still needs a full rewrite to reflect this.
 
-Credentials are modelled as a dictionary of named **fields** per authentication method (`IAuthenticationMethod::getFields()`), each one an `ICredentialField` naming how its value should be collected - `Text`, `Secret` (masked), or `FilePath`. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object built with `AuthenticationConfig(componentType)`, listing every method the named component type itself declares supporting (via `IComponentType::getSupportedAuthenticationMethods()`, set once when the module built the type) as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming`.
+Credentials are modelled as a dictionary of named **fields** per authentication method (`IAuthenticationMethod::getFields()`), each one an `ICredentialField` naming how its value should be collected - `Text`, `Secret` (masked), or `FilePath`. Authentication method selection happens through an `IAuthenticationConfig` object - a single, self-contained property object built with `componentType.createAuthenticationConfig()`, listing every method the named component type itself declares supporting (via `IComponentTypePrivate::getSupportedAuthenticationMethods()`, set once when the module built the type) as a candidate the caller selects among directly, tunes, and hands to `addAuthenticatedDevice`/`addStreaming`.
 
 At most one credential provider can ever be registered for an entire `Instance` - on `IInstanceBuilder`, at build time, before the instance's `Context` even exists (see [§2](#2-extensions-to-existing-interfaces)) - so there is no per-config provider selection at all: `IAuthenticationConfig` doesn't carry a provider id, and a module always uses whichever single provider (if any) `IContext::getCredentialProvider()` returns.
 
@@ -68,7 +75,7 @@ Carries the authentication settings for a single connection attempt. Lives along
 
 | Property | Description |
 |---|---|
-| `"AuthenticationMethod"` (Selection) | Candidates are the supported methods' own ids, as plain strings - the selection value is the currently selected id (`getSelectedAuthenticationMethod()`'s typed equivalent returns the full method object, looked up by this id). The real `IAuthenticationMethod` objects (fields and all) are reached separately, via `getSupportedAuthenticationMethods()`, keyed by that same id. A config returned by `AuthenticationConfig(componentType)` (see [§2](#2-extensions-to-existing-interfaces)) is self-contained - every authentication method the component type supports is a selection candidate here, not just one - so the caller switches methods by changing this property's selection, without fetching a different config object. Changing this property unconditionally resets `"SuppliedCredential"` back to empty, whatever it held before. |
+| `"AuthenticationMethod"` (Selection) | Candidates are the supported methods' own ids, as plain strings - the selection value is the currently selected id (`getSelectedAuthenticationMethod()`'s typed equivalent returns the full method object, looked up by this id). The real `IAuthenticationMethod` objects (fields and all) are reached separately, via `getSupportedAuthenticationMethods()`, keyed by that same id. A config returned by `componentType.createAuthenticationConfig()` (see [§2](#2-extensions-to-existing-interfaces)) is self-contained - every authentication method the component type supports is a selection candidate here, not just one - so the caller switches methods by changing this property's selection, without fetching a different config object. Changing this property unconditionally resets `"SuppliedCredential"` back to empty, whatever it held before. |
 | `"SuppliedCredential"` (Dict) | A credential supplied directly by the caller, to be used instead of the registered credential provider obtaining it - a dictionary of field value(s), keyed by their own field id (see [Credentials](#credentials) below). Its default value is an empty dictionary, which means "none supplied" (the registered provider is asked instead). A non-empty value counts as supplied, and is validated against the *currently selected* `"AuthenticationMethod"` on every write: it must carry a non-empty value for every field the method marks required (see `CredentialSatisfiesMethod`), or the write is rejected. Changing `"AuthenticationMethod"` always resets this property back to empty first, whatever it held before - a credential supplied for the previous method is never meaningful for the new one, compatible-looking or not. See [§5](#5-credential-provider-selection--supplied-credentials). |
 
 | Member | Description |
@@ -79,7 +86,7 @@ Carries the authentication settings for a single connection attempt. Lives along
 There is no "additional config" on `IAuthenticationConfig` itself - settings like whether to hide credential input as it's typed travel via the component's own, generic config object instead (the same one `addDevice`/`addStreaming` always take), read by the module from its own `config` parameter alongside the authentication config. Nor is there any credential-provider selection on it at all - see [§5](#5-credential-provider-selection--supplied-credentials).
 
 **Factory:** two overloads.
-- `AuthenticationConfig(componentType)` — the recommended way to build a config for a live device/streaming type. Reads `authenticationMethods` straight off `componentType`'s own `getSupportedAuthenticationMethods()` (see [§2](#2-extensions-to-existing-interfaces)) - the type itself is the single source of truth for what it supports, set once via `IComponentTypeBuilder` when the module built it.
+- `componentType.createAuthenticationConfig()` — the recommended way to build a config for a live device/streaming type. Reads `authenticationMethods` straight off `componentType`'s own `getSupportedAuthenticationMethods()` (see [§2](#2-extensions-to-existing-interfaces)) - the type itself is the single source of truth for what it supports, set once via `IComponentTypeBuilder` when the module built it.
 - `AuthenticationConfig(authenticationMethods)` — the lower-level overload, for building a config with no live `IComponentType` object at hand (e.g. deserialization). Each entry of `authenticationMethods` (a dict keyed by each authentication method's own id) becomes one candidate value of the resulting config's `"AuthenticationMethod"` Selection property, so a caller can later switch between methods just by changing that property's selection instead of needing a different config object per method; the dict's first entry, in iteration order, starts out selected.
 
 `"SuppliedCredential"` is never set by either factory - set it afterward via that property directly, the same way regardless of which one built the config.
@@ -152,7 +159,7 @@ Supplies the credentials requested via an `ICredentialRequest` — by prompting 
 
 ## 2. Extensions to Existing Interfaces
 
-Component types (`IComponentType` and everything derived from it, including `IDeviceType`/`IStreamingType`) carry their supported authentication data as genuine Struct fields: `getSupportedAuthenticationMethods()` (the authentication methods it supports, keyed by their own id) and `getDefaultAuthenticationMethodId()`. A module declares these once, via `IComponentTypeBuilder::setSupportedAuthenticationMethods`/`setDefaultAuthenticationMethodId`, when it builds the device or streaming type - left unset, a type defaults to supporting only the standard `"Anonymous"` method. (Server and Function block types do not carry this data - only Device and Streaming types do.) To build the self-contained `IAuthenticationConfig` for a type, call `AuthenticationConfig(componentType)` directly (see [§1](#1-core-interfaces)) - there's no separate method on `IDevice`/`IModule` for this anymore.
+Component types (`IComponentType` and everything derived from it, including `IDeviceType`/`IStreamingType`) carry their supported authentication data as genuine Struct fields: `getSupportedAuthenticationMethods()` (the authentication methods it supports, keyed by their own id) and `getDefaultAuthenticationMethodId()`. A module declares these once, via `IComponentTypeBuilder::setSupportedAuthenticationMethods`/`setDefaultAuthenticationMethodId`, when it builds the device or streaming type - left unset, a type defaults to supporting only the standard `"Anonymous"` method. (Server and Function block types do not carry this data - only Device and Streaming types do.) To build the self-contained `IAuthenticationConfig` for a type, call `componentType.createAuthenticationConfig()` directly (see [§1](#1-core-interfaces)) - there's no separate method on `IDevice`/`IModule` for this anymore.
 
 ### `IDevice`
 
@@ -210,7 +217,7 @@ auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, aut
 
 The same connection string is used, but an `IAuthenticationConfig` is supplied, and everything described in the rest of this document — credential negotiation, provider lookup, credential retrieval, verification — is triggered as a result.
 
-A device type only exposes this path meaningfully when it declares at least one supported authentication method (see [§2](#2-extensions-to-existing-interfaces)) - `AuthenticationConfig(componentType)` still succeeds otherwise (every type defaults to `"Anonymous"`), but `addAuthenticatedDevice` against a type that only supports `"Anonymous"` gains nothing over the plain path.
+A device type only exposes this path meaningfully when it declares at least one supported authentication method (see [§2](#2-extensions-to-existing-interfaces)) - `componentType.createAuthenticationConfig()` still succeeds otherwise (every type defaults to `"Anonymous"`), but `addAuthenticatedDevice` against a type that only supports `"Anonymous"` gains nothing over the plain path.
 
 ---
 
@@ -223,7 +230,7 @@ Attaching a streaming connection is authenticated **independently** of however t
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device");
 
 // Authenticated streaming attach, with its own independent authentication config:
-auto streamingAuthConfig = AuthenticationConfig(streamingType);
+auto streamingAuthConfig = streamingType.createAuthenticationConfig();
 SelectAuthenticationMethod(streamingAuthConfig, "PrivateKeyFile"); // see §7 - switches the selection generically
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingAuthConfig);
 ```
@@ -246,7 +253,7 @@ There is no provider *selection* at all - at most one credential provider can ev
 Setting `"SuppliedCredential"` hands the module a credential it already has — a dictionary of field value(s), keyed by their own field id — instead of having the registered provider obtain one interactively. A non-empty write is validated against the *currently selected* `"AuthenticationMethod"` (see [§1](#1-core-interfaces)): it must carry a non-empty value for every field the method marks required, so select the method first:
 
 ```cpp
-auto config = AuthenticationConfig(deviceType); // UserNamePassword is the default method
+auto config = deviceType.createAuthenticationConfig(); // UserNamePassword is the default method
 
 auto credential = Dict<IString, IString>();
 credential.set("UserName", "user");
@@ -262,7 +269,7 @@ auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, con
 The second case is what makes it possible for a *later*, ordinary `requestCredentials` call — e.g. authenticating a streaming connection attached to the same device — to be served from the provider's cache instead of prompting, provided the provider actually caches for that field kind (see `CmdLineCredentialProvider`'s `FilePath` caching) and the two requests share the same `(manufacturer, serialNumber, model)`:
 
 ```cpp
-auto deviceConfig = AuthenticationConfig(deviceType);
+auto deviceConfig = deviceType.createAuthenticationConfig();
 SelectAuthenticationMethod(deviceConfig, "PrivateKeyFile");
 
 auto deviceCredential = Dict<IString, IString>();
@@ -273,7 +280,7 @@ auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, dev
 
 // Same device, same FilePath field - no path prompt this time; the registered provider serves
 // it from the cache `cacheCredentials` populated above.
-auto streamingConfig = AuthenticationConfig(streamingType);
+auto streamingConfig = streamingType.createAuthenticationConfig();
 SelectAuthenticationMethod(streamingConfig, "PrivateKeyFile");
 device.addStreaming("daq.credential_demo_streaming://credential_demo_device", nullptr, streamingConfig);
 ```
@@ -311,7 +318,7 @@ Provider registration is **never serialized** — a reloaded instance must regis
 
 ### Selecting an authentication method
 
-`AuthenticationConfig(componentType)` returns one **self-contained** config listing every method the named device type supports as a candidate of its `"AuthenticationMethod"` selection property (see [§1](#1-core-interfaces)) - not a separate config per method. The application either accepts the type's default selection, or switches it to a different supported method by matching authentication method ids, entirely through plain property object calls:
+`componentType.createAuthenticationConfig()` returns one **self-contained** config listing every method the named device type supports as a candidate of its `"AuthenticationMethod"` selection property (see [§1](#1-core-interfaces)) - not a separate config per method. The application either accepts the type's default selection, or switches it to a different supported method by matching authentication method ids, entirely through plain property object calls:
 
 ```cpp
 // Selects one of the config's supported methods by authentication method id - manipulating the "AuthenticationMethod"
@@ -334,21 +341,21 @@ void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const
 auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
 
 // Use the type's default authentication method:
-auto config = AuthenticationConfig(deviceType);
+auto config = deviceType.createAuthenticationConfig();
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, config);
 
 // Or explicitly select a specific supported method instead (e.g. "Pin"), on a config of its own:
-auto pinConfig = AuthenticationConfig(deviceType);
+auto pinConfig = deviceType.createAuthenticationConfig();
 SelectAuthenticationMethod(pinConfig, "Pin");
 auto device2 = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, pinConfig);
 ```
 
 ### Example: manipulating the config as a plain property object
 
-`IAuthenticationConfig` extends `IPropertyObject` (see [§1](#1-core-interfaces)), so the application can equally configure and inspect it with plain property object calls instead of the typed getters used elsewhere in this section - `AuthenticationConfig(componentType)` already returns a fresh, independent, self-contained config, ready to tune directly:
+`IAuthenticationConfig` extends `IPropertyObject` (see [§1](#1-core-interfaces)), so the application can equally configure and inspect it with plain property object calls instead of the typed getters used elsewhere in this section - `componentType.createAuthenticationConfig()` already returns a fresh, independent, self-contained config, ready to tune directly:
 
 ```cpp
-auto authConfig = AuthenticationConfig(deviceType);
+auto authConfig = deviceType.createAuthenticationConfig();
 SelectAuthenticationMethod(authConfig, "Pin");
 
 StructPtr authenticationMethod = authConfig.getPropertySelectionValue("AuthenticationMethod");
@@ -371,7 +378,7 @@ auto instance = instanceBuilder.build();
 auto deviceType = instance.getAvailableDeviceTypes().get("CredentialDemoDevice");
 
 // FilePath variant — module reads and parses the PEM file itself.
-auto privateKeyFileConfig = AuthenticationConfig(deviceType);
+auto privateKeyFileConfig = deviceType.createAuthenticationConfig();
 SelectAuthenticationMethod(privateKeyFileConfig, "PrivateKeyFile");
 auto device = instance.addAuthenticatedDevice("daq://openDAQ_1234", nullptr, privateKeyFileConfig);
 ```
@@ -409,4 +416,4 @@ A method with no fields (e.g. `"Anonymous"`) skips steps 2–3 entirely: `Module
 5. **Persist the authentication config for later reload (devices only).** Also handled by `Module::createAuthenticatedDevice` itself, after the hook returns a device: it stores the *original* authentication config it was given on the newly created device (`IComponentPrivate::setAuthenticationConfig`) — its custom serialization then reduces this, on save, to every candidate authentication method and the selected method id (see [Serialization](#serialization) in [§1](#1-core-interfaces)) — so a future reload can repeat this same resolution process (see [Save and reload](#save-and-reload)) rather than needing the credential itself, or how it was obtained, to be saved anywhere. The module implementation never sees this happen.
 
 ![Application / Module / Credential Provider — sequence view of the same steps](credential_flow_diagram_sequence.png)
-*Diagram 3 — the same steps as above, as a sequence diagram across the three parties involved, now covering the full device lifecycle rather than just the module-level resolution step: the Application creates the self-contained default config (`AuthenticationConfig(componentType)`) and, if needed, tunes it - a different supported method, or a supplied credential; the Module then either resolves credentials through the registered Credential Provider (`requestCredentials`/`cacheCredentials`) or uses a supplied credential directly, matching the branching in Diagram 1; finally the config is saved and reloaded, re-authenticating the device from scratch through the same provider-resolution path - a prompt-free reload only happens if the provider itself already has something cached for this context, never because a credential was saved. Each phase's note names exactly which actors participate in it. Building the config is a single, direct call - `componentType` is already in the Application's hands (see [§2](#2-extensions-to-existing-interfaces)), no `ParentDevice`/`Instance` hop needed. As in Diagram 1, the pink/orange notes are `Module`'s own shared base-class code for consuming the single registered provider (steps 1-3 and 5, running around a module's own hook rather than inside it) - not core-mandated behavior, and not something a module implementation performs or even observes directly. Only the per-method verification (step 4) is truly specific to the credential-demo module.*
+*Diagram 3 — the same steps as above, as a sequence diagram across the three parties involved, now covering the full device lifecycle rather than just the module-level resolution step: the Application creates the self-contained default config (`componentType.createAuthenticationConfig()`) and, if needed, tunes it - a different supported method, or a supplied credential; the Module then either resolves credentials through the registered Credential Provider (`requestCredentials`/`cacheCredentials`) or uses a supplied credential directly, matching the branching in Diagram 1; finally the config is saved and reloaded, re-authenticating the device from scratch through the same provider-resolution path - a prompt-free reload only happens if the provider itself already has something cached for this context, never because a credential was saved. Each phase's note names exactly which actors participate in it. Building the config is a single, direct call - `componentType` is already in the Application's hands (see [§2](#2-extensions-to-existing-interfaces)), no `ParentDevice`/`Instance` hop needed. As in Diagram 1, the pink/orange notes are `Module`'s own shared base-class code for consuming the single registered provider (steps 1-3 and 5, running around a module's own hook rather than inside it) - not core-mandated behavior, and not something a module implementation performs or even observes directly. Only the per-method verification (step 4) is truly specific to the credential-demo module.*

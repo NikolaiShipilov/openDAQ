@@ -77,26 +77,17 @@ DeviceInfoPtr CredentialDemoDeviceImpl::CreateDeviceInfo(const DictPtr<IString, 
 
 DeviceTypePtr CredentialDemoDeviceImpl::CreateType(const ContextPtr& context)
 {
-    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod();
-    auto pinMethod = StandardPinAuthenticationMethod();
-    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod();
-    auto anonymousMethod = StandardAnonymousAuthenticationMethod();
-
     // Showcases all four authentication methods - UserName/Password, PIN, PrivateKeyFile, Anonymous -
-    // defaulting to UserName/Password.
-    auto supportedMethods =
-        Dict<IString, IAuthenticationMethod>({{userNamePasswordMethod.getId(), userNamePasswordMethod},
-                                              {pinMethod.getId(), pinMethod},
-                                              {privateKeyMethod.getId(), privateKeyMethod},
-                                              {anonymousMethod.getId(), anonymousMethod}});
-
+    // defaulting to Anonymous, the first one added.
     return DeviceTypeBuilder()
         .setId("CredentialDemoDevice")
         .setName("Credential demo device")
         .setDescription("openDAQ authentication/credential framework showcase device")
         .setConnectionStringPrefix(Prefix)
-        .setSupportedAuthenticationMethods(supportedMethods)
-        .setDefaultAuthenticationMethodId(StandardUserNamePasswordId)
+        .addAuthenticationMethod(StandardAnonymousAuthenticationMethod())
+        .addAuthenticationMethod(StandardUserNamePasswordAuthenticationMethod())
+        .addAuthenticationMethod(StandardPinAuthenticationMethod())
+        .addAuthenticationMethod(StandardPrivateKeyFileAuthenticationMethod())
         .build();
 }
 

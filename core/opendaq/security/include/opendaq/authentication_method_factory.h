@@ -35,17 +35,6 @@ inline AuthenticationMethodPtr AuthenticationMethod(const StringPtr& id, const D
 }
 
 /*!
- * @brief Creates a `AuthenticationMethod` with no credential fields at all - for an authentication method that
- * requires no credentials, e.g. typically anonymous access.
- * @param id The id that uniquely identifies this authentication method at least within the module that offers it.
- * @param description A human-readable description of the authentication method, for the user.
- */
-inline AuthenticationMethodPtr NoneAuthenticationMethod(const StringPtr& id, const StringPtr& description)
-{
-    return AuthenticationMethod(id, Dict<IString, ICredentialField>(), description);
-}
-
-/*!
  * @brief Checks whether `credential` is usable as-is for `authenticationMethod` - every field the method marks
  * required (`ICredentialField::isRequired`) is present among `credential`'s keys with a non-empty value. A
  * field that isn't required is never checked, whether present or not. `false` if `authenticationMethod` itself
@@ -131,13 +120,7 @@ inline AuthenticationMethodPtr StandardPrivateKeyFileAuthenticationMethod()
  */
 inline AuthenticationMethodPtr StandardAnonymousAuthenticationMethod()
 {
-    return NoneAuthenticationMethod(StandardAnonymousId, "No credentials required");
-}
-
-inline DictPtr<IString, IAuthenticationMethod> AnonymousOnlySupportedAuthenticationMethods()
-{
-    const auto anonymous = StandardAnonymousAuthenticationMethod();
-    return Dict<IString, IAuthenticationMethod>({{anonymous.getId(), anonymous}});
+    return AuthenticationMethod(StandardAnonymousId, Dict<IString, ICredentialField>(), "No credentials required");
 }
 
 END_NAMESPACE_OPENDAQ

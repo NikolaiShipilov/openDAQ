@@ -8,9 +8,8 @@ StreamingTypeImpl::StreamingTypeImpl(const StringPtr& id,
                                             const StringPtr& description,
                                             const StringPtr& prefix,
                                             const PropertyObjectPtr& defaultConfig,
-                                            const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods,
-                                            const StringPtr& defaultAuthenticationMethodId)
-    : Super(StreamingTypeStructType(), id, name, description, prefix, defaultConfig, supportedAuthenticationMethods, defaultAuthenticationMethodId)
+                                            const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods)
+    : Super(StreamingTypeStructType(), id, name, description, prefix, defaultConfig, supportedAuthenticationMethods)
 {
 }
 
@@ -20,8 +19,7 @@ StreamingTypeImpl::StreamingTypeImpl(const ComponentTypeBuilderPtr& builder)
                         builder.getDescription(),
                         builder.getConnectionStringPrefix(),
                         builder.getDefaultConfig(),
-                        builder.getSupportedAuthenticationMethods(),
-                        builder.getDefaultAuthenticationMethodId())
+                        builder.getSupportedAuthenticationMethods())
 {
 }
 
@@ -74,12 +72,6 @@ ErrCode INTERFACE_FUNC StreamingTypeImpl::serialize(ISerializer* serializer)
             {
                 serializerPtr.key("supportedAuthenticationMethods");
                 supportedAuthenticationMethods.serialize(serializerPtr);
-            }
-
-            if (defaultAuthenticationMethodId.assigned())
-            {
-                serializerPtr.key("defaultAuthenticationMethodId");
-                serializerPtr.writeString(defaultAuthenticationMethodId);
             }
 
             if (moduleInfo.assigned())
@@ -137,16 +129,12 @@ ErrCode StreamingTypeImpl::Deserialize(ISerializedObject* serialized, IBaseObjec
         if (serializedObj.hasKey("defaultConfig"))
             defaultConfig = serializedObj.readObject("defaultConfig", contextPtr, factoryCallbackPtr);
 
-        DictPtr<IString, IAuthenticationMethod> supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods();
+        DictPtr<IString, IAuthenticationMethod> supportedAuthenticationMethods;
         if (serializedObj.hasKey("supportedAuthenticationMethods"))
             supportedAuthenticationMethods = serializedObj.readObject("supportedAuthenticationMethods", contextPtr, factoryCallbackPtr).asPtr<IDict>();
 
-        StringPtr defaultAuthenticationMethodId = StandardAnonymousId;
-        if (serializedObj.hasKey("defaultAuthenticationMethodId"))
-            defaultAuthenticationMethodId = serializedObj.readString("defaultAuthenticationMethodId");
-
         auto streamingType = createWithImplementation<IStreamingType, StreamingTypeImpl>(
-            id, name, description, prefix, defaultConfig, supportedAuthenticationMethods, defaultAuthenticationMethodId);
+            id, name, description, prefix, defaultConfig, supportedAuthenticationMethods);
 
         ModuleInfoPtr moduleInfo;
         if (serializedObj.hasKey("moduleInfo"))
@@ -177,9 +165,7 @@ OPENDAQ_DEFINE_CLASS_FACTORY(
     IPropertyObject*,
     defaultConfig,
     IDict*,
-    supportedAuthenticationMethods,
-    IString*,
-    defaultAuthenticationMethodId
+    supportedAuthenticationMethods
     )
 
 END_NAMESPACE_OPENDAQ

@@ -5,7 +5,6 @@
 #include <opendaq/streaming_type_impl.h>
 #include <coretypes/validation.h>
 #include <coretypes/dictobject_factory.h>
-#include <opendaq/authentication_method_factory.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -18,13 +17,6 @@ ErrCode ComponentTypeBuilderImpl::build(IComponentType** componentType)
 {
     const ErrCode errCode = daqTry([&componentType, this]
     {
-        if ((sort == ComponentTypeSort::Device || sort == ComponentTypeSort::Streaming) && !this->supportedAuthenticationMethods.assigned())
-        {
-            // Left unset by the caller - default to offering "Anonymous".
-            this->supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods();
-            this->defaultAuthenticationMethodId = StandardAnonymousId;
-        }
-
         const auto builderPtr = this->borrowPtr<ComponentTypeBuilderPtr>();
         switch (sort)
         {
@@ -134,9 +126,23 @@ ErrCode ComponentTypeBuilderImpl::getDefaultConfig(IPropertyObject** defaultConf
     return OPENDAQ_SUCCESS;
 }
 
-ErrCode ComponentTypeBuilderImpl::setSupportedAuthenticationMethods(IDict* authenticationMethods)
+ErrCode ComponentTypeBuilderImpl::addAuthenticationMethod(IAuthenticationMethod* method)
 {
-    this->supportedAuthenticationMethods = authenticationMethods;
+    OPENDAQ_PARAM_NOT_NULL(method);
+
+    if (sort != ComponentTypeSort::Device && sort != ComponentTypeSort::Streaming)
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "addAuthenticationMethod only applies to a Device or Streaming type");
+
+    const auto methodPtr = AuthenticationMethodPtr::Borrow(method);
+    const StringPtr id = methodPtr.getId();
+
+    if (!this->supportedAuthenticationMethods.assigned())
+        this->supportedAuthenticationMethods = Dict<IString, IAuthenticationMethod>();
+
+    if (this->supportedAuthenticationMethods.hasKey(id))
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_ALREADYEXISTS, "An authentication method with the same id was already added");
+
+    this->supportedAuthenticationMethods.set(id, methodPtr);
     return OPENDAQ_SUCCESS;
 }
 
@@ -145,20 +151,6 @@ ErrCode ComponentTypeBuilderImpl::getSupportedAuthenticationMethods(IDict** auth
     OPENDAQ_PARAM_NOT_NULL(authenticationMethods);
 
     *authenticationMethods = this->supportedAuthenticationMethods.addRefAndReturn();
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode ComponentTypeBuilderImpl::setDefaultAuthenticationMethodId(IString* defaultAuthenticationMethodId)
-{
-    this->defaultAuthenticationMethodId = defaultAuthenticationMethodId;
-    return OPENDAQ_SUCCESS;
-}
-
-ErrCode ComponentTypeBuilderImpl::getDefaultAuthenticationMethodId(IString** defaultAuthenticationMethodId)
-{
-    OPENDAQ_PARAM_NOT_NULL(defaultAuthenticationMethodId);
-
-    *defaultAuthenticationMethodId = this->defaultAuthenticationMethodId.addRefAndReturn();
     return OPENDAQ_SUCCESS;
 }
 

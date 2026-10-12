@@ -49,11 +49,8 @@ public:
     ErrCode INTERFACE_FUNC setDefaultConfig(IPropertyObject* defaultConfig) override;
     ErrCode INTERFACE_FUNC getDefaultConfig(IPropertyObject** defaultConfig) override;
 
-    ErrCode INTERFACE_FUNC setSupportedAuthenticationMethods(IDict* authenticationMethods) override;
+    ErrCode INTERFACE_FUNC addAuthenticationMethod(IAuthenticationMethod* method) override;
     ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) override;
-
-    ErrCode INTERFACE_FUNC setDefaultAuthenticationMethodId(IString* defaultAuthenticationMethodId) override;
-    ErrCode INTERFACE_FUNC getDefaultAuthenticationMethodId(IString** defaultAuthenticationMethodId) override;
 
 private:
     ComponentTypeSort sort;
@@ -64,7 +61,6 @@ private:
     PropertyObjectPtr defaultConfig;
     ModuleInfoPtr moduleInfo;
     DictPtr<IString, IAuthenticationMethod> supportedAuthenticationMethods;
-    StringPtr defaultAuthenticationMethodId;
 };
 
 END_NAMESPACE_OPENDAQ

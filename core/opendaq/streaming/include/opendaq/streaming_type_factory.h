@@ -39,21 +39,19 @@ BEGIN_NAMESPACE_OPENDAQ
  * @param defaultConfig The property object, to be cloned and returned, each time user creates default
  * configuration object. This way each instance of the Streaming has its own configuration object.
  * @param supportedAuthenticationMethods The authentication methods this streaming type supports authenticating
- * with, keyed by their own id. Left unset, the streaming type defaults to supporting only the
- * standard `"Anonymous"` method - no credentials required.
- * @param defaultAuthenticationMethodId The id of the authentication method this streaming type supports by
- * default. Left unset, defaults to the standard `"Anonymous"` id.
+ * with, keyed by their own id. The first entry, in dict iteration order, is the one a built
+ * `IAuthenticationConfig` starts out selected on. Left unset, the streaming type supports none - the core treats
+ * it as not supporting authentication.
  */
 inline StreamingTypePtr StreamingType(const StringPtr& id,
                                               const StringPtr& name,
                                               const StringPtr& description,
                                               const StringPtr& prefix,
                                               const PropertyObjectPtr& defaultConfig = PropertyObject(),
-                                              const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods = AnonymousOnlySupportedAuthenticationMethods(),
-                                              const StringPtr& defaultAuthenticationMethodId = StandardAnonymousId)
+                                              const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods = nullptr)
 {
     StreamingTypePtr obj(
-        StreamingType_Create(id, name, description, prefix, defaultConfig, supportedAuthenticationMethods, defaultAuthenticationMethodId));
+        StreamingType_Create(id, name, description, prefix, defaultConfig, supportedAuthenticationMethods));
     return obj;
 }
 
@@ -63,13 +61,11 @@ inline StreamingTypePtr StreamingType(const StringPtr& id,
 inline StructTypePtr StreamingTypeStructType()
 {
     return StructType("StreamingType",
-                      List<IString>("Id", "Name", "Description", "Prefix", "SupportedAuthenticationMethods", "DefaultAuthenticationMethodId"),
-                      List<IBaseObject>("", "", "", "", Dict<IString, IBaseObject>(), ""),
+                      List<IString>("Id", "Name", "Description", "Prefix"),
+                      List<IBaseObject>("", "", "", ""),
                       List<IType>(SimpleType(ctString),
                                  SimpleType(ctString),
                                  SimpleType(ctString),
-                                 SimpleType(ctString),
-                                 SimpleType(ctDict),
                                  SimpleType(ctString)));
 }
 

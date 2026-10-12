@@ -19,26 +19,17 @@ CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connec
 
 StreamingTypePtr CredentialDemoStreamingImpl::CreateType(const ContextPtr& context)
 {
-    auto userNamePasswordMethod = StandardUserNamePasswordAuthenticationMethod();
-    auto pinMethod = StandardPinAuthenticationMethod();
-    auto privateKeyMethod = StandardPrivateKeyFileAuthenticationMethod();
-    auto anonymousMethod = StandardAnonymousAuthenticationMethod();
-
-    // Showcases the same four authentication methods as the device, defaulting to PIN.
-    auto supportedMethods =
-        Dict<IString, IAuthenticationMethod>({{userNamePasswordMethod.getId(), userNamePasswordMethod},
-                                              {pinMethod.getId(), pinMethod},
-                                              {privateKeyMethod.getId(), privateKeyMethod},
-                                              {anonymousMethod.getId(), anonymousMethod}});
-
+    // Showcases the same four authentication methods as the device, defaulting to Anonymous, the first one added.
     return StreamingTypeBuilder()
         .setId(CredentialDemoStreamingTypeId)
         .setName("Credential demo streaming")
         .setDescription("Dummy streaming connection, authenticated via the same credential framework and "
                          "auth methods as the device")
         .setConnectionStringPrefix(Prefix)
-        .setSupportedAuthenticationMethods(supportedMethods)
-        .setDefaultAuthenticationMethodId(StandardPinId)
+        .addAuthenticationMethod(StandardAnonymousAuthenticationMethod())
+        .addAuthenticationMethod(StandardPinAuthenticationMethod())
+        .addAuthenticationMethod(StandardUserNamePasswordAuthenticationMethod())
+        .addAuthenticationMethod(StandardPrivateKeyFileAuthenticationMethod())
         .build();
 }
 
