@@ -7,6 +7,8 @@
 #include <coretypes/serializer_ptr.h>
 #include <coretypes/function_ptr.h>
 #include <coretypes/ctutils.h>
+#include <coretypes/formatter.h>
+#include <fmt/format.h>
 #include <opendaq/authentication_config_ptr.h>
 #include <opendaq/authentication_method_factory.h>
 
@@ -57,7 +59,8 @@ ErrCode AuthenticationConfigImpl::setAuthenticationMethod(IString* authenticatio
 
     if (!supportedAuthenticationMethods.hasKey(idPtr))
     {
-        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND, "\"{}\" is not one of this config's supported authentication methods", idPtr);
+        return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOTFOUND,
+                                   fmt::format("\"{}\" is not one of this config's supported authentication methods", idPtr));
     }
     return this->setPropertySelectionValue(String(AuthenticationMethodPropertyName), authenticationMethodId);
 }
