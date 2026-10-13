@@ -171,7 +171,7 @@ ErrCode ComponentTypeBuilderImpl::setLinkedDeviceType(IDeviceType* deviceType)
     if (sort != ComponentTypeSort::Streaming)
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_NOT_SUPPORTED, "setLinkedDeviceType only applies to a Streaming type");
 
-    if (this->defaultConfig.assigned() || this->supportedAuthenticationMethods.getCount() > 0)
+    if (this->defaultConfig.assigned() || (this->supportedAuthenticationMethods.assigned() && this->supportedAuthenticationMethods.getCount() > 0))
         return DAQ_MAKE_ERROR_INFO(OPENDAQ_ERR_INVALID_OPERATION,
                                    "setLinkedDeviceType cannot be used together with a default config already "
                                    "set or authentication methods already added");

@@ -1,8 +1,7 @@
 #include <credential_demo_module/credential_demo_streaming_impl.h>
+#include <credential_demo_module/credential_demo_device_impl.h>
 
 #include <opendaq/streaming_type_factory.h>
-#include <opendaq/authentication_method_factory.h>
-#include <coretypes/dictobject_factory.h>
 
 BEGIN_NAMESPACE_CREDENTIAL_DEMO_MODULE
 
@@ -19,17 +18,15 @@ CredentialDemoStreamingImpl::CredentialDemoStreamingImpl(const StringPtr& connec
 
 StreamingTypePtr CredentialDemoStreamingImpl::CreateType(const ContextPtr& context)
 {
-    // Showcases the same four authentication methods as the device, defaulting to Anonymous, the first one added.
+    // Shares its connection parameters - including the device's four authentication methods - with the device
+    // type, rather than declaring its own.
     return StreamingTypeBuilder()
         .setId(CredentialDemoStreamingTypeId)
         .setName("Credential demo streaming")
         .setDescription("Dummy streaming connection, authenticated via the same credential framework and "
                          "auth methods as the device")
         .setConnectionStringPrefix(Prefix)
-        .addAuthenticationMethod(StandardAnonymousAuthenticationMethod())
-        .addAuthenticationMethod(StandardPinAuthenticationMethod())
-        .addAuthenticationMethod(StandardUserNamePasswordAuthenticationMethod())
-        .addAuthenticationMethod(StandardPrivateKeyFileAuthenticationMethod())
+        .setLinkedDeviceType(CredentialDemoDeviceImpl::CreateType(context))
         .build();
 }
 
