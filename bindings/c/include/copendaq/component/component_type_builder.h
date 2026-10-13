@@ -40,6 +40,7 @@ extern "C"
     typedef struct daqPropertyObject daqPropertyObject;
     typedef struct daqDict daqDict;
     typedef struct daqAuthenticationMethod daqAuthenticationMethod;
+    typedef struct daqDeviceType daqDeviceType;
 
     EXPORTED extern const daqIntfID DAQ_COMPONENT_TYPE_BUILDER_INTF_ID;
     void EXPORTED daqComponentTypeBuilder_getInterfaceId(daqIntfID* intfId);
@@ -59,6 +60,8 @@ extern "C"
     daqErrCode EXPORTED daqComponentTypeBuilder_getDefaultConfig(daqComponentTypeBuilder* self, daqPropertyObject** defaultConfig);
     daqErrCode EXPORTED daqComponentTypeBuilder_addAuthenticationMethod(daqComponentTypeBuilder* self, daqAuthenticationMethod* method);
     daqErrCode EXPORTED daqComponentTypeBuilder_getSupportedAuthenticationMethods(daqComponentTypeBuilder* self, daqDict** authenticationMethods);
+    daqErrCode EXPORTED daqComponentTypeBuilder_setLinkedDeviceType(daqComponentTypeBuilder* self, daqDeviceType* deviceType);
+    daqErrCode EXPORTED daqComponentTypeBuilder_getLinkedDeviceType(daqComponentTypeBuilder* self, daqDeviceType** deviceType);
     daqErrCode EXPORTED daqComponentTypeBuilder_createComponentTypeBuilder(daqComponentTypeBuilder** obj);
     daqErrCode EXPORTED daqComponentTypeBuilder_createDeviceTypeBuilder(daqComponentTypeBuilder** obj);
     daqErrCode EXPORTED daqComponentTypeBuilder_createStreamingTypeBuilder(daqComponentTypeBuilder** obj);

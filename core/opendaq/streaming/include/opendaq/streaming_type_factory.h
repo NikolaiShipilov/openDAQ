@@ -21,6 +21,7 @@
 #include <opendaq/component_type_builder_factory.h>
 #include <opendaq/authentication_method_factory.h>
 #include <coretypes/dictobject_factory.h>
+#include <opendaq/device_type_ptr.h>
 
 BEGIN_NAMESPACE_OPENDAQ
 
@@ -42,16 +43,20 @@ BEGIN_NAMESPACE_OPENDAQ
  * with, keyed by their own id. The first entry, in dict iteration order, is the one a built
  * `IAuthenticationConfig` starts out selected on. Left unset, the streaming type supports none - the core treats
  * it as not supporting authentication.
+ * @param linkedDeviceType The device type this streaming type shares its connection parameters with (including
+ * supported authentication methods). Left unset, this streaming type doesn't share its parameters with any
+ * specific device type.
  */
 inline StreamingTypePtr StreamingType(const StringPtr& id,
                                               const StringPtr& name,
                                               const StringPtr& description,
                                               const StringPtr& prefix,
                                               const PropertyObjectPtr& defaultConfig = PropertyObject(),
-                                              const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods = nullptr)
+                                              const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods = nullptr,
+                                              const DeviceTypePtr& linkedDeviceType = nullptr)
 {
     StreamingTypePtr obj(
-        StreamingType_Create(id, name, description, prefix, defaultConfig, supportedAuthenticationMethods));
+        StreamingType_Create(id, name, description, prefix, defaultConfig, supportedAuthenticationMethods, linkedDeviceType));
     return obj;
 }
 

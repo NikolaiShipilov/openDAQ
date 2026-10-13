@@ -33,11 +33,21 @@ public:
                                const StringPtr& description,
                                const StringPtr& prefix,
                                const PropertyObjectPtr& defaultConfig,
-                               const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods);
+                               const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods,
+                               const DeviceTypePtr& linkedDeviceType = nullptr);
 
     explicit StreamingTypeImpl(const ComponentTypeBuilderPtr& builder);
 
+    // IStreamingType
     ErrCode INTERFACE_FUNC getConnectionStringPrefix(IString** prefix) override;
+    ErrCode INTERFACE_FUNC getLinkedDeviceType(IDeviceType** deviceType) override;
+
+    // IComponentType
+    ErrCode INTERFACE_FUNC createDefaultConfig(IPropertyObject** defaultConfig) override;
+    ErrCode INTERFACE_FUNC createAuthenticationConfig(IAuthenticationConfig** config) override;
+
+    // IComponentTypePrivate
+    ErrCode INTERFACE_FUNC getSupportedAuthenticationMethods(IDict** authenticationMethods) override;
 
     // ISerializable
     ErrCode INTERFACE_FUNC serialize(ISerializer* serializer) override;
@@ -45,6 +55,9 @@ public:
 
     static ConstCharPtr SerializeId();
     static ErrCode Deserialize(ISerializedObject* serialized, IBaseObject* context, IFunction* factoryCallback, IBaseObject** obj);
+
+private:
+    DeviceTypePtr linkedDeviceType;
 };
 
 END_NAMESPACE_OPENDAQ
