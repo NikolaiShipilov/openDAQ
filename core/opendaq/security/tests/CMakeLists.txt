@@ -2,6 +2,7 @@ opendaq_set_cmake_folder_context(TARGET_FOLDER_NAME)
 set(MODULE_NAME security)
 
 set(TEST_SOURCES test_credential_field.cpp
+                 test_authentication_method.cpp
 )
 
 opendaq_prepare_test_runner(TEST_APP FOR ${MODULE_NAME}

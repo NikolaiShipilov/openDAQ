@@ -32,6 +32,13 @@ TEST_F(CredentialFieldTest, FactoryWithParams)
     ASSERT_FALSE(field.isRequired());
 }
 
+TEST_F(CredentialFieldTest, FactoryThrowsOnUnassignedParams)
+{
+    ASSERT_THROW(CredentialField(nullptr, CredentialFieldKind::Text, "User name"), InvalidParameterException);
+    ASSERT_THROW(CredentialField("Username", CredentialFieldKind::Text, nullptr), InvalidParameterException);
+    ASSERT_THROW(CredentialField("Username", CredentialFieldKind::Text, "User name", nullptr), InvalidParameterException);
+}
+
 TEST_F(CredentialFieldTest, SecretKind)
 {
     const CredentialFieldPtr field = CredentialField("Password", CredentialFieldKind::Secret, "Password", Dict<IString, IString>(), False);
