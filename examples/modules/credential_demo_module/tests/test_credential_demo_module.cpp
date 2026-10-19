@@ -18,6 +18,8 @@ using namespace daq;
 
 static constexpr const char* DeviceConnectionString = "daq.credential_demo://credential_demo_device";
 
+#ifdef DAQMODULES_CREDENTIAL_DEMO_MODULE_ENABLE_PRIVATE_KEY_AUTH
+
 // A valid, matching EC (P-256) key pair, and a second, mismatched private key, generated once via
 // `openssl genpkey`/`openssl pkey -pubout` - used to exercise `StandardPrivateKeyFile` authentication
 // without depending on any key material outside this file.
@@ -59,6 +61,8 @@ public:
 
     const std::string path;
 };
+
+#endif // DAQMODULES_CREDENTIAL_DEMO_MODULE_ENABLE_PRIVATE_KEY_AUTH
 
 static ContextPtr contextWithModuleOptions(const DictPtr<IString, IBaseObject>& moduleOptions)
 {
@@ -238,6 +242,8 @@ TEST_F(CredentialDemoModuleTest, AuthenticatedDeviceThrowsWithWrongPin)
     ASSERT_THROW(module.createAuthenticatedDevice(DeviceConnectionString, nullptr, nullptr, loginParameters), AuthenticationFailedException);
 }
 
+#ifdef DAQMODULES_CREDENTIAL_DEMO_MODULE_ENABLE_PRIVATE_KEY_AUTH
+
 TEST_F(CredentialDemoModuleTest, AuthenticatedDeviceSucceedsWithValidPrivateKey)
 {
     const CredentialDemoTestTempFile publicKeyFile("credential_demo_module_test_public_key.pem", MatchingPublicKeyPem);
@@ -297,3 +303,5 @@ TEST_F(CredentialDemoModuleTest, AuthenticatedDeviceThrowsWhenModuleHasNoPublicK
 
     ASSERT_THROW(module.createAuthenticatedDevice(DeviceConnectionString, nullptr, nullptr, loginParameters), AuthenticationFailedException);
 }
+
+#endif // DAQMODULES_CREDENTIAL_DEMO_MODULE_ENABLE_PRIVATE_KEY_AUTH

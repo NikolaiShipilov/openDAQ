@@ -32,8 +32,9 @@ void createJsonConfigFile()
 }
 
 // `componentType.createAuthenticationConfig()` returns one self-contained config listing every authentication
-// method the named component type supports (Anonymous, UserNamePassword, Pin, PrivateKeyFile) as a candidate
-// of its "AuthenticationMethod" selection property, defaulting to Anonymous, the first one added - so every
+// method the named component type supports (Anonymous, UserNamePassword, Pin, and - when the module's
+// private-key auth option is on - PrivateKeyFile) as a candidate of its "AuthenticationMethod" selection
+// property, defaulting to Anonymous, the first one added - so every
 // demo below that wants a specific method selects it explicitly rather than relying on the default.
 // This switches that selection to the method named by `authenticationMethodId`, entirely through
 // plain property object calls - the candidates are already just ids, so no `IAuthenticationMethod` lookup
@@ -41,6 +42,20 @@ void createJsonConfigFile()
 void SelectAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const StringPtr& authenticationMethodId)
 {
     authConfig.setPropertySelectionValue("AuthenticationMethod", authenticationMethodId);
+}
+
+// Not every device/streaming type supports every authentication method - in particular, the credential demo
+// module's `StandardPrivateKeyFile` support is itself a build-time option (`DAQMODULES_CREDENTIAL_DEMO_MODULE_
+// ENABLE_PRIVATE_KEY_AUTH`), off by default. Checked the same way `SelectAuthenticationMethod` sets the
+// selection itself - via the "AuthenticationMethod" selection property's candidates - rather than assuming a
+// method id is always valid to select.
+bool SupportsAuthenticationMethod(const AuthenticationConfigPtr& authConfig, const StringPtr& authenticationMethodId)
+{
+    ListPtr<IString> candidates = authConfig.getProperty("AuthenticationMethod").getSelectionValues();
+    for (const auto& candidate : candidates)
+        if (candidate == authenticationMethodId)
+            return true;
+    return false;
 }
 
 // Temporary bridge until `IAuthenticationConfig` becomes a real part of the add-device config schema:
@@ -64,8 +79,14 @@ PropertyObjectPtr WithAuthenticationConfig(const AuthenticationConfigPtr& authCo
 // to the matching private key.
 void demoPrivateKeyFileAuthentication(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
-    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
     auto privateKeyFileConfig = deviceType.createAuthenticationConfig();
+    if (!SupportsAuthenticationMethod(privateKeyFileConfig, "PrivateKeyFile"))
+    {
+        std::cout << "PrivateKeyFile authentication is disabled in this build of the credential demo module - skipping." << std::endl;
+        return;
+    }
+
+    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
     SelectAuthenticationMethod(privateKeyFileConfig, "PrivateKeyFile");
     auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(privateKeyFileConfig));
     std::cout << "Connected to \"" << device.getInfo().getName() << "\" with private-key challenge authentication. Press \"enter\" to continue..." << std::endl;
@@ -96,8 +117,9 @@ void demoUserNamePasswordAuthentication(const InstancePtr& instance, const Devic
 // `IAuthenticationConfig` derives from `IPropertyObject` - the same way `IDeviceInfo` does - so besides the
 // typed getters used in every other demo, the exact same settings can be read and set with plain property
 // object calls instead. `deviceType.createAuthenticationConfig()` already returns one self-contained config with
-// every supported method (Anonymous, UserNamePassword, Pin, PrivateKeyFile) as a candidate of its
-// "AuthenticationMethod" selection property - `SelectAuthenticationMethod` switches that selection to
+// every supported method (Anonymous, UserNamePassword, Pin, and - when the module's private-key auth option
+// is on - PrivateKeyFile) as a candidate of its "AuthenticationMethod" selection property -
+// `SelectAuthenticationMethod` switches that selection to
 // "Pin" via plain property object calls, no separate per-method config fetched anywhere.
 void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const DeviceTypePtr& deviceType)
 {
@@ -131,8 +153,17 @@ void demoDeviceAndStreamingAuthentication(const InstancePtr& instance, const Dev
 
     auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
     auto streamingAuthConfig = streamingType.createAuthenticationConfig();
-    SelectAuthenticationMethod(streamingAuthConfig, "PrivateKeyFile");
-    std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    if (SupportsAuthenticationMethod(streamingAuthConfig, "PrivateKeyFile"))
+    {
+        SelectAuthenticationMethod(streamingAuthConfig, "PrivateKeyFile");
+        std::cout << "When prompted for the private-key path, enter: " << CREDENTIAL_DEMO_KEYS_DIR << "/private_key.pem" << std::endl;
+    }
+    else
+    {
+        std::cout << "PrivateKeyFile authentication is disabled in this build of the credential demo module - "
+                     "falling back to Anonymous for the streaming connection."
+                  << std::endl;
+    }
     device.addStreaming("daq.credential_demo_streaming://credential_demo_device", WithAuthenticationConfig(streamingAuthConfig));
     std::cout << "Attached a streaming connection authenticated independently of the device. Streaming sources: "
               << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
