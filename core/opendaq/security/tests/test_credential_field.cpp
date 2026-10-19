@@ -9,11 +9,12 @@ BEGIN_NAMESPACE_OPENDAQ
 TEST_F(CredentialFieldTest, FactoryDefaults)
 {
     const CredentialFieldPtr field = CredentialField("Username", CredentialFieldKind::Text, "User name");
+    const auto emptyMetadata = Dict<IString, IString>();
 
     ASSERT_EQ(field.getId(), "Username");
     ASSERT_EQ(field.getKind(), CredentialFieldKind::Text);
     ASSERT_EQ(field.getName(), "User name");
-    ASSERT_EQ(field.getMetadata().getCount(), 0u);
+    ASSERT_EQ(field.getMetadata(), emptyMetadata);
     ASSERT_TRUE(field.isRequired());
 }
 
@@ -27,8 +28,7 @@ TEST_F(CredentialFieldTest, FactoryWithParams)
     ASSERT_EQ(field.getId(), "PrivateKeyFilePath");
     ASSERT_EQ(field.getKind(), CredentialFieldKind::FilePath);
     ASSERT_EQ(field.getName(), "Private key file");
-    ASSERT_EQ(field.getMetadata().getCount(), 1u);
-    ASSERT_EQ(field.getMetadata().get("Extensions"), "pem,key");
+    ASSERT_EQ(field.getMetadata(), metadata);
     ASSERT_FALSE(field.isRequired());
 }
 
@@ -63,8 +63,7 @@ TEST_F(CredentialFieldTest, SerializeDeserializeWithMetadata)
     ASSERT_EQ(newField.getId(), "PrivateKeyFilePath");
     ASSERT_EQ(newField.getKind(), CredentialFieldKind::FilePath);
     ASSERT_EQ(newField.getName(), "Private key file");
-    ASSERT_EQ(newField.getMetadata().getCount(), 1u);
-    ASSERT_EQ(newField.getMetadata().get("Extensions"), "pem,key");
+    ASSERT_EQ(newField.getMetadata(), metadata);
     ASSERT_FALSE(newField.isRequired());
 
     serializer.reset();

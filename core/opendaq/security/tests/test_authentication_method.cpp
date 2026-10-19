@@ -8,10 +8,11 @@ BEGIN_NAMESPACE_OPENDAQ
 
 TEST_F(AuthenticationMethodTest, FactoryNoFields)
 {
-    const AuthenticationMethodPtr method = AuthenticationMethod("AnonymousTest", Dict<IString, ICredentialField>(), "No credentials required");
+    const auto emptyFields = Dict<IString, ICredentialField>();
+    const AuthenticationMethodPtr method = AuthenticationMethod("AnonymousTest", emptyFields, "No credentials required");
 
     ASSERT_EQ(method.getId(), "AnonymousTest");
-    ASSERT_EQ(method.getFields().getCount(), 0u);
+    ASSERT_EQ(method.getFields(), emptyFields);
     ASSERT_EQ(method.getDescription(), "No credentials required");
 }
 
@@ -32,9 +33,7 @@ TEST_F(AuthenticationMethodTest, FactoryWithFields)
 
     ASSERT_EQ(method.getId(), "UserNamePasswordTest");
     ASSERT_EQ(method.getDescription(), "Username and password");
-    ASSERT_EQ(method.getFields().getCount(), 2u);
-    ASSERT_EQ(method.getFields().get("UserName").getKind(), CredentialFieldKind::Text);
-    ASSERT_EQ(method.getFields().get("Password").getKind(), CredentialFieldKind::Secret);
+    ASSERT_EQ(method.getFields(), fields);
 }
 
 TEST_F(AuthenticationMethodTest, SerializeDeserialize)
@@ -52,7 +51,7 @@ TEST_F(AuthenticationMethodTest, SerializeDeserialize)
 
     ASSERT_EQ(newMethod.getId(), "PinTest");
     ASSERT_EQ(newMethod.getDescription(), "PIN code");
-    ASSERT_EQ(newMethod.getFields().getCount(), 1u);
+    ASSERT_EQ(newMethod.getFields().getKeyList(), List<IString>("Pin"));
     ASSERT_EQ(newMethod.getFields().get("Pin").getKind(), CredentialFieldKind::Secret);
 
     serializer.reset();
@@ -63,29 +62,31 @@ TEST_F(AuthenticationMethodTest, SerializeDeserialize)
 TEST_F(AuthenticationMethodTest, StandardMethods)
 {
     const auto anonymous = StandardAnonymousAuthenticationMethod();
+    const auto emptyFields = Dict<IString, ICredentialField>();
     ASSERT_EQ(anonymous.getId(), StandardAnonymousId);
-    ASSERT_EQ(anonymous.getFields().getCount(), 0u);
+    ASSERT_EQ(anonymous.getFields(), emptyFields);
 
     const auto userNamePassword = StandardUserNamePasswordAuthenticationMethod();
     const auto userNamePasswordFields = userNamePassword.getFields();
     ASSERT_EQ(userNamePassword.getId(), StandardUserNamePasswordId);
-    ASSERT_EQ(userNamePasswordFields.getCount(), 2u);
+    ASSERT_EQ(userNamePasswordFields.getKeyList(), List<IString>("UserName", "Password"));
     ASSERT_EQ(userNamePasswordFields.get("UserName").getKind(), CredentialFieldKind::Text);
     ASSERT_EQ(userNamePasswordFields.get("Password").getKind(), CredentialFieldKind::Secret);
 
     const auto pin = StandardPinAuthenticationMethod();
     const auto pinFields = pin.getFields();
     ASSERT_EQ(pin.getId(), StandardPinId);
-    ASSERT_EQ(pinFields.getCount(), 1u);
+    ASSERT_EQ(pinFields.getKeyList(), List<IString>("Pin"));
     ASSERT_EQ(pinFields.get("Pin").getKind(), CredentialFieldKind::Secret);
 
     const auto privateKeyFile = StandardPrivateKeyFileAuthenticationMethod();
     const auto privateKeyFileFields = privateKeyFile.getFields();
     ASSERT_EQ(privateKeyFile.getId(), StandardPrivateKeyFileId);
-    ASSERT_EQ(privateKeyFileFields.getCount(), 1u);
+    ASSERT_EQ(privateKeyFileFields.getKeyList(), List<IString>("PrivateKeyFilePath"));
     const auto privateKeyField = privateKeyFileFields.get("PrivateKeyFilePath");
+    const auto expectedPrivateKeyFileMetadata = Dict<IString, IString>({{"Extensions", "pem,key"}});
     ASSERT_EQ(privateKeyField.getKind(), CredentialFieldKind::FilePath);
-    ASSERT_EQ(privateKeyField.getMetadata().get("Extensions"), "pem,key");
+    ASSERT_EQ(privateKeyField.getMetadata(), expectedPrivateKeyFileMetadata);
 }
 
 TEST_F(AuthenticationMethodTest, CredentialAcceptionThrowsOnUnassignedParams)

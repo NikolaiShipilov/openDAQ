@@ -52,12 +52,14 @@ TEST_F(AuthenticationConfigTest, SettingAuthenticationMethodResetsSuppliedCreden
     const AuthenticationConfigPtr config = MakeAuthenticationConfig(AnonymousAndUserNamePasswordMethods());
     config.setAuthenticationMethod(StandardUserNamePasswordId);
 
-    config.setSuppliedCredential(Dict<IString, IString>({{"UserName", "john"}, {"Password", "secret"}}));
-    ASSERT_EQ(config.getSuppliedCredential().getCount(), 2u);
+    const auto credentials = Dict<IString, IString>({{"UserName", "john"}, {"Password", "secret"}});
+    config.setSuppliedCredential(credentials);
+    ASSERT_EQ(config.getSuppliedCredential(), credentials);
 
     config.setAuthenticationMethod(StandardAnonymousId);
 
-    ASSERT_EQ(config.getSuppliedCredential().getCount(), 0u);
+    const auto emptyCredentials = Dict<IString, IString>();
+    ASSERT_EQ(config.getSuppliedCredential(), emptyCredentials);
 }
 
 TEST_F(AuthenticationConfigTest, GetAuthenticationMethodsReturnsSupportedSet)
@@ -65,10 +67,7 @@ TEST_F(AuthenticationConfigTest, GetAuthenticationMethodsReturnsSupportedSet)
     const auto methods = AnonymousAndUserNamePasswordMethods();
     const AuthenticationConfigPtr config = MakeAuthenticationConfig(methods);
 
-    const auto supported = config.getAuthenticationMethods();
-
-    ASSERT_EQ(supported.getCount(), 2u);
-    ASSERT_EQ(supported.getKeyList(), List<IString>(StandardAnonymousId, StandardUserNamePasswordId));
+    ASSERT_EQ(config.getAuthenticationMethods(), methods);
 }
 
 TEST_F(AuthenticationConfigTest, SuppliedCredentialDefaultsEmpty)
@@ -77,8 +76,9 @@ TEST_F(AuthenticationConfigTest, SuppliedCredentialDefaultsEmpty)
         MakeAuthenticationConfig(Dict<IString, IAuthenticationMethod>({{StandardUserNamePasswordId, StandardUserNamePasswordAuthenticationMethod()}}));
 
     const auto credential = config.getSuppliedCredential();
+    const auto emptyCredentials = Dict<IString, IString>();
     ASSERT_TRUE(credential.assigned());
-    ASSERT_EQ(credential.getCount(), 0u);
+    ASSERT_EQ(credential, emptyCredentials);
 }
 
 TEST_F(AuthenticationConfigTest, SetSuppliedCredentialAcceptedWhenSatisfiesMethod)
@@ -86,11 +86,10 @@ TEST_F(AuthenticationConfigTest, SetSuppliedCredentialAcceptedWhenSatisfiesMetho
     const AuthenticationConfigPtr config = MakeAuthenticationConfig(AnonymousAndUserNamePasswordMethods());
     config.setAuthenticationMethod(StandardUserNamePasswordId);
 
-    config.setSuppliedCredential(Dict<IString, IString>({{"UserName", "john"}, {"Password", "secret"}}));
+    const auto credentials = Dict<IString, IString>({{"UserName", "john"}, {"Password", "secret"}});
+    config.setSuppliedCredential(credentials);
 
-    const auto credential = config.getSuppliedCredential();
-    ASSERT_EQ(credential.get("UserName"), "john");
-    ASSERT_EQ(credential.get("Password"), "secret");
+    ASSERT_EQ(config.getSuppliedCredential(), credentials);
 }
 
 TEST_F(AuthenticationConfigTest, SetSuppliedCredentialThrowsWhenMissingRequiredField)
@@ -141,7 +140,8 @@ TEST_F(AuthenticationConfigTest, GenericPropertyObjectAccess)
 
 TEST_F(AuthenticationConfigTest, SerializeDeserialize)
 {
-    const AuthenticationConfigPtr config = MakeAuthenticationConfig(AnonymousAndUserNamePasswordMethods());
+    const auto methods = AnonymousAndUserNamePasswordMethods();
+    const AuthenticationConfigPtr config = MakeAuthenticationConfig(methods);
     config.setAuthenticationMethod(StandardUserNamePasswordId);
     config.setSuppliedCredential(Dict<IString, IString>());
 
@@ -153,9 +153,16 @@ TEST_F(AuthenticationConfigTest, SerializeDeserialize)
     const AuthenticationConfigPtr newConfig = deserializer.deserialize(serialized, nullptr, nullptr);
 
     ASSERT_EQ(newConfig.getSelectedAuthenticationMethod().getId(), StandardUserNamePasswordId);
-    ASSERT_EQ(newConfig.getAuthenticationMethods().getCount(), 2u);
-    ASSERT_TRUE(newConfig.getAuthenticationMethods().hasKey(StandardAnonymousId));
-    ASSERT_EQ(newConfig.getSuppliedCredential().getCount(), 0u);
+    const auto emptyCredentials = Dict<IString, IString>();
+    ASSERT_EQ(newConfig.getSuppliedCredential(), emptyCredentials);
+
+    // Deserialization rebuilds fresh `IAuthenticationMethod` instances rather than reusing the originals, and
+    // `AuthenticationMethodImpl` has no value-based equality - compare each entry's own content instead.
+    const auto deserializedMethods = newConfig.getAuthenticationMethods();
+    const auto emptyFields = Dict<IString, ICredentialField>();
+    ASSERT_EQ(deserializedMethods.getKeyList(), methods.getKeyList());
+    ASSERT_EQ(deserializedMethods.get(StandardAnonymousId).getFields(), emptyFields);
+    ASSERT_EQ(deserializedMethods.get(StandardUserNamePasswordId).getFields().getKeyList(), List<IString>("UserName", "Password"));
 
     serializer.reset();
     newConfig.serialize(serializer);
@@ -174,7 +181,8 @@ TEST_F(AuthenticationConfigTest, SerializeNeverWritesSuppliedCredential)
     const auto deserializer = JsonDeserializer();
     const AuthenticationConfigPtr newConfig = deserializer.deserialize(serializer.getOutput(), nullptr, nullptr);
 
-    ASSERT_EQ(newConfig.getSuppliedCredential().getCount(), 0u);
+    const auto emptyCredentials = Dict<IString, IString>();
+    ASSERT_EQ(newConfig.getSuppliedCredential(), emptyCredentials);
 }
 
 END_NAMESPACE_OPENDAQ
