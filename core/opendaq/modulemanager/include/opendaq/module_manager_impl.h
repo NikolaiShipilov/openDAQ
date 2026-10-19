@@ -129,22 +129,6 @@ private:
     // provider to obtain one.
     DictPtr<IString, IString> resolveCredentials(const AuthenticationConfigPtr& authenticationConfig, const CredentialRequestPtr& credentialRequest) const;
 
-    // Hands `credentials` to the registered credential provider's cache, keyed by `credentialRequest`, so a
-    // later interactive request for the same context can be served from it. Called only once `credentials` has
-    // already been used to successfully create a device/streaming connection - caching earlier would record
-    // credentials that were never confirmed to actually work. No-op if no provider is registered. Any failure
-    // is logged, never thrown.
-    void cacheCredentialsAfterSuccess(const CredentialRequestPtr& credentialRequest, const DictPtr<IString, IString>& credentials) const;
-
-    // Manufacturer/serial number (and model, if available) are usually known only once `device` is created - if
-    // `device`'s own info now supplies them, hands the already-obtained `credentials` to the registered credential
-    // provider via `cacheCredentialsAfterSuccess`, keyed by them too.
-    void recacheCredentialsWithDeviceInfo(const DevicePtr& device,
-                                          const AuthenticationConfigPtr& authenticationConfig,
-                                          const StringPtr& canonicalConnectionString,
-                                          const ComponentTypePtr& componentType,
-                                          const DictPtr<IString, IString>& credentials) const;
-
     static PropertyObjectPtr CreateGeneralConfig(Bool scanOnAdd);
     static void OverrideConfigProperties(PropertyObjectPtr& targetConfig, const PropertyObjectPtr& sourceConfig);
 

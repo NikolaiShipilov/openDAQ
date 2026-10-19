@@ -844,58 +844,6 @@ DictPtr<IString, IString> ModuleManagerImpl::resolveCredentials(const Authentica
     return credentials;
 }
 
-void ModuleManagerImpl::cacheCredentialsAfterSuccess(const CredentialRequestPtr& credentialRequest, const DictPtr<IString, IString>& credentials) const
-{
-    if (!credentialProvider.assigned())
-        return;
-
-    try
-    {
-        credentialProvider.cacheCredentials(credentialRequest, credentials);
-    }
-    catch (const DaqException& e)
-    {
-        LOG_W("Failed to cache credentials: {}", e.what())
-    }
-    catch (const std::exception& e)
-    {
-        LOG_W("Failed to cache credentials: {}", e.what())
-    }
-}
-
-void ModuleManagerImpl::recacheCredentialsWithDeviceInfo(const DevicePtr& device,
-                                                         const AuthenticationConfigPtr& authenticationConfig,
-                                                         const StringPtr& canonicalConnectionString,
-                                                         const ComponentTypePtr& componentType,
-                                                         const DictPtr<IString, IString>& credentials) const
-{
-    const DeviceInfoPtr deviceInfo = device.getInfo();
-    if (!credentialProvider.assigned() || !deviceInfo.assigned() || !deviceInfo.getManufacturer().assigned() || !deviceInfo.getSerialNumber().assigned())
-        return;
-
-    try
-    {
-        const auto enrichedRequest = CredentialRequestBuilder()
-                                         .setConnectionString(canonicalConnectionString)
-                                         .setManufacturer(deviceInfo.getManufacturer())
-                                         .setSerialNumber(deviceInfo.getSerialNumber())
-                                         .setModel(deviceInfo.getModel())
-                                         .setDisplayName(deviceInfo.getName())
-                                         .setAuthenticationMethod(authenticationConfig.getSelectedAuthenticationMethod())
-                                         .setComponentType(componentType)
-                                         .build();
-        cacheCredentialsAfterSuccess(enrichedRequest, credentials);
-    }
-    catch (const DaqException& e)
-    {
-        LOG_W("Failed to re-cache credentials with resolved manufacturer/serial number: {}", e.what())
-    }
-    catch (const std::exception& e)
-    {
-        LOG_W("Failed to re-cache credentials with resolved manufacturer/serial number: {}", e.what())
-    }
-}
-
 ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device, IString* connectionString, IComponent* parent, IPropertyObject* config)
 {
     OPENDAQ_PARAM_NOT_NULL(connectionString);
@@ -1037,11 +985,8 @@ ErrCode ModuleManagerImpl::createDeviceInternal(IDevice** device, IString* conne
                     if (const auto& componentPrivate = devicePtr.asPtrOrNull<IComponentPrivate>(true); componentPrivate.assigned())
                         componentPrivate.setAuthenticationConfig(resolvedAuthConfig);
 
-                    recacheCredentialsWithDeviceInfo(devicePtr,
-                                                     resolvedAuthConfig,
-                                                     library.module.getCanonicalConnectionString(connectionStringPtr),
-                                                     deviceType,
-                                                     credentials);
+                    // TODO: cache `credentials` with the device's own resolved manufacturer/serial number/model here when a caching
+                    // mechanism (e.g. a vault) is ready.
                 }
             }
 
@@ -1826,9 +1771,7 @@ StreamingPtr ModuleManagerImpl::onCreateStreaming(const StringPtr& connectionStr
                                                  .build();
                 streaming = module.createAuthenticatedStreaming(connectionString, streamingTypeConfig, loginParameters);
 
-                // Unlike device creation, manufacturer/serial/model/display name are already known upfront here
-                // (from `owner`'s info), so the same request built above is reused directly - no need to rebuild it.
-                cacheCredentialsAfterSuccess(credentialRequest, credentials);
+                // TODO: cache `credentials` keyed by `credentialRequest` here when a caching mechanism (e.g. a vault) is ready.
             }
             else
             {

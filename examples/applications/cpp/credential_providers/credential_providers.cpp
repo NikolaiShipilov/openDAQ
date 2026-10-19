@@ -117,41 +117,6 @@ void demoAuthenticationConfigAsPropertyObject(const InstancePtr& instance, const
     instance.removeDevice(device);
 }
 
-// CmdLineCredentialProvider caches FilePath credentials in-memory for the active session, keyed by
-// (manufacturer, serialNumber) - so authenticating a second connection to the very same device via the
-// same FilePath-format method reuses the path already entered instead of prompting again. Demonstrated
-// here across two different connections to the same device - first the device itself, then a streaming
-// connection attached to it. The device's own path is supplied directly via the `"SuppliedCredential"`
-// property rather than typed interactively - the registered provider still caches it (see `ICredentialProvider::cacheCredentials`),
-// so no user prompt is needed anywhere in this demo.
-void demoCachedFilePathCredentialAcrossDeviceAndStreaming(const InstancePtr& instance, const DeviceTypePtr& deviceType)
-{
-    auto streamingType = instance.getModuleManager().asPtr<IModuleManagerUtils>().getAvailableStreamingTypes().get("CredentialDemoStreaming");
-    auto streamingAuthConfig = streamingType.createAuthenticationConfig();
-    SelectAuthenticationMethod(streamingAuthConfig, "PrivateKeyFile");
-
-    auto deviceAuthConfig = deviceType.createAuthenticationConfig();
-    SelectAuthenticationMethod(deviceAuthConfig, "PrivateKeyFile");
-
-    // The supplied credential is a dictionary of field value(s), keyed by their own field id - here just a
-    // single "PrivateKeyFilePath" entry, the private key's path.
-    auto suppliedCredential = Dict<IString, IString>({{"PrivateKeyFilePath", String(std::string(CREDENTIAL_DEMO_KEYS_DIR) + "/private_key.pem")}});
-    deviceAuthConfig.setPropertyValue("SuppliedCredential", suppliedCredential);
-
-    auto device = instance.addDevice("daq://openDAQ_1234", WithAuthenticationConfig(deviceAuthConfig));
-    std::cout << "Connected to \"" << device.getInfo().getName()
-              << "\" with private-key challenge authentication, using a credential supplied directly - no prompt." << std::endl;
-
-    std::cout << "Attaching a streaming connection authenticated the same way - same device, same FilePath-format "
-                 "method - so no path prompt should appear this time; the provider serves it from its cache instead."
-              << std::endl;
-    device.addStreaming("daq.credential_demo_streaming://credential_demo_device", WithAuthenticationConfig(streamingAuthConfig));
-    std::cout << "Attached. Streaming sources: " << device.asPtr<IMirroredDevice>().getStreamingSources().getCount() << std::endl;
-    std::cout << "Press \"enter\" to continue..." << std::endl;
-    std::cin.get();
-    instance.removeDevice(device);
-}
-
 // The device and a streaming connection attached to it are authenticated entirely independently of one
 // another - the device here via UserName/Password, the streaming connection via its own, separate
 // authentication config (PrivateKeyFile), attached with a manual `addStreaming` call.
@@ -237,7 +202,6 @@ int main(int /*argc*/, const char* /*argv*/[])
     demoUserNamePasswordAuthentication(instance, deviceType);
     demoDeviceAndStreamingAuthentication(instance, deviceType);
     demoAuthenticationConfigAsPropertyObject(instance, deviceType);
-    demoCachedFilePathCredentialAcrossDeviceAndStreaming(instance, deviceType);
     demoPinAuthenticationAndReload(instance, deviceType);
 
     std::cout << "Press \"enter\" to exit the application..." << std::endl;
