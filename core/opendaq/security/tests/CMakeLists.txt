@@ -6,6 +6,7 @@ set(TEST_SOURCES test_credential_field.cpp
                  test_authentication_config.cpp
                  test_credential_request.cpp
                  test_login_parameters.cpp
+                 test_cmd_line_credential_provider.cpp
 )
 
 opendaq_prepare_test_runner(TEST_APP FOR ${MODULE_NAME}

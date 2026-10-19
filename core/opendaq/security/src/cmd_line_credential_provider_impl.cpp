@@ -1,5 +1,4 @@
 #include <opendaq/cmd_line_credential_provider_impl.h>
-#include <coreobjects/exceptions.h>
 #include <opendaq/security_exceptions.h>
 #include <fmt/format.h>
 #include <iostream>
@@ -62,7 +61,9 @@ DictPtr<IString, IString> CmdLineCredentialProviderImpl::readCredential(const Cr
         const StringPtr value = String(readLine(fmt::format("{}: ", name.toStdString()), field.getKind() == CredentialFieldKind::Secret));
 
         if (isFilePath && !isFileAccessible(value.toStdString()))
-            DAQ_THROW_EXCEPTION(AuthenticationFailedException, "File \"{}\" does not exist or is not accessible", value);
+        {
+            DAQ_THROW_EXCEPTION(NotFoundException, "File \"{}\" does not exist or is not accessible", value);
+        }
 
         credential.set(name, value);
     }
