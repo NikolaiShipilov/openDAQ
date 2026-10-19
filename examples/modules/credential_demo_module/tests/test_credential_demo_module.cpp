@@ -17,6 +17,7 @@ using CredentialDemoModuleTest = testing::Test;
 using namespace daq;
 
 static constexpr const char* DeviceConnectionString = "daq.credential_demo://credential_demo_device";
+static constexpr const char* StreamingConnectionString = "daq.credential_demo_streaming://credential_demo_device";
 
 #ifdef DAQMODULES_CREDENTIAL_DEMO_MODULE_ENABLE_PRIVATE_KEY_AUTH
 
@@ -157,6 +158,16 @@ TEST_F(CredentialDemoModuleTest, GetAvailableDeviceTypes)
     ASSERT_NO_THROW(deviceTypes = module.getAvailableDeviceTypes());
     ASSERT_EQ(deviceTypes.getCount(), 1u);
     ASSERT_TRUE(deviceTypes.hasKey("CredentialDemoDevice"));
+}
+
+TEST_F(CredentialDemoModuleTest, GetAvailableStreamingTypes)
+{
+    auto module = createModule();
+
+    DictPtr<IString, IStreamingType> streamingTypes;
+    ASSERT_NO_THROW(streamingTypes = module.getAvailableStreamingTypes());
+    ASSERT_EQ(streamingTypes.getCount(), 1u);
+    ASSERT_TRUE(streamingTypes.hasKey("CredentialDemoStreaming"));
 }
 
 TEST_F(CredentialDemoModuleTest, CreateDeviceConnectionStringNull)
@@ -302,6 +313,105 @@ TEST_F(CredentialDemoModuleTest, AuthenticatedDeviceThrowsWhenModuleHasNoPublicK
                                       .build();
 
     ASSERT_THROW(module.createAuthenticatedDevice(DeviceConnectionString, nullptr, nullptr, loginParameters), AuthenticationFailedException);
+}
+
+#endif // DAQMODULES_CREDENTIAL_DEMO_MODULE_ENABLE_PRIVATE_KEY_AUTH
+
+TEST_F(CredentialDemoModuleTest, AuthenticatedStreamingSucceedsAnonymously)
+{
+    auto module = createModule();
+
+    const auto loginParameters = LoginParametersBuilder().setAuthenticationMethod(StandardAnonymousAuthenticationMethod()).build();
+
+    StreamingPtr streaming;
+    ASSERT_NO_THROW(streaming = module.createAuthenticatedStreaming(StreamingConnectionString, nullptr, loginParameters));
+    ASSERT_TRUE(streaming.assigned());
+}
+
+TEST_F(CredentialDemoModuleTest, AuthenticatedStreamingSucceedsWithCorrectUserNamePassword)
+{
+    auto module = createModule();
+
+    const auto loginParameters = LoginParametersBuilder()
+                                      .setAuthenticationMethod(StandardUserNamePasswordAuthenticationMethod())
+                                      .setCredentials(Dict<IString, IString>({{"UserName", "user"}, {"Password", "pass"}}))
+                                      .build();
+
+    StreamingPtr streaming;
+    ASSERT_NO_THROW(streaming = module.createAuthenticatedStreaming(StreamingConnectionString, nullptr, loginParameters));
+    ASSERT_TRUE(streaming.assigned());
+}
+
+TEST_F(CredentialDemoModuleTest, AuthenticatedStreamingThrowsWithWrongPassword)
+{
+    auto module = createModule();
+
+    const auto loginParameters = LoginParametersBuilder()
+                                      .setAuthenticationMethod(StandardUserNamePasswordAuthenticationMethod())
+                                      .setCredentials(Dict<IString, IString>({{"UserName", "user"}, {"Password", "wrong"}}))
+                                      .build();
+
+    ASSERT_THROW(module.createAuthenticatedStreaming(StreamingConnectionString, nullptr, loginParameters), AuthenticationFailedException);
+}
+
+TEST_F(CredentialDemoModuleTest, AuthenticatedStreamingSucceedsWithCorrectPin)
+{
+    auto module = createModule();
+
+    const auto loginParameters = LoginParametersBuilder()
+                                      .setAuthenticationMethod(StandardPinAuthenticationMethod())
+                                      .setCredentials(Dict<IString, IString>({{"Pin", "1234"}}))
+                                      .build();
+
+    StreamingPtr streaming;
+    ASSERT_NO_THROW(streaming = module.createAuthenticatedStreaming(StreamingConnectionString, nullptr, loginParameters));
+    ASSERT_TRUE(streaming.assigned());
+}
+
+TEST_F(CredentialDemoModuleTest, AuthenticatedStreamingThrowsWithWrongPin)
+{
+    auto module = createModule();
+
+    const auto loginParameters = LoginParametersBuilder()
+                                      .setAuthenticationMethod(StandardPinAuthenticationMethod())
+                                      .setCredentials(Dict<IString, IString>({{"Pin", "0000"}}))
+                                      .build();
+
+    ASSERT_THROW(module.createAuthenticatedStreaming(StreamingConnectionString, nullptr, loginParameters), AuthenticationFailedException);
+}
+
+#ifdef DAQMODULES_CREDENTIAL_DEMO_MODULE_ENABLE_PRIVATE_KEY_AUTH
+
+TEST_F(CredentialDemoModuleTest, AuthenticatedStreamingSucceedsWithValidPrivateKey)
+{
+    const CredentialDemoTestTempFile publicKeyFile("credential_demo_module_test_public_key.pem", MatchingPublicKeyPem);
+    const CredentialDemoTestTempFile privateKeyFile("credential_demo_module_test_private_key.pem", MatchingPrivateKeyPem);
+
+    auto module = createModule(contextWithModuleOptions(Dict<IString, IBaseObject>({{"PublicKeyPath", publicKeyFile.path}})));
+
+    const auto loginParameters = LoginParametersBuilder()
+                                      .setAuthenticationMethod(StandardPrivateKeyFileAuthenticationMethod())
+                                      .setCredentials(Dict<IString, IString>({{"PrivateKeyFilePath", privateKeyFile.path}}))
+                                      .build();
+
+    StreamingPtr streaming;
+    ASSERT_NO_THROW(streaming = module.createAuthenticatedStreaming(StreamingConnectionString, nullptr, loginParameters));
+    ASSERT_TRUE(streaming.assigned());
+}
+
+TEST_F(CredentialDemoModuleTest, AuthenticatedStreamingThrowsWithMismatchedPrivateKey)
+{
+    const CredentialDemoTestTempFile publicKeyFile("credential_demo_module_test_public_key.pem", MatchingPublicKeyPem);
+    const CredentialDemoTestTempFile privateKeyFile("credential_demo_module_test_wrong_private_key.pem", MismatchedPrivateKeyPem);
+
+    auto module = createModule(contextWithModuleOptions(Dict<IString, IBaseObject>({{"PublicKeyPath", publicKeyFile.path}})));
+
+    const auto loginParameters = LoginParametersBuilder()
+                                      .setAuthenticationMethod(StandardPrivateKeyFileAuthenticationMethod())
+                                      .setCredentials(Dict<IString, IString>({{"PrivateKeyFilePath", privateKeyFile.path}}))
+                                      .build();
+
+    ASSERT_THROW(module.createAuthenticatedStreaming(StreamingConnectionString, nullptr, loginParameters), AuthenticationFailedException);
 }
 
 #endif // DAQMODULES_CREDENTIAL_DEMO_MODULE_ENABLE_PRIVATE_KEY_AUTH
