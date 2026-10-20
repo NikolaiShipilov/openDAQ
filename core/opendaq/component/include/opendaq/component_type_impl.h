@@ -77,7 +77,8 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
                                                                         const StringPtr& description,
                                                                         const PropertyObjectPtr& defaultConfig,
                                                                         const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods)
-    : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}}))
+    : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(
+          type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}}))
     , id(id)
     , name(name)
     , description(description)
@@ -95,7 +96,8 @@ GenericComponentTypeImpl<Intf, Interfaces...>::GenericComponentTypeImpl(const St
                                                                         const StringPtr& prefix,
                                                                         const PropertyObjectPtr& defaultConfig,
                                                                         const DictPtr<IString, IAuthenticationMethod>& supportedAuthenticationMethods)
-    : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}, {"Prefix", prefix}}))
+    : GenericStructImpl<Intf, IStruct, IComponentTypePrivate, Interfaces...>(
+          type, Dict<IString, IBaseObject>({{"Id", id}, {"Name", name}, {"Description", description}, {"Prefix", prefix}}))
     , id(id)
     , name(name)
     , description(description)
