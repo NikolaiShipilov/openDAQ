@@ -91,7 +91,7 @@ DECLARE_OPENDAQ_INTERFACE(IComponentType, IBaseObject)
      * @brief Builds an `AuthenticationConfig` listing every authentication method this component type
      * supports, as a candidate of its `"AuthenticationMethod"` selection property.
      * @param[out] config The built authentication config.
-     * @retval OPENDAQ_ERR_NOT_SUPPORTED when this component type sort (server-, FB-types) does not support authentication.
+     * @retval OPENDAQ_ERR_NOT_SUPPORTED when this component type sort (server-, FB-types) does not upports authentication.
      */
     virtual ErrCode INTERFACE_FUNC createAuthenticationConfig(IAuthenticationConfig** config) = 0;
 };
